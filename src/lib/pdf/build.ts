@@ -1,6 +1,6 @@
 import { PdfDocument, PdfError } from '@ignaciano3/better-pdf';
 import { rgb, type PdfPage } from '@ignaciano3/better-pdf/generate';
-import type { EditElement, EditState, SignatureElement, TextElement } from './types';
+import type { EditElement, EditState, ImageElement, SignatureElement, TextElement } from './types';
 
 /**
  * Error thrown when a source PDF cannot be loaded or stamped. Carries a
@@ -86,8 +86,8 @@ async function drawElement(
 	element: EditElement,
 	pageHeight: number
 ): Promise<void> {
-	if (element.type === 'signature') {
-		await drawSignatureElement(doc, page, element, pageHeight);
+	if (element.type === 'signature' || element.type === 'image') {
+		await drawRasterElement(doc, page, element, pageHeight);
 		return;
 	}
 	drawTextElement(page, element, pageHeight);
@@ -105,21 +105,30 @@ function drawTextElement(page: PdfPage, element: TextElement, pageHeight: number
 }
 
 /**
- * Embed and stamp a signature image. The element's `y` is its top edge in a
- * top-left coordinate system, so the PDF (bottom-left origin) bottom edge sits
- * at `pageHeight - y - height`. Transparent PNGs keep their alpha channel as a
- * soft mask automatically — no white box is painted over underlying content.
+ * Embed and stamp a raster element (signature or image). The element's `y` is
+ * its top edge in a top-left coordinate system, so the PDF (bottom-left origin)
+ * bottom edge sits at `pageHeight - y - height`. Transparent PNGs keep their
+ * alpha channel as a soft mask automatically — no white box is painted over
+ * underlying content. Signatures and uploaded images share the same geometry,
+ * so they go through one embed path.
  */
-async function drawSignatureElement(
+async function drawRasterElement(
 	doc: PdfDocument,
 	page: PdfPage,
-	element: SignatureElement,
+	element: SignatureElement | ImageElement,
 	pageHeight: number
 ): Promise<void> {
-	const image =
-		element.format === 'png'
-			? await doc.embedPng(element.image)
-			: await doc.embedJpg(element.image);
+	let image;
+	try {
+		image =
+			element.format === 'png'
+				? await doc.embedPng(element.image)
+				: await doc.embedJpg(element.image);
+	} catch {
+		// Unsupported or corrupt image bytes (e.g. a CMYK JPEG the wasm decoder
+		// rejects): skip this element rather than failing the whole export.
+		return;
+	}
 	const bottomY = pageHeight - element.y - element.height;
 	page.drawImage(image, {
 		x: element.x,
