@@ -12,8 +12,9 @@ let _db: PostgresJsDatabase<typeof schema> | undefined;
  */
 export function getDb(): PostgresJsDatabase<typeof schema> {
 	if (!_db) {
-		if (!env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
-		_db = drizzle(postgres(env.DATABASE_URL), { schema });
+		const url = env['DATABASE_URL'];
+		if (!url) throw new Error('DATABASE_URL is not set');
+		_db = drizzle(postgres(url), { schema });
 	}
 	return _db;
 }
