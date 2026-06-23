@@ -2,6 +2,7 @@ import type { EditElement } from '../types';
 import type { ElementRenderer, RenderContext } from './types';
 import { renderText } from './text';
 import { renderRaster } from './raster';
+import { renderShape } from './shape';
 
 export type { RenderContext, ElementRenderer } from './types';
 
@@ -15,7 +16,8 @@ export type { RenderContext, ElementRenderer } from './types';
 const registry: Record<EditElement['type'], ElementRenderer> = {
 	text: renderText as ElementRenderer,
 	signature: renderRaster as ElementRenderer,
-	image: renderRaster as ElementRenderer
+	image: renderRaster as ElementRenderer,
+	shape: renderShape as ElementRenderer
 };
 
 /** Render one element by dispatching on its `type`. */

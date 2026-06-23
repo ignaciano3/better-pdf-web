@@ -95,5 +95,41 @@ export interface ImageElement {
 	format: 'png' | 'jpg';
 }
 
+/** The kinds of vector shape the editor can draw. */
+export type ShapeKind = 'line' | 'rectangle' | 'ellipse';
+
+/**
+ * A vector shape element (line, rectangle, or ellipse). Like the other
+ * elements, `x`/`y` are the top-left corner of the shape's bounding box in PDF
+ * points with a top-left origin; `width`/`height` are the box dimensions and the
+ * builder flips the Y axis at finalize time. A `line` is drawn as the diagonal
+ * of its bounding box (top-left → bottom-right).
+ */
+export interface ShapeElement {
+	type: 'shape';
+	id: string;
+	/** Which primitive to draw. */
+	shape: ShapeKind;
+	/** Distance from the left edge, in PDF points. */
+	x: number;
+	/** Distance from the top edge, in PDF points (top-left origin). */
+	y: number;
+	/** Bounding-box width in PDF points. */
+	width: number;
+	/** Bounding-box height in PDF points. */
+	height: number;
+	/**
+	 * Zero-based index of the page this element belongs to. Defaults to 0.
+	 * Used so multi-page source documents stamp each element onto the right page.
+	 */
+	page?: number;
+	/** Stroke RGB components in 0..1. Defaults to black. */
+	strokeColor?: { r: number; g: number; b: number };
+	/** Stroke width in PDF points. Defaults to 1. */
+	strokeWidth?: number;
+	/** Fill RGB components in 0..1. Omit for no fill (rectangle/ellipse only). */
+	fillColor?: { r: number; g: number; b: number };
+}
+
 /** Discriminated union of everything the editor can stamp onto a page. */
-export type EditElement = TextElement | SignatureElement | ImageElement;
+export type EditElement = TextElement | SignatureElement | ImageElement | ShapeElement;
