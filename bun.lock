@@ -5,6 +5,7 @@
     "": {
       "name": "better-pdf-web",
       "dependencies": {
+        "@ignaciano3/better-pdf": "^0.13.1",
         "better-auth": "^1.6.20",
         "drizzle-orm": "^0.45.2",
         "postgres": "^3.4.9",
@@ -143,6 +144,8 @@
     "@humanwhocodes/module-importer": ["@humanwhocodes/module-importer@1.0.1", "", {}, "sha512-bxveV4V8v5Yb4ncFTT3rPSgZBOpCkjfK0y4oVVVJwIuDVBRMDXrPyXRL988i5ap9m9bnyEEjWfm5WkBmtffLfA=="],
 
     "@humanwhocodes/retry": ["@humanwhocodes/retry@0.4.3", "", {}, "sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ=="],
+
+    "@ignaciano3/better-pdf": ["@ignaciano3/better-pdf@0.13.1", "", { "bin": { "better-pdf-generate-types": "dist/bin/generate-types.js" } }, "sha512-L9jOkHmMAnlA88+pA6WMkwOp0AsPh+Fcad8RDpM/RvvwCxMmtu5ouSwmNtGH90Qek3uRd/rajc7m4RRM1HLtAw=="],
 
     "@jridgewell/gen-mapping": ["@jridgewell/gen-mapping@0.3.13", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.0", "@jridgewell/trace-mapping": "^0.3.24" } }, "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA=="],
 
