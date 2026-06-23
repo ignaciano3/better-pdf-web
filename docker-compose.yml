@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:17
+    container_name: bpw-pg
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: better_pdf_web
+    ports:
+      - '5432:5432'
+    volumes:
+      - bpw-pg-data:/var/lib/postgresql/data
+
+volumes:
+  bpw-pg-data:
