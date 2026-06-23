@@ -1,11 +1,11 @@
 import { json } from '@sveltejs/kit';
 import { sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
+import { getDb } from '$lib/server/db';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
 	try {
-		await db.execute(sql`select 1`);
+		await getDb().execute(sql`select 1`);
 		return json({ status: 'ok', db: 'reachable' });
 	} catch (err) {
 		// Log details server-side only; never reflect internal error text to clients.
