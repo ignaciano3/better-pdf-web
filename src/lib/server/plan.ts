@@ -11,20 +11,32 @@ export type Plan = 'free' | 'pro';
  *
  * This is the #12 stub: there is no billing integration, so the only source of
  * truth is the `subscription` table, which the app never writes. The default is
- * therefore 'free' whenever there is no user, no row, or a non-'pro' plan
- * value. Anonymous callers (no `userId`) are implicitly the lowest tier and
- * never reach the database.
+ * 'free' whenever there is no user, no row, or anything other than a fully
+ * valid pro entitlement.
+ *
+ * Pro is granted ONLY when the row is `plan='pro'` AND `status='active'` AND not
+ * past its `current_period_end`. Checking `plan` alone would fail open: once
+ * billing writes rows, a canceled or expired pro subscription would keep
+ * granting pro access. Anonymous callers never reach the database.
  */
 export async function resolvePlan(userId: string | undefined): Promise<Plan> {
 	if (!userId) return 'free';
 
 	const rows = await getDb()
-		.select({ plan: subscription.plan })
+		.select({
+			plan: subscription.plan,
+			status: subscription.status,
+			currentPeriodEnd: subscription.currentPeriodEnd
+		})
 		.from(subscription)
 		.where(eq(subscription.userId, userId))
 		.limit(1);
 
-	return rows[0]?.plan === 'pro' ? 'pro' : 'free';
+	const row = rows[0];
+	if (!row || row.plan !== 'pro' || row.status !== 'active') return 'free';
+	// An entitlement that has run out is no longer pro.
+	if (row.currentPeriodEnd && row.currentPeriodEnd.getTime() < Date.now()) return 'free';
+	return 'pro';
 }
 
 /**
