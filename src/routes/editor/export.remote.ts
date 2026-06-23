@@ -6,7 +6,8 @@ import type { EditState, TextElement } from '$lib/pdf/types';
 import { getDb } from '$lib/server/db';
 import { usageEvent } from '$lib/server/db/schema.app';
 import { resolveIdentity } from '$lib/server/identity';
-import { decide, windowStart, WINDOW_MS } from '$lib/server/rate-limit';
+import { resolvePlan } from '$lib/server/plan';
+import { decide, windowStart, WINDOW_MS, type Tier } from '$lib/server/rate-limit';
 
 // Server-side hard limits. These cap the attack surface of the WASM/PDF
 // parsers for this endpoint. Identity + rate limiting + schema validation
@@ -91,8 +92,8 @@ async function countInWindow(
  * Finalize the editor document into PDF bytes on the server.
  *
  * Supports blank-canvas authoring and stamping onto an uploaded source PDF
- * (#4). Gated by per-identity rate limiting (#6): anonymous 2/hour,
- * authenticated 5/hour. Over the cap returns HTTP 429.
+ * (#4). Gated by tier-driven rate limiting (#6, #12): anonymous 2/hour, free
+ * 5/hour, pro unlimited. Over the cap returns HTTP 429.
  */
 export const exportPdf = command('unchecked', async (input: unknown): Promise<Uint8Array> => {
 	const { state, fingerprint } = validate(input);
@@ -100,9 +101,13 @@ export const exportPdf = command('unchecked', async (input: unknown): Promise<Ui
 	const event = getRequestEvent();
 	const identity = resolveIdentity(event, fingerprint);
 
+	// Map identity → tier. Anonymous callers are the lowest tier; logged-in
+	// callers get their resolved plan ('free' by default, 'pro' if subscribed).
+	const tier: Tier = identity.kind === 'anon' ? 'anonymous' : await resolvePlan(identity.userId);
+
 	const now = new Date();
 	const priorCount = await countInWindow(identity.userId, identity.ipHash, now);
-	const verdict = decide(identity.kind, priorCount);
+	const verdict = decide(tier, priorCount);
 	if (!verdict.allowed) {
 		error(
 			429,
@@ -122,7 +127,7 @@ export const exportPdf = command('unchecked', async (input: unknown): Promise<Ui
 		.values({
 			id: crypto.randomUUID(),
 			action: EXPORT_ACTION,
-			tierAtTime: identity.tier,
+			tierAtTime: tier,
 			createdAt: now,
 			...(identity.userId ? { userId: identity.userId } : {}),
 			...(identity.ipHash ? { ipHash: identity.ipHash } : {})

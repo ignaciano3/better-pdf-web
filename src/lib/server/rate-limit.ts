@@ -1,28 +1,38 @@
 /**
  * Pure rate-limit decision logic. No I/O, no DB, no clock reads beyond what is
  * passed in — fully unit-testable. The caller is responsible for resolving
- * identity, choosing the window, and counting prior events; this module only
- * turns those numbers into an allow/deny decision.
+ * identity, choosing the tier, choosing the window, and counting prior events;
+ * this module only turns those numbers into an allow/deny decision.
  *
- * Caps (issue #6): anonymous 2/hour, authenticated 5/hour. Paid tiers and the
- * `subscription` table arrive in #12 and are intentionally not modeled here.
+ * Caps are keyed by tier (issue #12): anonymous 2/hour, free 5/hour, pro
+ * unlimited. The caller maps an identity + resolved plan onto a tier.
  */
 
 export type IdentityKind = 'anon' | 'user';
 
+/** Billing/usage tier that selects the cap. */
+export type Tier = 'anonymous' | 'free' | 'pro';
+
 /** Sliding window in milliseconds. */
 export const WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
-/** Per-window export caps, keyed by identity kind. */
-export const CAPS: Record<IdentityKind, number> = {
-	anon: 2,
-	user: 5
+/**
+ * Sentinel for "no cap". Pro is effectively unlimited; we model it as Infinity
+ * so `priorCount < limit` is always true and `remaining` is always Infinity.
+ */
+export const UNLIMITED = Infinity;
+
+/** Per-window export caps, keyed by tier. */
+export const CAPS: Record<Tier, number> = {
+	anonymous: 2,
+	free: 5,
+	pro: UNLIMITED
 };
 
 export interface RateDecision {
 	/** Whether this action is permitted. */
 	allowed: boolean;
-	/** The cap that applied. */
+	/** The cap that applied. `Infinity` for an unlimited (pro) tier. */
 	limit: number;
 	/** Remaining actions in the window AFTER this one (never negative). */
 	remaining: number;
@@ -31,14 +41,17 @@ export interface RateDecision {
 /**
  * Decide whether an action is allowed.
  *
- * @param kind     anon | user — selects the cap.
+ * @param tier       anonymous | free | pro — selects the cap.
  * @param priorCount number of events already recorded in the current window.
- * @returns allow/deny with the applied limit and remaining budget.
+ * @returns allow/deny with the applied limit and remaining budget. For an
+ *          unlimited tier, `allowed` is always true and `remaining` is
+ *          `Infinity`.
  */
-export function decide(kind: IdentityKind, priorCount: number): RateDecision {
-	const limit = CAPS[kind];
+export function decide(tier: Tier, priorCount: number): RateDecision {
+	const limit = CAPS[tier];
 	const allowed = priorCount < limit;
-	// Budget remaining after this action would be recorded.
+	// Budget remaining after this action would be recorded. Infinity stays
+	// Infinity; Math.max keeps finite tiers non-negative.
 	const remaining = allowed ? Math.max(0, limit - priorCount - 1) : 0;
 	return { allowed, limit, remaining };
 }
