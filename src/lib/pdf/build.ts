@@ -1,6 +1,6 @@
 import { PdfDocument, PdfError } from '@ignaciano3/better-pdf';
 import { rgb, type PdfPage } from '@ignaciano3/better-pdf/generate';
-import type { EditState, TextElement } from './types';
+import type { EditElement, EditState, SignatureElement, TextElement } from './types';
 
 /**
  * Error thrown when a source PDF cannot be loaded or stamped. Carries a
@@ -44,7 +44,7 @@ async function buildBlank(state: EditState): Promise<Uint8Array> {
 	const page = doc.addPage(state.pageSize);
 
 	for (const element of state.elements) {
-		drawTextElement(page, element, pageHeight);
+		await drawElement(doc, page, element, pageHeight);
 	}
 
 	return doc.save();
@@ -52,7 +52,7 @@ async function buildBlank(state: EditState): Promise<Uint8Array> {
 
 async function buildFromSource(
 	sourcePdf: Uint8Array,
-	elements: readonly TextElement[]
+	elements: readonly EditElement[]
 ): Promise<Uint8Array> {
 	try {
 		const doc = await PdfDocument.load(sourcePdf);
@@ -61,7 +61,7 @@ async function buildFromSource(
 			const pageIndex = element.page ?? 0;
 			if (pageIndex < 0 || pageIndex >= pageCount) continue;
 			const page = doc.getPage(pageIndex);
-			drawTextElement(page, element, page.height);
+			await drawElement(doc, page, element, page.height);
 		}
 		// Parsing of malformed input can surface here (lazily at save time).
 		return await doc.save();
@@ -76,6 +76,23 @@ async function buildFromSource(
 	}
 }
 
+/**
+ * Dispatch on element type. Image embedding is async (the wasm core embeds the
+ * bytes), so this returns a promise even though text drawing is synchronous.
+ */
+async function drawElement(
+	doc: PdfDocument,
+	page: PdfPage,
+	element: EditElement,
+	pageHeight: number
+): Promise<void> {
+	if (element.type === 'signature') {
+		await drawSignatureElement(doc, page, element, pageHeight);
+		return;
+	}
+	drawTextElement(page, element, pageHeight);
+}
+
 function drawTextElement(page: PdfPage, element: TextElement, pageHeight: number): void {
 	const baselineY = pageHeight - element.y - element.size;
 	const { color } = element;
@@ -84,5 +101,30 @@ function drawTextElement(page: PdfPage, element: TextElement, pageHeight: number
 		y: baselineY,
 		size: element.size,
 		...(color ? { color: rgb(color.r, color.g, color.b) } : {})
+	});
+}
+
+/**
+ * Embed and stamp a signature image. The element's `y` is its top edge in a
+ * top-left coordinate system, so the PDF (bottom-left origin) bottom edge sits
+ * at `pageHeight - y - height`. Transparent PNGs keep their alpha channel as a
+ * soft mask automatically — no white box is painted over underlying content.
+ */
+async function drawSignatureElement(
+	doc: PdfDocument,
+	page: PdfPage,
+	element: SignatureElement,
+	pageHeight: number
+): Promise<void> {
+	const image =
+		element.format === 'png'
+			? await doc.embedPng(element.image)
+			: await doc.embedJpg(element.image);
+	const bottomY = pageHeight - element.y - element.height;
+	page.drawImage(image, {
+		x: element.x,
+		y: bottomY,
+		width: element.width,
+		height: element.height
 	});
 }
