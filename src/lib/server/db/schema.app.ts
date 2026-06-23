@@ -30,3 +30,20 @@ export const usageEvent = pgTable(
 		index('usage_event_ip_hash_created_at_idx').on(table.ipHash, table.createdAt)
 	]
 );
+
+/**
+ * Per-user subscription record. One row per user; absence of a row means the
+ * user is on the free plan. This is the #12 stub: there is no billing
+ * integration yet, so rows are never written by the app and `plan` defaults to
+ * 'free'. `providerId` / `currentPeriodEnd` are placeholders for a future
+ * Stripe (or similar) integration.
+ *
+ * `userId` is the primary key — at most one subscription per user.
+ */
+export const subscription = pgTable('subscription', {
+	userId: text('user_id').primaryKey(),
+	plan: text('plan').notNull().default('free'),
+	status: text('status').notNull().default('active'),
+	providerId: text('provider_id'),
+	currentPeriodEnd: timestamp('current_period_end')
+});
