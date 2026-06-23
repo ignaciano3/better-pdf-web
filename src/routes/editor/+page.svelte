@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { exportPdf } from './export.remote';
-	import type { EditElement, EditState, SignatureElement, TextElement } from '$lib/pdf/types';
+	import type {
+		EditElement,
+		EditState,
+		ImageElement,
+		SignatureElement,
+		TextElement
+	} from '$lib/pdf/types';
 	import { renderSourcePdf, type RenderedPage, PdfRenderError } from '$lib/pdf/render';
 	import SignaturePad from '$lib/components/SignaturePad.svelte';
 
@@ -22,11 +28,19 @@
 	const MAX_BYTES = 50 * 1024 * 1024; // 50 MB upload guard.
 	const SIG_IMAGE_MAX_BYTES = 10 * 1024 * 1024; // 10 MB signature-image guard.
 	const SIG_DEFAULT_WIDTH = 180; // PDF points; height derived from aspect.
+	const IMG_MAX_BYTES = 10 * 1024 * 1024; // 10 MB image guard.
+	const IMG_DEFAULT_WIDTH = 200; // PDF points; height derived from aspect.
 
 	let elements = $state<EditElement[]>([]);
 	let showSignaturePad = $state(false);
 	// When set, the next page click places a signature instead of text.
 	let pendingSignature = $state<{
+		image: Uint8Array;
+		format: 'png' | 'jpg';
+		aspect: number;
+	} | null>(null);
+	// When set, the next page click places an image instead of text.
+	let pendingImage = $state<{
 		image: Uint8Array;
 		format: 'png' | 'jpg';
 		aspect: number;
@@ -99,6 +113,8 @@
 		elements = [];
 		selectedId = null;
 		errorMessage = null;
+		pendingSignature = null;
+		pendingImage = null;
 	}
 
 	function addTextAt(clientX: number, clientY: number, pageEl: HTMLElement, pageIndex: number) {
@@ -147,11 +163,39 @@
 		pendingSignature = null;
 	}
 
+	function placeImageAt(clientX: number, clientY: number, pageEl: HTMLElement, pageIndex: number) {
+		const pending = pendingImage;
+		if (!pending) return;
+		const rect = pageEl.getBoundingClientRect();
+		const x = (clientX - rect.left) / SCALE;
+		const y = (clientY - rect.top) / SCALE;
+		const width = IMG_DEFAULT_WIDTH;
+		const height = width / pending.aspect;
+		const el: ImageElement = {
+			type: 'image',
+			id: `i${nextId++}`,
+			x,
+			y,
+			width,
+			height,
+			page: pageIndex,
+			image: pending.image,
+			format: pending.format
+		};
+		elements.push(el);
+		selectedId = el.id;
+		pendingImage = null;
+	}
+
 	function onPageClick(event: MouseEvent, pageIndex: number) {
 		// Only add when clicking the bare page, not an existing element.
 		if (event.target !== event.currentTarget) return;
 		if (pendingSignature) {
 			placeSignatureAt(event.clientX, event.clientY, event.currentTarget as HTMLElement, pageIndex);
+			return;
+		}
+		if (pendingImage) {
+			placeImageAt(event.clientX, event.clientY, event.currentTarget as HTMLElement, pageIndex);
 			return;
 		}
 		addTextAt(event.clientX, event.clientY, event.currentTarget as HTMLElement, pageIndex);
@@ -185,6 +229,36 @@
 			const bytes = new Uint8Array(await file.arrayBuffer());
 			const aspect = await imageAspect(file);
 			pendingSignature = { image: bytes, format: isPng ? 'png' : 'jpg', aspect };
+		} catch {
+			errorMessage = 'Could not read that image.';
+		} finally {
+			input.value = '';
+		}
+	}
+
+	async function onImageUpload(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+		errorMessage = null;
+
+		const isPng = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
+		const isJpg = file.type === 'image/jpeg' || /\.jpe?g$/i.test(file.name);
+		if (!isPng && !isJpg) {
+			errorMessage = 'Please choose a PNG or JPG image.';
+			input.value = '';
+			return;
+		}
+		if (file.size > IMG_MAX_BYTES) {
+			errorMessage = `That image is too large (max ${Math.round(IMG_MAX_BYTES / 1024 / 1024)} MB).`;
+			input.value = '';
+			return;
+		}
+
+		try {
+			const bytes = new Uint8Array(await file.arrayBuffer());
+			const aspect = await imageAspect(file);
+			pendingImage = { image: bytes, format: isPng ? 'png' : 'jpg', aspect };
 		} catch {
 			errorMessage = 'Could not read that image.';
 		} finally {
@@ -232,7 +306,7 @@
 		window.addEventListener('pointerup', up);
 	}
 
-	function startResize(event: PointerEvent, el: SignatureElement) {
+	function startResize(event: PointerEvent, el: SignatureElement | ImageElement) {
 		event.stopPropagation();
 		event.preventDefault();
 		selectedId = el.id;
@@ -267,7 +341,7 @@
 	// Object URLs for signature previews, cached per element id so we don't
 	// recreate them on every render. Plain record — not reactive state.
 	const sigUrls: Record<string, string> = {};
-	function signatureUrl(el: SignatureElement): string {
+	function signatureUrl(el: SignatureElement | ImageElement): string {
 		const cached = sigUrls[el.id];
 		if (cached) return cached;
 		const type = el.format === 'png' ? 'image/png' : 'image/jpeg';
@@ -317,7 +391,9 @@
 		<span class="text-sm text-gray-500">
 			{pendingSignature
 				? 'Click a page to place your signature.'
-				: 'Click a page to add text. Drag to move.'}
+				: pendingImage
+					? 'Click a page to place your image.'
+					: 'Click a page to add text. Drag to move.'}
 		</span>
 		<div class="ml-auto flex items-center gap-2">
 			<label
@@ -355,6 +431,17 @@
 					accept="image/png,image/jpeg,.png,.jpg,.jpeg"
 					class="hidden"
 					onchange={onSignatureUpload}
+				/>
+			</label>
+			<label
+				class="cursor-pointer rounded bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-200"
+			>
+				Upload image
+				<input
+					type="file"
+					accept="image/png,image/jpeg,.png,.jpg,.jpeg"
+					class="hidden"
+					onchange={onImageUpload}
 				/>
 			</label>
 			{#if selectedText}
