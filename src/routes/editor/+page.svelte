@@ -4,6 +4,18 @@
 	import { renderSourcePdf, type RenderedPage, PdfRenderError } from '$lib/pdf/render';
 
 	// A4 in PDF points; rendered at SCALE px per point.
+	// Stable per-browser id persisted in localStorage, sent with exports so the
+	// server can rate-limit anonymous callers behind a shared IP.
+	function getFingerprint(): string {
+		const KEY = 'bpw:fingerprint';
+		let fp = localStorage.getItem(KEY);
+		if (!fp) {
+			fp = crypto.randomUUID();
+			localStorage.setItem(KEY, fp);
+		}
+		return fp;
+	}
+
 	const DEFAULT_PAGE: [number, number] = [595.28, 841.89];
 	const SCALE = 0.8;
 	const MAX_BYTES = 50 * 1024 * 1024; // 50 MB upload guard.
@@ -148,7 +160,7 @@
 				elements: $state.snapshot(elements) as TextElement[],
 				...(sourceBytes ? { sourcePdf: sourceBytes } : {})
 			};
-			const bytes = await exportPdf(state);
+			const bytes = await exportPdf({ state, fingerprint: getFingerprint() });
 			// Copy into a plain ArrayBuffer so the Blob part type is satisfied
 			// (the wire value may be backed by a non-ArrayBuffer buffer).
 			const buf = new ArrayBuffer(bytes.byteLength);
