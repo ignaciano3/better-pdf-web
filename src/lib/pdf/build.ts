@@ -1,6 +1,6 @@
 import { PdfDocument, PdfError } from '@ignaciano3/better-pdf';
-import { rgb, type PdfPage } from '@ignaciano3/better-pdf/generate';
-import type { EditElement, EditState, ImageElement, SignatureElement, TextElement } from './types';
+import type { EditElement, EditState } from './types';
+import { renderElement } from './renderers';
 
 /**
  * Error thrown when a source PDF cannot be loaded or stamped. Carries a
@@ -24,12 +24,8 @@ export class PdfBuildError extends Error {
  *   elements on top of its existing pages, preserving the original page count.
  *
  * This is the dogfooding seam: every editor element is rendered through the
- * better-pdf authoring API. Runs server-side (Node/Bun) where the wasm core
- * self-initializes on import.
- *
- * Canvas coordinates are top-left origin; PDF uses bottom-left, so the Y axis
- * is flipped here. `y` is the element's top edge, so the text baseline is
- * placed one font-size below it.
+ * better-pdf authoring API (via the renderer registry). Runs server-side
+ * (Node/Bun) where the wasm core self-initializes on import.
  */
 export async function buildPdf(state: EditState): Promise<Uint8Array> {
 	if (state.sourcePdf && state.sourcePdf.byteLength > 0) {
@@ -44,7 +40,7 @@ async function buildBlank(state: EditState): Promise<Uint8Array> {
 	const page = doc.addPage(state.pageSize);
 
 	for (const element of state.elements) {
-		await drawElement(doc, page, element, pageHeight);
+		await renderElement({ doc, page, pageHeight }, element);
 	}
 
 	return doc.save();
@@ -61,7 +57,7 @@ async function buildFromSource(
 			const pageIndex = element.page ?? 0;
 			if (pageIndex < 0 || pageIndex >= pageCount) continue;
 			const page = doc.getPage(pageIndex);
-			await drawElement(doc, page, element, page.height);
+			await renderElement({ doc, page, pageHeight: page.height }, element);
 		}
 		// Parsing of malformed input can surface here (lazily at save time).
 		return await doc.save();
@@ -74,66 +70,4 @@ async function buildFromSource(
 			{ cause }
 		);
 	}
-}
-
-/**
- * Dispatch on element type. Image embedding is async (the wasm core embeds the
- * bytes), so this returns a promise even though text drawing is synchronous.
- */
-async function drawElement(
-	doc: PdfDocument,
-	page: PdfPage,
-	element: EditElement,
-	pageHeight: number
-): Promise<void> {
-	if (element.type === 'signature' || element.type === 'image') {
-		await drawRasterElement(doc, page, element, pageHeight);
-		return;
-	}
-	drawTextElement(page, element, pageHeight);
-}
-
-function drawTextElement(page: PdfPage, element: TextElement, pageHeight: number): void {
-	const baselineY = pageHeight - element.y - element.size;
-	const { color } = element;
-	page.drawText(element.text, {
-		x: element.x,
-		y: baselineY,
-		size: element.size,
-		...(color ? { color: rgb(color.r, color.g, color.b) } : {})
-	});
-}
-
-/**
- * Embed and stamp a raster element (signature or image). The element's `y` is
- * its top edge in a top-left coordinate system, so the PDF (bottom-left origin)
- * bottom edge sits at `pageHeight - y - height`. Transparent PNGs keep their
- * alpha channel as a soft mask automatically — no white box is painted over
- * underlying content. Signatures and uploaded images share the same geometry,
- * so they go through one embed path.
- */
-async function drawRasterElement(
-	doc: PdfDocument,
-	page: PdfPage,
-	element: SignatureElement | ImageElement,
-	pageHeight: number
-): Promise<void> {
-	let image;
-	try {
-		image =
-			element.format === 'png'
-				? await doc.embedPng(element.image)
-				: await doc.embedJpg(element.image);
-	} catch {
-		// Unsupported or corrupt image bytes (e.g. a CMYK JPEG the wasm decoder
-		// rejects): skip this element rather than failing the whole export.
-		return;
-	}
-	const bottomY = pageHeight - element.y - element.height;
-	page.drawImage(image, {
-		x: element.x,
-		y: bottomY,
-		width: element.width,
-		height: element.height
-	});
 }
