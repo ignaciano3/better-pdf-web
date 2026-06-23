@@ -1,8 +1,21 @@
-import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
-// Vite resolves this to a hashed URL for the bundled worker module.
-import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+// pdf.js touches browser-only globals (DOMMatrix, etc.) at module load, so it
+// must never be imported during SSR. It's loaded lazily, in the browser only,
+// the first time a render is requested.
+type PdfJs = typeof import('pdfjs-dist');
+let pdfjsPromise: Promise<PdfJs> | undefined;
 
-GlobalWorkerOptions.workerSrc = PdfWorker;
+async function loadPdfjs(): Promise<PdfJs> {
+	if (!pdfjsPromise) {
+		pdfjsPromise = (async () => {
+			const pdfjs = await import('pdfjs-dist');
+			// Vite resolves this to a hashed URL for the bundled worker module.
+			const worker = (await import('pdfjs-dist/build/pdf.worker.mjs?url')).default;
+			pdfjs.GlobalWorkerOptions.workerSrc = worker;
+			return pdfjs;
+		})();
+	}
+	return pdfjsPromise;
+}
 
 /** A rasterized source page, ready to display behind the editing layer. */
 export interface RenderedPage {
@@ -33,6 +46,7 @@ export class PdfRenderError extends Error {
  * @throws {PdfRenderError} on corrupt, encrypted, or unsupported input.
  */
 export async function renderSourcePdf(bytes: Uint8Array, scale: number): Promise<RenderedPage[]> {
+	const { getDocument } = await loadPdfjs();
 	// pdf.js may detach the buffer; pass a copy so the caller's bytes survive.
 	const loadingTask = getDocument({ data: bytes.slice() });
 	let doc;
