@@ -1,11 +1,14 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import SignaturePad from '$lib/components/SignaturePad.svelte';
 	import { EditorState } from './editor.svelte';
 	import Toolbar from './Toolbar.svelte';
 	import Canvas from './Canvas.svelte';
+	import UpsellModal from './UpsellModal.svelte';
 
 	const editor = new EditorState();
 	let showSignaturePad = $state(false);
+	const signedIn = $derived(Boolean(page.data['user']));
 
 	function onSignatureDrawn(png: Uint8Array, aspect: number) {
 		editor.pendingSignature = { image: png, format: 'png', aspect };
@@ -27,4 +30,6 @@
 	{#if showSignaturePad}
 		<SignaturePad onuse={onSignatureDrawn} oncancel={() => (showSignaturePad = false)} />
 	{/if}
+
+	<UpsellModal {editor} {signedIn} />
 </div>

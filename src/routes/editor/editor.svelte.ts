@@ -330,20 +330,32 @@ function downloadPdf(bytes: Uint8Array) {
 	URL.revokeObjectURL(url);
 }
 
-/** Recognize the rate-limit (429) payload the export command serializes. */
+/**
+ * Recognize the rate-limit (429) payload the export command serializes.
+ *
+ * A remote-function `error(429, body)` reaches the client as an HttpError-like
+ * object: the JSON we sent is on `.body.message`, with `.status === 429`. Fall
+ * back to a plain `.message` for safety.
+ */
 function parseUpsell(e: unknown): UpsellInfo | null {
-	if (!(e instanceof Error)) return null;
-	try {
-		const body = JSON.parse(e.message) as { reason?: string } & UpsellInfo;
-		if (body.reason === 'rate_limited') {
-			return {
-				...(body.limit !== undefined ? { limit: body.limit } : {}),
-				...(body.window !== undefined ? { window: body.window } : {}),
-				...(body.upgradeUrl !== undefined ? { upgradeUrl: body.upgradeUrl } : {})
-			};
+	const err = e as { status?: number; body?: { message?: string }; message?: string };
+	const raw = err?.body?.message ?? err?.message;
+
+	if (raw) {
+		try {
+			const body = JSON.parse(raw) as { reason?: string } & UpsellInfo;
+			if (body.reason === 'rate_limited') {
+				return {
+					...(body.limit !== undefined ? { limit: body.limit } : {}),
+					...(body.window !== undefined ? { window: body.window } : {}),
+					...(body.upgradeUrl !== undefined ? { upgradeUrl: body.upgradeUrl } : {})
+				};
+			}
+		} catch {
+			// not a JSON payload; fall through to the status check
 		}
-	} catch {
-		// not a JSON rate-limit payload
 	}
-	return null;
+
+	// Rate-limited but body wasn't the expected JSON: still show the upsell.
+	return err?.status === 429 ? {} : null;
 }
