@@ -1,7 +1,13 @@
 import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { env } from '$env/dynamic/private';
-import * as schema from './schema';
+import * as authSchema from './schema';
+import * as appSchema from './schema.app';
+
+// Merge the generated Better Auth tables with the app-owned tables so the
+// runtime client knows about both. `schema.ts` is regenerated wholesale by
+// `auth generate`, so app tables live in `schema.app.ts` and are merged here.
+const schema = { ...authSchema, ...appSchema };
 
 let _db: PostgresJsDatabase<typeof schema> | undefined;
 
