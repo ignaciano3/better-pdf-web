@@ -25,5 +25,10 @@ vite.config.ts.timestamp-*
 # Playwright MCP
 .playwright-mcp/
 
+# Playwright e2e
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
 # git worktrees for parallel agents
 .claude/worktrees/
