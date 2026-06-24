@@ -54,10 +54,10 @@
 <svelte:window onkeydown={onKeyDown} />
 
 <div class="flex-1 overflow-auto p-8" bind:clientWidth={editor.canvasWidth}>
-	<div
-		class="mx-auto flex w-fit flex-col gap-6"
-		style="transform: scale({editor.zoom}); transform-origin: top center;"
-	>
+	<!-- CSS `zoom` (not `transform: scale`) so the scaled pages keep a real
+	     layout box: overflow scrollbars and mx-auto centering both stay correct,
+	     and pointer math (cssScale = SCALE * zoom) is unaffected. -->
+	<div class="mx-auto flex w-fit flex-col gap-6" style="zoom: {editor.zoom};">
 		{#each editor.pages as page, pageIndex (pageIndex)}
 			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 			<div
