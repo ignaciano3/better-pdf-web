@@ -1,8 +1,25 @@
 <script lang="ts">
 	import type { EditorState } from './editor.svelte';
-	import type { DrawKind } from './constants';
+	import type { DrawKind, FieldKind } from './constants';
 
 	let { editor, onDrawSignature }: { editor: EditorState; onDrawSignature: () => void } = $props();
+
+	let fieldMenuOpen = $state(false);
+
+	const fieldTools: { kind: FieldKind; label: string }[] = [
+		{ kind: 'text', label: 'Text field' },
+		{ kind: 'checkbox', label: 'Checkbox' },
+		{ kind: 'radio', label: 'Radio group' },
+		{ kind: 'dropdown', label: 'Dropdown' },
+		{ kind: 'combo', label: 'Combo box' },
+		{ kind: 'listbox', label: 'List box' },
+		{ kind: 'signature', label: 'Signature field' }
+	];
+
+	function pickField(kind: FieldKind) {
+		editor.setTool({ type: 'field', kind });
+		fieldMenuOpen = false;
+	}
 
 	async function onPdfChange(event: Event) {
 		const input = event.currentTarget as HTMLInputElement;
@@ -114,6 +131,37 @@
 					onchange={onSignatureUpload}
 				/>
 			</label>
+		</div>
+
+		<!-- Form fields — a separate group from the drawing tools. -->
+		<div class="relative flex items-center gap-1 rounded-lg border border-gray-200 p-1">
+			<button
+				class={toolClass(editor.activeFieldKind !== null)}
+				aria-haspopup="menu"
+				aria-expanded={fieldMenuOpen}
+				onclick={() => (fieldMenuOpen = !fieldMenuOpen)}
+			>
+				Field ▾
+			</button>
+			{#if fieldMenuOpen}
+				<div
+					class="absolute top-full left-0 z-30 mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+					role="menu"
+				>
+					{#each fieldTools as f (f.kind)}
+						<button
+							class="block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100 {editor.activeFieldKind ===
+							f.kind
+								? 'font-semibold text-blue-600'
+								: ''}"
+							role="menuitem"
+							onclick={() => pickField(f.kind)}
+						>
+							{f.label}
+						</button>
+					{/each}
+				</div>
+			{/if}
 		</div>
 	</div>
 

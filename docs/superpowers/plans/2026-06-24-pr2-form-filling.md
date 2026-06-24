@@ -12,16 +12,30 @@ renderer/overlay registries, and `export-validate.ts`.
 Reading (`doc.getForm().getFields()` → `FieldInfo[]`):
 
 ```ts
-interface FieldWidget { page: number; rect: [x0, y0, x1, y1]; } // PDF points, origin bottom-left
+interface FieldWidget {
+	page: number;
+	rect: [x0, y0, x1, y1];
+} // PDF points, origin bottom-left
 interface FieldInfo {
-  name: string;
-  type: 'text'|'checkbox'|'radio'|'dropdown'|'listbox'|'signature'|'pushbutton'|'unknown';
-  value: string | null;
-  states: string[];     // checkbox/radio on-states
-  options: string[];    // dropdown/listbox options
-  readOnly: boolean; required: boolean; exported: boolean;
-  maxLength: number | null; multiSelect: boolean;
-  widgets: FieldWidget[];
+	name: string;
+	type:
+		| 'text'
+		| 'checkbox'
+		| 'radio'
+		| 'dropdown'
+		| 'listbox'
+		| 'signature'
+		| 'pushbutton'
+		| 'unknown';
+	value: string | null;
+	states: string[]; // checkbox/radio on-states
+	options: string[]; // dropdown/listbox options
+	readOnly: boolean;
+	required: boolean;
+	exported: boolean;
+	maxLength: number | null;
+	multiSelect: boolean;
+	widgets: FieldWidget[];
 }
 ```
 
@@ -79,27 +93,34 @@ extract query returns them) / from `EditorState.pages`.
 
 ```ts
 export type FieldKind =
-  | 'text' | 'checkbox' | 'radio' | 'dropdown'
-  | 'signature' | 'listbox' | 'combo';
+	| 'text'
+	| 'checkbox'
+	| 'radio'
+	| 'dropdown'
+	| 'signature'
+	| 'listbox'
+	| 'combo';
 
 export interface FieldElement {
-  type: 'field';
-  id: string;
-  field: FieldKind;
-  name: string;            // fully-qualified AcroForm name, unique in the doc
-  x: number; y: number;    // top-left origin, PDF points
-  width: number; height: number;
-  page?: number;
-  required?: boolean;
-  readOnly?: boolean;
-  tooltip?: string;
-  border?: { color: { r: number; g: number; b: number }; width?: number };
-  background?: { r: number; g: number; b: number };
-  value?: string;          // current fill value (PNG dataURL for signature)
-  options?: string[];      // dropdown/radio/listbox/combo
-  placeholder?: string;    // text
-  maxLength?: number;      // text
-  multiline?: boolean;     // text
+	type: 'field';
+	id: string;
+	field: FieldKind;
+	name: string; // fully-qualified AcroForm name, unique in the doc
+	x: number;
+	y: number; // top-left origin, PDF points
+	width: number;
+	height: number;
+	page?: number;
+	required?: boolean;
+	readOnly?: boolean;
+	tooltip?: string;
+	border?: { color: { r: number; g: number; b: number }; width?: number };
+	background?: { r: number; g: number; b: number };
+	value?: string; // current fill value (PNG dataURL for signature)
+	options?: string[]; // dropdown/radio/listbox/combo
+	placeholder?: string; // text
+	maxLength?: number; // text
+	multiline?: boolean; // text
 }
 ```
 
@@ -145,6 +166,7 @@ export-copy bytes, convert results to `FieldElement`s (they already are), and se
 
 Interactive input per kind, positioned `x*SCALE,y*SCALE`, sized
 `width*SCALE×height*SCALE`, bound to `el.value`:
+
 - text → `<input>` (or `<textarea>` if multiline) with placeholder/maxLength.
 - checkbox → `<input type=checkbox>` (value '' / onValue).
 - radio → render the group's options as radios (MVP: single-widget radios ok).
@@ -153,9 +175,9 @@ Interactive input per kind, positioned `x*SCALE,y*SCALE`, sized
 - signature → a drop zone showing the PNG dataURL if set; click opens the
   signature pad / image upload (reuse existing pending-raster flow; store PNG
   dataURL in `value`).
-Selecting the overlay sets `editor.selectedId`; dragging moves it
-(reuse `editor.startDrag`); resize via existing handle pattern where sensible.
-Register `field: FieldOverlay` in `overlays/index.ts`.
+  Selecting the overlay sets `editor.selectedId`; dragging moves it
+  (reuse `editor.startDrag`); resize via existing handle pattern where sensible.
+  Register `field: FieldOverlay` in `overlays/index.ts`.
 
 ## Field Properties modal — `src/routes/editor/FieldPropertiesModal.svelte`
 

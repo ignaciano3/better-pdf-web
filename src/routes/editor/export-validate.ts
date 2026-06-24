@@ -10,6 +10,12 @@ const MAX_TEXT_LEN = 20_000;
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15 MB per embedded raster element
 const MAX_PAGE_OPS = 10_000;
 const MAX_FINGERPRINT_LEN = 256;
+const MAX_FIELD_NAME_LEN = 256;
+const MAX_FIELD_OPTIONS = 1_000;
+// Signature dataURLs are stored in `value`; cap generously (~2 MB of base64).
+const MAX_FIELD_VALUE_LEN = 2_000_000;
+
+const FIELD_KINDS = ['text', 'checkbox', 'radio', 'dropdown', 'signature', 'listbox', 'combo'];
 
 function isFiniteNumber(n: unknown): n is number {
 	return typeof n === 'number' && Number.isFinite(n);
@@ -52,6 +58,30 @@ function validateElement(el: EditElement): void {
 				error(422, 'Invalid shape geometry');
 			}
 			if (!['line', 'rectangle', 'ellipse'].includes(el.shape)) error(422, 'Invalid shape kind');
+			break;
+		case 'field':
+			if (!isFiniteNumber(el.width) || !isFiniteNumber(el.height)) {
+				error(422, 'Invalid field geometry');
+			}
+			if (!FIELD_KINDS.includes(el.field)) error(422, 'Invalid field kind');
+			if (typeof el.name !== 'string' || el.name.length === 0) error(422, 'Invalid field name');
+			if (el.name.length > MAX_FIELD_NAME_LEN) error(422, 'Field name too large');
+			if (el.options !== undefined) {
+				if (!Array.isArray(el.options) || !el.options.every((o) => typeof o === 'string')) {
+					error(422, 'Invalid field options');
+				}
+				if (el.options.length > MAX_FIELD_OPTIONS) error(422, 'Too many field options');
+			}
+			if (el.maxLength !== undefined && !isFiniteNumber(el.maxLength)) {
+				error(422, 'Invalid field max length');
+			}
+			if (el.border?.width !== undefined && !isFiniteNumber(el.border.width)) {
+				error(422, 'Invalid field border width');
+			}
+			if (el.value !== undefined) {
+				if (typeof el.value !== 'string') error(422, 'Invalid field value');
+				if (el.value.length > MAX_FIELD_VALUE_LEN) error(422, 'Field value too large');
+			}
 			break;
 		default:
 			error(422, 'Unknown element type');

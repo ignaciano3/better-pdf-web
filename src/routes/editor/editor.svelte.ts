@@ -1,6 +1,8 @@
 import type {
 	EditElement,
 	EditState,
+	FieldElement,
+	FieldKind,
 	ImageElement,
 	PageOp,
 	ShapeElement,
@@ -8,6 +10,7 @@ import type {
 } from '$lib/pdf/types';
 import { renderSourcePdf, type RenderedPage, PdfRenderError } from '$lib/pdf/render';
 import { exportPdf } from './export.remote';
+import { extractFields } from './extractFields.remote';
 import {
 	DEFAULT_PAGE,
 	SCALE,
@@ -18,6 +21,7 @@ import {
 	SHAPE_DEFAULT_STROKE,
 	SHAPE_DEFAULT_STROKE_WIDTH,
 	SHAPE_MIN_SIZE,
+	FIELD_DEFAULT_SIZE,
 	SELECT_TOOL,
 	type Tool,
 	type DrawKind,
@@ -98,8 +102,13 @@ export class EditorState {
 	tool = $state<Tool>(SELECT_TOOL);
 	/** The draw kind in effect, or null when selecting. */
 	activeDrawKind = $derived<DrawKind | null>(this.tool.type === 'draw' ? this.tool.kind : null);
+	/** The field kind in effect, or null when not placing a field. */
+	activeFieldKind = $derived<FieldKind | null>(this.tool.type === 'field' ? this.tool.kind : null);
 	/** Stroke color applied to newly drawn shapes (RGB 0..1). */
 	shapeStroke = $state<{ r: number; g: number; b: number }>({ ...SHAPE_DEFAULT_STROKE });
+
+	/** True while the field-properties modal is open for the selected field. */
+	fieldModalOpen = $state(false);
 
 	exporting = $state(false);
 	loadingPdf = $state(false);
@@ -114,6 +123,7 @@ export class EditorState {
 	selected = $derived(this.elements.find((e) => e.id === this.selectedId) ?? null);
 	selectedText = $derived(this.selected?.type === 'text' ? this.selected : null);
 	selectedShape = $derived(this.selected?.type === 'shape' ? this.selected : null);
+	selectedField = $derived(this.selected?.type === 'field' ? this.selected : null);
 
 	nextId(prefix: string): string {
 		return `${prefix}${this.#nextId++}`;
@@ -145,6 +155,8 @@ export class EditorState {
 			x: el.x + 8,
 			y: el.y + 8
 		} as EditElement;
+		// Fields must keep unique names; a clone gets a fresh suggested name.
+		if (clone.type === 'field') clone.name = this.uniqueFieldName(clone.field);
 		this.add(clone);
 	}
 
@@ -292,16 +304,66 @@ export class EditorState {
 		this.pendingImage = null;
 	}
 
-	/** Handle a click on the bare page background at canvas px coords. Only the
-	 * active draw tool creates; shape kinds are drawn by drag, not click. */
-	placeAtClient(clientX: number, clientY: number, pageEl: HTMLElement, pageIndex: number) {
-		if (this.tool.type !== 'draw') return;
-		const kind = this.tool.kind;
-		if (kind === 'line' || kind === 'rectangle' || kind === 'ellipse') return;
+	/**
+	 * Suggest a unique AcroForm field name for a new field of `kind`, e.g.
+	 * `text1`, `checkbox2`. Counts up until the name is free among existing
+	 * field elements.
+	 */
+	uniqueFieldName(kind: FieldKind): string {
+		const taken = this.elements
+			.filter((e) => e.type === 'field')
+			.map((e) => (e as FieldElement).name);
+		let n = 1;
+		while (taken.includes(`${kind}${n}`)) n++;
+		return `${kind}${n}`;
+	}
 
+	/**
+	 * True if `name` is already used by a field element other than the one with
+	 * `exceptId`. Drives the modal's inline duplicate-name validation.
+	 */
+	fieldNameTaken(name: string, exceptId: string): boolean {
+		return this.elements.some(
+			(e) => e.type === 'field' && e.id !== exceptId && (e as FieldElement).name === name
+		);
+	}
+
+	/** Create a new field of `kind` at top-left PDF-point coords on a page. */
+	placeFieldAt(kind: FieldKind, x: number, y: number, pageIndex: number) {
+		const size = FIELD_DEFAULT_SIZE[kind];
+		const el: FieldElement = {
+			type: 'field',
+			id: this.nextId('f'),
+			field: kind,
+			name: this.uniqueFieldName(kind),
+			x,
+			y,
+			width: size.width,
+			height: size.height,
+			page: pageIndex,
+			...(kind === 'dropdown' || kind === 'combo' || kind === 'listbox' || kind === 'radio'
+				? { options: ['Option 1', 'Option 2'] }
+				: {})
+		};
+		this.add(el);
+	}
+
+	/** Handle a click on the bare page background at canvas px coords. Only an
+	 * active draw or field tool creates; shape kinds are drawn by drag, not click. */
+	placeAtClient(clientX: number, clientY: number, pageEl: HTMLElement, pageIndex: number) {
 		const rect = pageEl.getBoundingClientRect();
 		const x = (clientX - rect.left) / SCALE;
 		const y = (clientY - rect.top) / SCALE;
+
+		if (this.tool.type === 'field') {
+			this.placeFieldAt(this.tool.kind, x, y, pageIndex);
+			this.resetTool();
+			return;
+		}
+
+		if (this.tool.type !== 'draw') return;
+		const kind = this.tool.kind;
+		if (kind === 'line' || kind === 'rectangle' || kind === 'ellipse') return;
 
 		if (kind === 'signature') {
 			if (!this.pendingSignature) return;
@@ -317,10 +379,10 @@ export class EditorState {
 
 	// --- shapes --------------------------------------------------------------
 
-	/** Activate a tool. Entering a draw tool clears the current selection. */
+	/** Activate a tool. Entering a create tool clears the current selection. */
 	setTool(tool: Tool) {
 		this.tool = tool;
-		if (tool.type === 'draw') this.selectedId = null;
+		if (tool.type === 'draw' || tool.type === 'field') this.selectedId = null;
 	}
 
 	/** Return to the idle select tool. */
@@ -408,7 +470,10 @@ export class EditorState {
 		window.addEventListener('pointerup', up);
 	}
 
-	startResize(event: PointerEvent, el: SignatureElement | ImageElement | ShapeElement) {
+	startResize(
+		event: PointerEvent,
+		el: SignatureElement | ImageElement | ShapeElement | FieldElement
+	) {
 		event.stopPropagation();
 		event.preventDefault();
 		this.selectedId = el.id;
@@ -416,8 +481,8 @@ export class EditorState {
 		const startY = event.clientY;
 		const startWidth = el.width;
 		const startHeight = el.height;
-		// Rasters resize about their aspect ratio; shapes resize freely on both axes.
-		const free = el.type === 'shape';
+		// Rasters resize about their aspect ratio; shapes/fields resize freely.
+		const free = el.type === 'shape' || el.type === 'field';
 		const aspect = el.width / el.height;
 
 		const minSide = free ? SHAPE_MIN_SIZE : 20;
@@ -472,8 +537,17 @@ export class EditorState {
 			// One source-page op per page, in original order, unrotated.
 			this.pageOps = result.map((_, i) => ({ kind: 'source', sourceIndex: i, rotation: 0 }));
 			this.sourceBytes = exportCopy;
-			this.elements = [];
 			this.selectedId = null;
+			// Detect AcroForm fields (D1, server-side). Failures are swallowed: the
+			// editor still opens for stamping with no fields surfaced.
+			let detected: FieldElement[] = [];
+			try {
+				const res = await extractFields({ bytes: exportCopy.slice() });
+				detected = res.fields as FieldElement[];
+			} catch {
+				detected = [];
+			}
+			this.elements = detected;
 		} catch (e) {
 			this.errorMessage =
 				e instanceof PdfRenderError

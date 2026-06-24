@@ -188,5 +188,76 @@ export interface ShapeElement {
 	fillColor?: { r: number; g: number; b: number };
 }
 
+/**
+ * The kinds of AcroForm field the editor can read and author.
+ *
+ * `dropdown` and `combo` both author via `addDropdown`; `combo` is an editable
+ * (combo) dropdown while `dropdown` is a plain selection list. They are kept
+ * distinct in the model so the UI can offer both; the export maps both through
+ * `addDropdown` (a plain dropdown is a non-editable combo).
+ */
+export type FieldKind =
+	| 'text'
+	| 'checkbox'
+	| 'radio'
+	| 'dropdown'
+	| 'signature'
+	| 'listbox'
+	| 'combo';
+
+/**
+ * An interactive AcroForm field, either detected on upload (D1) or authored in
+ * the editor (D2). Detected and authored fields are the same shape and behave
+ * identically. Like the other elements, `x`/`y` are the top-left corner in PDF
+ * points with a top-left origin; the export rebuild flips Y when authoring the
+ * widget rect (see {@link import('./coords').topLeftToRect}).
+ */
+export interface FieldElement {
+	type: 'field';
+	id: string;
+	/** Which AcroForm field kind this is. */
+	field: FieldKind;
+	/** Fully-qualified AcroForm field name; unique within the document. */
+	name: string;
+	/** Distance from the left edge, in PDF points. */
+	x: number;
+	/** Distance from the top edge, in PDF points (top-left origin). */
+	y: number;
+	/** Widget width in PDF points. */
+	width: number;
+	/** Widget height in PDF points. */
+	height: number;
+	/** Zero-based output page index. Defaults to 0. */
+	page?: number;
+	/** Required flag. */
+	required?: boolean;
+	/** Read-only flag. */
+	readOnly?: boolean;
+	/** Tooltip / user-facing description. */
+	tooltip?: string;
+	/** Widget border color (RGB 0..1) and optional width in points. */
+	border?: { color: { r: number; g: number; b: number }; width?: number };
+	/** Widget background fill color (RGB 0..1). */
+	background?: { r: number; g: number; b: number };
+	/**
+	 * Current fill value. For checkbox it is the on-state value when checked (or
+	 * '' when unchecked); for signature it is a PNG data URL of the drawn image.
+	 */
+	value?: string;
+	/** Options for dropdown / radio / listbox / combo. */
+	options?: string[];
+	/** Placeholder text (text fields only). */
+	placeholder?: string;
+	/** Max length (text fields only). */
+	maxLength?: number;
+	/** Multiline flag (text fields only). */
+	multiline?: boolean;
+}
+
 /** Discriminated union of everything the editor can stamp onto a page. */
-export type EditElement = TextElement | SignatureElement | ImageElement | ShapeElement;
+export type EditElement =
+	| TextElement
+	| SignatureElement
+	| ImageElement
+	| ShapeElement
+	| FieldElement;
