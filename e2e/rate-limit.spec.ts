@@ -21,6 +21,12 @@ async function gotoEditorWithFingerprint(page: Page, fingerprint: string) {
 }
 
 async function addTextElement(page: Page) {
+	// Reveal the canvas from the upload-or-blank empty state, then arm the Text
+	// tool — page clicks only create when a draw tool is active (no more
+	// click-to-add "lottery").
+	const startBlank = page.getByRole('button', { name: 'Start blank' });
+	if (await startBlank.isVisible().catch(() => false)) await startBlank.click();
+	await page.getByRole('button', { name: 'Text', exact: true }).click();
 	const blankPage = page.locator('div.shadow-lg').first();
 	await expect(blankPage).toBeVisible();
 	await blankPage.click({ position: { x: 40, y: 40 } });
