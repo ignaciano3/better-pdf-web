@@ -1,21 +1,43 @@
-import { error } from '@sveltejs/kit';
-import { desc, eq } from 'drizzle-orm';
+import { error, fail } from '@sveltejs/kit';
+import { and, count, desc, eq, gte } from 'drizzle-orm';
 import { getDb } from '$lib/server/db';
 import { user } from '$lib/server/db/schema';
-import { subscription } from '$lib/server/db/schema.app';
+import { subscription, usageEvent } from '$lib/server/db/schema.app';
 import { resolvePlan } from '$lib/server/plan';
-import type { PageServerLoad } from './$types';
+import type { Actions, PageServerLoad } from './$types';
 
-/**
- * Admin dashboard — visible to `root` users only. Non-root (including anonymous)
- * callers get a 404 so the page's existence is not revealed.
- */
-export const load: PageServerLoad = async ({ locals }) => {
+const PLANS = ['free', 'pro', 'root'] as const;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const EXPORT_ACTION = 'export';
+
+/** Throw 404 unless the caller is a root user (hides the page from everyone else). */
+async function requireRoot(locals: App.Locals): Promise<NonNullable<App.Locals['user']>> {
 	const current = locals.user;
 	if (!current) error(404, 'Not found');
 	if ((await resolvePlan(current.id)) !== 'root') error(404, 'Not found');
+	return current;
+}
 
+/** Sum export events per user (optionally only since `since`) → { userId: count }. */
+async function exportCounts(since?: Date): Promise<Record<string, number>> {
+	const where = since
+		? and(eq(usageEvent.action, EXPORT_ACTION), gte(usageEvent.createdAt, since))
+		: eq(usageEvent.action, EXPORT_ACTION);
 	const rows = await getDb()
+		.select({ userId: usageEvent.userId, total: count() })
+		.from(usageEvent)
+		.where(where)
+		.groupBy(usageEvent.userId);
+	const out: Record<string, number> = {};
+	for (const r of rows) if (r.userId) out[r.userId] = r.total;
+	return out;
+}
+
+export const load: PageServerLoad = async ({ locals }) => {
+	await requireRoot(locals);
+	const db = getDb();
+
+	const rows = await db
 		.select({
 			id: user.id,
 			name: user.name,
@@ -29,15 +51,57 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.leftJoin(subscription, eq(subscription.userId, user.id))
 		.orderBy(desc(user.createdAt));
 
+	const [allTime, last24h] = await Promise.all([
+		exportCounts(),
+		exportCounts(new Date(Date.now() - DAY_MS))
+	]);
+
 	const users = rows.map((r) => ({
 		id: r.id,
 		name: r.name,
 		email: r.email,
 		emailVerified: r.emailVerified,
 		createdAt: r.createdAt,
-		// Stored plan; defaults to free when there is no subscription row.
-		plan: r.status === 'active' && r.plan ? r.plan : 'free'
+		// Stored plan; defaults to free when there is no active subscription row.
+		plan: r.status === 'active' && r.plan ? r.plan : 'free',
+		exportsTotal: allTime[r.id] ?? 0,
+		exports24h: last24h[r.id] ?? 0
 	}));
 
-	return { users };
+	const totals = { root: 0, pro: 0, free: 0 };
+	for (const u of users) {
+		if (u.plan === 'root') totals.root++;
+		else if (u.plan === 'pro') totals.pro++;
+		else totals.free++;
+	}
+
+	return { users, totals };
+};
+
+export const actions: Actions = {
+	/** Set a user's plan (free/pro/root). Root-only; refuses self-demotion. */
+	setPlan: async ({ locals, request }) => {
+		const current = await requireRoot(locals);
+		const form = await request.formData();
+		const userId = String(form.get('userId') ?? '');
+		const plan = String(form.get('plan') ?? '');
+
+		if (!userId || !PLANS.includes(plan as (typeof PLANS)[number])) {
+			return fail(400, { message: 'Invalid user or plan.' });
+		}
+		// Guard against locking yourself out of admin.
+		if (userId === current.id && plan !== 'root') {
+			return fail(400, { message: 'Refusing to remove your own root access.' });
+		}
+
+		await getDb()
+			.insert(subscription)
+			.values({ userId, plan, status: 'active', currentPeriodEnd: null })
+			.onConflictDoUpdate({
+				target: subscription.userId,
+				set: { plan, status: 'active', currentPeriodEnd: null }
+			});
+
+		return { success: true, message: `Set ${userId} to ${plan}.` };
+	}
 };

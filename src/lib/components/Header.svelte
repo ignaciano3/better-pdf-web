@@ -3,7 +3,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { signOut } from '$lib/auth-client';
 
-	let { user }: { user: { email: string } | null } = $props();
+	let { user, isRoot = false }: { user: { email: string } | null; isRoot?: boolean } = $props();
 
 	let signingOut = $state(false);
 
@@ -20,6 +20,9 @@
 	<a href={resolve('/')} class="text-lg font-semibold text-gray-900">better-pdf-web</a>
 	<nav class="flex items-center gap-4 text-sm">
 		{#if user}
+			{#if isRoot}
+				<a href={resolve('/admin')} class="font-medium text-purple-700 hover:underline">Admin</a>
+			{/if}
 			<span class="text-gray-600">{user.email}</span>
 			<button
 				type="button"
