@@ -14,8 +14,13 @@ async function gotoEditorWithFingerprint(page: Page, fingerprint: string) {
 	await expect(page.getByRole('button', { name: 'Export PDF' })).toBeVisible();
 }
 
-/** Click the blank A4 page background to add a "New text" element. */
+/** Reveal the blank canvas, arm the Text tool, and click to add a "New text" element. */
 async function addTextElement(page: Page) {
+	// Reveal the canvas from the upload-or-blank empty state, then arm the Text
+	// tool — page clicks only create when a draw tool is active.
+	const startBlank = page.getByRole('button', { name: 'Start blank' });
+	if (await startBlank.isVisible().catch(() => false)) await startBlank.click();
+	await page.getByRole('button', { name: 'Text', exact: true }).click();
 	const blankPage = page.locator('div.shadow-lg').first();
 	await expect(blankPage).toBeVisible();
 	// Click near a corner so the click lands on the bare page, not an overlay.
