@@ -29,21 +29,21 @@ Feature scope table below for which lib calls each feature exercises.
 
 ## Feature scope (lib coverage)
 
-| Feature | PR | better-pdf calls exercised |
-| --- | --- | --- |
-| Rich static text | 1 | `drawText` font/color/opacity/rotate/lineHeight/maxWidth; `StandardFonts` |
-| Form field read | 2 | `getForm().getFields()`, widget `rect`/`page` |
-| Form field authoring | 2 | `createForm()` → `FormBuilder` |
-| Field types (listbox/combo) | 2 | `ChoiceOptions.combo`, `PdfListBox.selectMultiple` |
-| Field properties | 2 | `FieldBorder`, `background`, `tooltip`, `readOnly`, `maxLength`, `multiline` |
-| Fill + export rebuild | 2 | `embedPdfPage`/`drawPage`, `createForm`, `PdfSignature.setImage` |
-| Freehand / polygon | 3 | `drawSvgPath`, `drawPolygon` |
-| Hyperlinks | 3 | `drawLink` (`url` / `goToPage`) |
-| Custom font embed | 3 | `embedFont(bytes)`, `PdfFont` |
-| Zoom / page size | 4 | canvas zoom; `setSize` / `setMediaBox` on export |
-| Merge PDFs | 4 | `embedPdfPage` from a second source |
-| Document properties | 4 | `setTitle`/`setAuthor`/`setSubject`/`setKeywords`/`setCreator` |
-| Outline / bookmarks | 4 | `setOutline(OutlineItem[])` |
+| Feature                     | PR  | better-pdf calls exercised                                                   |
+| --------------------------- | --- | ---------------------------------------------------------------------------- |
+| Rich static text            | 1   | `drawText` font/color/opacity/rotate/lineHeight/maxWidth; `StandardFonts`    |
+| Form field read             | 2   | `getForm().getFields()`, widget `rect`/`page`                                |
+| Form field authoring        | 2   | `createForm()` → `FormBuilder`                                               |
+| Field types (listbox/combo) | 2   | `ChoiceOptions.combo`, `PdfListBox.selectMultiple`                           |
+| Field properties            | 2   | `FieldBorder`, `background`, `tooltip`, `readOnly`, `maxLength`, `multiline` |
+| Fill + export rebuild       | 2   | `embedPdfPage`/`drawPage`, `createForm`, `PdfSignature.setImage`             |
+| Freehand / polygon          | 3   | `drawSvgPath`, `drawPolygon`                                                 |
+| Hyperlinks                  | 3   | `drawLink` (`url` / `goToPage`)                                              |
+| Custom font embed           | 3   | `embedFont(bytes)`, `PdfFont`                                                |
+| Zoom / page size            | 4   | canvas zoom; `setSize` / `setMediaBox` on export                             |
+| Merge PDFs                  | 4   | `embedPdfPage` from a second source                                          |
+| Document properties         | 4   | `setTitle`/`setAuthor`/`setSubject`/`setKeywords`/`setCreator`               |
+| Outline / bookmarks         | 4   | `setOutline(OutlineItem[])`                                                  |
 
 Everything writes PDFs through `@ignaciano3/better-pdf` (dogfooding). pdf.js is
 used only to rasterize pages for display. WASM stays server-only: field reading
@@ -68,7 +68,7 @@ client-render / server-finalize split.
 - **Stamp round-trip.** Static text/image/shape are baked into page content on
   export and are not recoverable as editable elements on re-import. Making them
   round-trip needs an embedded edit-state sidecar, which the lib cannot store
-  today (see Risks). Marked *desired*, not MVP.
+  today (see Risks). Marked _desired_, not MVP.
 - Flatten-on-download (ship interactive forms only in MVP; `flattenFields`
   exists for a fast follow).
 - Multi-widget radio-group subtleties beyond basic single-group radios.
@@ -135,13 +135,13 @@ in the plan (see Risks).
 - New `tool` state on `EditorState`, grouped into two distinct categories that
   the UI also keeps visually separate:
   - **Drawings (stamps):** `'text' | 'image' | 'signature' | 'line' |
-    'rectangle' | 'ellipse'` (PR1) + `'path' | 'polygon' | 'link'` (PR3).
+'rectangle' | 'ellipse'` (PR1) + `'path' | 'polygon' | 'link'` (PR3).
   - **Form fields:** `'field-text' | 'field-checkbox' | 'field-radio' |
-    'field-dropdown' | 'field-signature' | 'field-listbox' | 'field-combo'`.
+'field-dropdown' | 'field-signature' | 'field-listbox' | 'field-combo'`.
   - Plus the default `'select'`.
 - Modeled so the two categories never blur: e.g.
   `type Tool = 'select' | { group: 'draw'; kind: DrawKind } | { group: 'field';
-  kind: FieldKind }` (or an equivalent tagged enum) — drawings produce static
+kind: FieldKind }` (or an equivalent tagged enum) — drawings produce static
   stamp elements, fields produce `FieldElement`s. (Form-field tools are wired in
   PR2; PR1 ships the grouping and the drawing tools.)
 - Page click creates an element only when a create-tool is active; `'select'`
@@ -195,24 +195,24 @@ Detected AcroForm fields open the same modal with their read values.
 Extend `src/lib/pdf/types.ts`:
 
 ```ts
-type FieldKind =
-  | 'text' | 'checkbox' | 'radio' | 'dropdown'
-  | 'signature' | 'listbox' | 'combo';
+type FieldKind = 'text' | 'checkbox' | 'radio' | 'dropdown' | 'signature' | 'listbox' | 'combo';
 
 interface FieldElementBase {
-  type: 'field';
-  id: string;
-  field: FieldKind;
-  name: string;          // fully-qualified AcroForm name, unique
-  x: number; y: number;  // top-left origin, PDF points
-  width: number; height: number;
-  page?: number;
-  required?: boolean;
-  readOnly?: boolean;
-  tooltip?: string;
-  border?: { color: { r: number; g: number; b: number }; width?: number };
-  background?: { r: number; g: number; b: number };
-  value?: string;        // current fill value (PNG dataURL for signature)
+	type: 'field';
+	id: string;
+	field: FieldKind;
+	name: string; // fully-qualified AcroForm name, unique
+	x: number;
+	y: number; // top-left origin, PDF points
+	width: number;
+	height: number;
+	page?: number;
+	required?: boolean;
+	readOnly?: boolean;
+	tooltip?: string;
+	border?: { color: { r: number; g: number; b: number }; width?: number };
+	background?: { r: number; g: number; b: number };
+	value?: string; // current fill value (PNG dataURL for signature)
 }
 // + per-kind extras: text { placeholder?, maxLength?, multiline? },
 //   dropdown/radio/listbox/combo { options: string[] }

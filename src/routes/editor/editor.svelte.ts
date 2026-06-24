@@ -4,7 +4,6 @@ import type {
 	ImageElement,
 	PageOp,
 	ShapeElement,
-	ShapeKind,
 	SignatureElement
 } from '$lib/pdf/types';
 import { renderSourcePdf, type RenderedPage, PdfRenderError } from '$lib/pdf/render';
@@ -19,6 +18,9 @@ import {
 	SHAPE_DEFAULT_STROKE,
 	SHAPE_DEFAULT_STROKE_WIDTH,
 	SHAPE_MIN_SIZE,
+	SELECT_TOOL,
+	type Tool,
+	type DrawKind,
 	type PageInfo,
 	type PendingRaster
 } from './constants';
@@ -91,9 +93,11 @@ export class EditorState {
 	pendingSignature = $state<PendingRaster | null>(null);
 	pendingImage = $state<PendingRaster | null>(null);
 
-	/** When set, dragging on a page draws a shape of this kind instead of
-	 * click-to-add-text. Cleared after one shape is drawn. */
-	shapeTool = $state<ShapeKind | null>(null);
+	/** Active tool. `select` (default) edits existing elements; a `draw` tool
+	 * makes the next page click/drag create that element, then resets to select. */
+	tool = $state<Tool>(SELECT_TOOL);
+	/** The draw kind in effect, or null when selecting. */
+	activeDrawKind = $derived<DrawKind | null>(this.tool.type === 'draw' ? this.tool.kind : null);
 	/** Stroke color applied to newly drawn shapes (RGB 0..1). */
 	shapeStroke = $state<{ r: number; g: number; b: number }>({ ...SHAPE_DEFAULT_STROKE });
 
@@ -129,6 +133,19 @@ export class EditorState {
 			this.elements = this.elements.filter((e) => e.id !== this.selectedId);
 			this.selectedId = null;
 		}
+	}
+
+	/** Clone the selected element 8pt down-right and select the copy. */
+	duplicateSelected() {
+		const el = this.selected;
+		if (!el) return;
+		const clone = {
+			...$state.snapshot(el),
+			id: this.nextId(el.type[0] ?? 'e'),
+			x: el.x + 8,
+			y: el.y + 8
+		} as EditElement;
+		this.add(clone);
 	}
 
 	elementsForPage(pageIndex: number): EditElement[] {
@@ -275,22 +292,40 @@ export class EditorState {
 		this.pendingImage = null;
 	}
 
-	/** Handle a click on the bare page background at canvas px coords. */
+	/** Handle a click on the bare page background at canvas px coords. Only the
+	 * active draw tool creates; shape kinds are drawn by drag, not click. */
 	placeAtClient(clientX: number, clientY: number, pageEl: HTMLElement, pageIndex: number) {
+		if (this.tool.type !== 'draw') return;
+		const kind = this.tool.kind;
+		if (kind === 'line' || kind === 'rectangle' || kind === 'ellipse') return;
+
 		const rect = pageEl.getBoundingClientRect();
 		const x = (clientX - rect.left) / SCALE;
 		const y = (clientY - rect.top) / SCALE;
-		if (this.pendingSignature) return this.placeSignatureAt(x, y, pageIndex);
-		if (this.pendingImage) return this.placeImageAt(x, y, pageIndex);
-		this.addTextAt(x, y, pageIndex);
+
+		if (kind === 'signature') {
+			if (!this.pendingSignature) return;
+			this.placeSignatureAt(x, y, pageIndex);
+		} else if (kind === 'image') {
+			if (!this.pendingImage) return;
+			this.placeImageAt(x, y, pageIndex);
+		} else {
+			this.addTextAt(x, y, pageIndex);
+		}
+		this.resetTool();
 	}
 
 	// --- shapes --------------------------------------------------------------
 
-	/** Toggle the active shape tool (null = back to text/click mode). */
-	setShapeTool(kind: ShapeKind | null) {
-		this.shapeTool = this.shapeTool === kind ? null : kind;
-		if (this.shapeTool) this.selectedId = null;
+	/** Activate a tool. Entering a draw tool clears the current selection. */
+	setTool(tool: Tool) {
+		this.tool = tool;
+		if (tool.type === 'draw') this.selectedId = null;
+	}
+
+	/** Return to the idle select tool. */
+	resetTool() {
+		this.tool = SELECT_TOOL;
 	}
 
 	/**
@@ -300,7 +335,11 @@ export class EditorState {
 	 * page's pointerdown.
 	 */
 	beginShapeDraw(event: PointerEvent, pageEl: HTMLElement, pageIndex: number): boolean {
-		const kind = this.shapeTool;
+		const kind =
+			this.tool.type === 'draw' &&
+			(this.tool.kind === 'line' || this.tool.kind === 'rectangle' || this.tool.kind === 'ellipse')
+				? this.tool.kind
+				: null;
 		if (!kind) return false;
 		event.preventDefault();
 		const rect = pageEl.getBoundingClientRect();
@@ -336,8 +375,8 @@ export class EditorState {
 			// A stray click with no real drag still yields a visible default shape.
 			if (el.width < SHAPE_MIN_SIZE) el.width = SHAPE_MIN_SIZE * 4;
 			if (el.shape !== 'line' && el.height < SHAPE_MIN_SIZE) el.height = SHAPE_MIN_SIZE * 4;
-			// One-shot tool: return to normal mode after drawing.
-			this.shapeTool = null;
+			// One-shot tool: return to select after drawing.
+			this.resetTool();
 		};
 		window.addEventListener('pointermove', move);
 		window.addEventListener('pointerup', up);

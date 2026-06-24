@@ -51,6 +51,21 @@ export type PageOp =
 			rotation: number;
 	  };
 
+/** The 12 standard PDF fonts better-pdf exposes without embedding. */
+export type StandardFontName =
+	| 'Helvetica'
+	| 'Helvetica-Bold'
+	| 'Helvetica-Oblique'
+	| 'Helvetica-BoldOblique'
+	| 'Courier'
+	| 'Courier-Bold'
+	| 'Courier-Oblique'
+	| 'Courier-BoldOblique'
+	| 'Times-Roman'
+	| 'Times-Bold'
+	| 'Times-Italic'
+	| 'Times-BoldItalic';
+
 export interface TextElement {
 	type: 'text';
 	id: string;
@@ -68,6 +83,16 @@ export interface TextElement {
 	page?: number;
 	/** RGB components in 0..1. Defaults to black. */
 	color?: { r: number; g: number; b: number };
+	/** One of the 12 standard fonts. Defaults to Helvetica. */
+	font?: StandardFontName;
+	/** Opacity 0..1. Defaults to 1. */
+	opacity?: number;
+	/** Clockwise rotation in degrees for display; counter-clockwise at draw. */
+	rotation?: number;
+	/** Baseline distance for multi-line text. Defaults to 1.15 * size. */
+	lineHeight?: number;
+	/** Word-wrap width in PDF points. Omit for no wrap. */
+	maxWidth?: number;
 }
 
 /**
