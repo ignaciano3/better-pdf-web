@@ -1,7 +1,7 @@
 import { PdfDocument, PdfError, rgb } from '@ignaciano3/better-pdf';
-import type { Color } from '@ignaciano3/better-pdf/generate';
+import type { Color, PdfFont } from '@ignaciano3/better-pdf/generate';
 import type { FormBuilder } from '@ignaciano3/better-pdf/generate';
-import type { EditElement, EditState, FieldElement, PageOp } from './types';
+import type { EditElement, EditState, EmbeddedFontAsset, FieldElement, PageOp } from './types';
 import { renderElement } from './renderers';
 import { topLeftToPdfY } from './coords';
 
@@ -49,6 +49,29 @@ function toColor(c: { r: number; g: number; b: number }): Color {
 	return rgb(c.r, c.g, c.b);
 }
 
+/**
+ * Embed each font asset once, returning a `Record<id, PdfFont>` for renderers.
+ * A single asset that fails to embed (corrupt / unsupported font program) is
+ * skipped — text referencing it falls back to its standard font — rather than
+ * failing the whole export.
+ */
+async function embedFonts(
+	doc: PdfDocument,
+	assets: readonly EmbeddedFontAsset[] | undefined
+): Promise<Record<string, PdfFont>> {
+	const fonts: Record<string, PdfFont> = {};
+	if (!assets) return fonts;
+	for (const asset of assets) {
+		if (!asset || !(asset.bytes instanceof Uint8Array) || asset.bytes.byteLength === 0) continue;
+		try {
+			fonts[asset.id] = await doc.embedFont(asset.bytes);
+		} catch {
+			// Skip this font; referencing text falls back to its standard font.
+		}
+	}
+	return fonts;
+}
+
 /** Decode a `data:image/...;base64,...` URL to raw bytes, or null if not one. */
 function dataUrlToBytes(value: string | undefined): Uint8Array | null {
 	if (!value || !value.startsWith('data:')) return null;
@@ -86,7 +109,8 @@ async function buildBlankRebuild(state: EditState): Promise<Uint8Array> {
 		pageHeights.push(state.pageSize[1]);
 	}
 
-	await stampAndAuthor(doc, state.elements, pageHeights);
+	const fonts = await embedFonts(doc, state.fonts);
+	await stampAndAuthor(doc, state.elements, pageHeights, fonts);
 	return doc.save();
 }
 
@@ -136,7 +160,8 @@ async function buildSourceRebuild(state: EditState): Promise<Uint8Array> {
 			}
 		}
 
-		await stampAndAuthor(doc, state.elements, pageHeights);
+		const fonts = await embedFonts(doc, state.fonts);
+		await stampAndAuthor(doc, state.elements, pageHeights, fonts);
 		return await doc.save();
 	} catch (cause) {
 		if (cause instanceof PdfBuildError) throw cause;
@@ -159,7 +184,8 @@ async function buildSourceRebuild(state: EditState): Promise<Uint8Array> {
 async function stampAndAuthor(
 	doc: PdfDocument,
 	elements: readonly EditElement[],
-	pageHeights: number[]
+	pageHeights: number[],
+	fonts: Record<string, PdfFont>
 ): Promise<void> {
 	const pageCount = pageHeights.length;
 	const fields: FieldElement[] = [];
@@ -172,7 +198,10 @@ async function stampAndAuthor(
 			continue;
 		}
 		const page = doc.getPage(pageIndex);
-		await renderElement({ doc, page, pageHeight: pageHeights[pageIndex] as number }, element);
+		await renderElement(
+			{ doc, page, pageHeight: pageHeights[pageIndex] as number, fonts },
+			element
+		);
 	}
 
 	// Draw signature-field PNGs (drawn/uploaded) into their rect so they show even

@@ -3,6 +3,9 @@ import type { ElementRenderer, RenderContext } from './types';
 import { renderText } from './text';
 import { renderRaster } from './raster';
 import { renderShape } from './shape';
+import { renderPath } from './path';
+import { renderPolygon } from './polygon';
+import { renderLink } from './link';
 
 export type { RenderContext, ElementRenderer } from './types';
 
@@ -24,7 +27,10 @@ const registry: Record<StampType, ElementRenderer> = {
 	text: renderText as ElementRenderer,
 	signature: renderRaster as ElementRenderer,
 	image: renderRaster as ElementRenderer,
-	shape: renderShape as ElementRenderer
+	shape: renderShape as ElementRenderer,
+	path: renderPath as ElementRenderer,
+	polygon: renderPolygon as ElementRenderer,
+	link: renderLink as ElementRenderer
 };
 
 /**

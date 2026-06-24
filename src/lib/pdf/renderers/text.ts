@@ -12,10 +12,12 @@ function toFont(name: StandardFontName | undefined): StandardFonts | undefined {
  * so the baseline sits one font-size below it after the Y flip. `rotation` is
  * stored clockwise (CSS convention); drawText rotates counter-clockwise.
  */
-export const renderText: ElementRenderer<TextElement> = ({ page, pageHeight }, element) => {
+export const renderText: ElementRenderer<TextElement> = ({ page, pageHeight, fonts }, element) => {
 	const baselineY = pageHeight - element.y - element.size;
-	const { color, font, opacity, rotation, lineHeight, maxWidth } = element;
-	const f = toFont(font);
+	const { color, font, opacity, rotation, lineHeight, maxWidth, fontId } = element;
+	// An embedded custom font (when present) wins over the standard font.
+	const embedded = fontId ? fonts[fontId] : undefined;
+	const f = embedded ?? toFont(font);
 	page.drawText(element.text, {
 		x: element.x,
 		y: baselineY,

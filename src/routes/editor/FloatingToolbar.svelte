@@ -38,6 +38,14 @@
 			? { left: editor.selected.x * SCALE, top: editor.selected.y * SCALE - 44 }
 			: null
 	);
+
+	async function onFontUpload(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		const t = editor.selectedText;
+		if (file && t) await editor.applyCustomFont(file, t);
+		input.value = '';
+	}
 </script>
 
 {#if editor.selected && pos}
@@ -72,6 +80,34 @@
 				class="h-6 w-6 cursor-pointer rounded border"
 				aria-label="Text color"
 			/>
+			{#if t.fontId}
+				<span
+					class="max-w-24 truncate text-xs text-gray-600"
+					title={editor.embeddedFonts[t.fontId]?.name}
+				>
+					{editor.embeddedFonts[t.fontId]?.name ?? 'Custom font'}
+				</span>
+				<button
+					onclick={() => editor.clearCustomFont(t)}
+					class="rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+					title="Revert to a standard font"
+				>
+					Standard
+				</button>
+			{:else}
+				<label
+					class="cursor-pointer rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+					title="Upload a .ttf or .otf font"
+				>
+					Upload font
+					<input
+						type="file"
+						accept=".ttf,.otf,font/ttf,font/otf"
+						class="hidden"
+						onchange={onFontUpload}
+					/>
+				</label>
+			{/if}
 		{/if}
 
 		{#if editor.selectedShape}
@@ -107,6 +143,115 @@
 						aria-label="Fill color"
 					/>
 				{/if}
+			{/if}
+		{/if}
+
+		{#if editor.selectedVector}
+			{@const v = editor.selectedVector}
+			<input
+				type="color"
+				value={toHex(v.strokeColor)}
+				oninput={(e) => (v.strokeColor = fromHex((e.currentTarget as HTMLInputElement).value))}
+				class="h-6 w-6 cursor-pointer rounded border"
+				aria-label="Stroke color"
+			/>
+			<input
+				type="number"
+				min="0"
+				max="50"
+				step="0.5"
+				value={v.strokeWidth ?? 1}
+				oninput={(e) => (v.strokeWidth = Number((e.currentTarget as HTMLInputElement).value))}
+				class="w-14 rounded border px-1 py-0.5 text-sm"
+				aria-label="Stroke width"
+			/>
+			<label class="flex items-center gap-1 text-sm">
+				<input
+					type="checkbox"
+					checked={Boolean(v.fillColor)}
+					onchange={(e) => {
+						if ((e.currentTarget as HTMLInputElement).checked) {
+							v.fillColor = { r: 0.8, g: 0.8, b: 0.8 };
+						} else {
+							delete v.fillColor;
+						}
+					}}
+				/>
+				Fill
+			</label>
+			{#if v.fillColor}
+				<input
+					type="color"
+					value={toHex(v.fillColor)}
+					oninput={(e) => (v.fillColor = fromHex((e.currentTarget as HTMLInputElement).value))}
+					class="h-6 w-6 cursor-pointer rounded border"
+					aria-label="Fill color"
+				/>
+			{/if}
+			<label class="flex items-center gap-1 text-sm" title="Opacity">
+				α
+				<input
+					type="range"
+					min="0"
+					max="1"
+					step="0.05"
+					value={v.opacity ?? 1}
+					oninput={(e) => (v.opacity = Number((e.currentTarget as HTMLInputElement).value))}
+					class="w-16"
+					aria-label="Opacity"
+				/>
+			</label>
+		{/if}
+
+		{#if editor.selectedLink}
+			{@const ln = editor.selectedLink}
+			<label class="flex items-center gap-1 text-sm">
+				<input
+					type="radio"
+					name="link-target"
+					checked={ln.url !== undefined}
+					onchange={() => {
+						delete ln.goToPage;
+						ln.url = ln.url ?? '';
+					}}
+				/>
+				URL
+			</label>
+			<label class="flex items-center gap-1 text-sm">
+				<input
+					type="radio"
+					name="link-target"
+					checked={ln.goToPage !== undefined}
+					onchange={() => {
+						delete ln.url;
+						ln.goToPage = ln.goToPage ?? 0;
+					}}
+				/>
+				Page
+			</label>
+			{#if ln.url !== undefined}
+				<input
+					type="url"
+					placeholder="https://…"
+					value={ln.url}
+					oninput={(e) => (ln.url = (e.currentTarget as HTMLInputElement).value)}
+					class="w-44 rounded border px-1 py-0.5 text-sm"
+					aria-label="Link URL"
+				/>
+			{:else}
+				<input
+					type="number"
+					min="0"
+					placeholder="0-based page"
+					value={ln.goToPage ?? 0}
+					oninput={(e) =>
+						(ln.goToPage = Math.max(
+							0,
+							Math.floor(Number((e.currentTarget as HTMLInputElement).value))
+						))}
+					class="w-24 rounded border px-1 py-0.5 text-sm"
+					aria-label="Go to page (0-based)"
+				/>
 			{/if}
 		{/if}
 

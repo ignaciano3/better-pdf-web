@@ -36,7 +36,25 @@ export const SHAPE_DEFAULT_STROKE_WIDTH = 1;
 export const SHAPE_MIN_SIZE = 6;
 
 /** What a page click/drag does. `select` edits existing elements only. */
-export type DrawKind = 'text' | 'image' | 'signature' | 'line' | 'rectangle' | 'ellipse';
+export type DrawKind =
+	| 'text'
+	| 'image'
+	| 'signature'
+	| 'line'
+	| 'rectangle'
+	| 'ellipse'
+	| 'path'
+	| 'polygon'
+	| 'link';
+
+/** Default stroke width (PDF points) for a newly drawn path/polygon. */
+export const VECTOR_DEFAULT_STROKE_WIDTH = 2;
+
+/** Default size (PDF points) for a link rect created by a stray click (no drag). */
+export const LINK_DEFAULT_SIZE: { width: number; height: number } = { width: 120, height: 24 };
+
+/** Max custom-font upload size (bytes); mirrors the server-side cap. */
+export const MAX_FONT_BYTES = 5 * 1024 * 1024;
 export type { FieldKind } from '$lib/pdf/types';
 import type { FieldKind } from '$lib/pdf/types';
 export type Tool =

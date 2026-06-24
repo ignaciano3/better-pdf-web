@@ -27,6 +27,12 @@ export interface EditState {
 	 * When absent the builder keeps the source document's pages as-is.
 	 */
 	pageOps?: PageOp[];
+	/**
+	 * Custom fonts to embed. Each is embedded once at export and made available
+	 * to text elements that reference it via {@link TextElement.fontId}. Assets
+	 * referenced by no text element are harmlessly unused.
+	 */
+	fonts?: EmbeddedFontAsset[];
 }
 
 /**
@@ -93,6 +99,12 @@ export interface TextElement {
 	lineHeight?: number;
 	/** Word-wrap width in PDF points. Omit for no wrap. */
 	maxWidth?: number;
+	/**
+	 * References an {@link EmbeddedFontAsset.id} on {@link EditState.fonts}. When
+	 * set (and the asset embeds successfully) it overrides {@link font}; otherwise
+	 * the renderer falls back to the standard {@link font}.
+	 */
+	fontId?: string;
 }
 
 /**
@@ -189,6 +201,101 @@ export interface ShapeElement {
 }
 
 /**
+ * A free vector path: an ordered list of points stamped as an SVG path. Used by
+ * the freehand drawing tool (`closed: false` polyline) and closed vector shapes.
+ * `points` are absolute top-left-origin PDF points; `x`/`y` mirror the bounding
+ * box's top-left corner so {@link import('../../routes/editor/editor.svelte').EditorState.startDrag}
+ * can translate the whole element (it shifts every point by the same delta).
+ */
+export interface PathElement {
+	type: 'path';
+	id: string;
+	/** Bounding-box left edge (top-left origin, PDF points). */
+	x: number;
+	/** Bounding-box top edge (top-left origin, PDF points). */
+	y: number;
+	/** Zero-based output page index. Defaults to 0. */
+	page?: number;
+	/** Absolute top-left-origin PDF points; the renderer flips each point's Y. */
+	points: { x: number; y: number }[];
+	/** Close the path with a `Z` segment. Defaults to false (open polyline). */
+	closed?: boolean;
+	/** Stroke RGB components in 0..1. Defaults to black. */
+	strokeColor?: { r: number; g: number; b: number };
+	/** Stroke width in PDF points. Defaults to 1. */
+	strokeWidth?: number;
+	/** Fill RGB components in 0..1. Omit for no fill. */
+	fillColor?: { r: number; g: number; b: number };
+	/** Opacity 0..1. Defaults to 1. */
+	opacity?: number;
+}
+
+/**
+ * A polygon: a multi-vertex closed (default) or open shape stamped via
+ * `page.drawPolygon`. Same coordinate conventions as {@link PathElement}.
+ */
+export interface PolygonElement {
+	type: 'polygon';
+	id: string;
+	/** Bounding-box left edge (top-left origin, PDF points). */
+	x: number;
+	/** Bounding-box top edge (top-left origin, PDF points). */
+	y: number;
+	/** Zero-based output page index. Defaults to 0. */
+	page?: number;
+	/** Absolute top-left-origin PDF points; the renderer flips each point's Y. */
+	points: { x: number; y: number }[];
+	/** Close the polygon. Defaults to true. */
+	closed?: boolean;
+	/** Stroke RGB components in 0..1. Defaults to black. */
+	strokeColor?: { r: number; g: number; b: number };
+	/** Stroke width in PDF points. Defaults to 1. */
+	strokeWidth?: number;
+	/** Fill RGB components in 0..1. Omit for no fill. */
+	fillColor?: { r: number; g: number; b: number };
+	/** Opacity 0..1. Defaults to 1. */
+	opacity?: number;
+}
+
+/**
+ * A clickable link annotation over a rectangular region. Exactly one of
+ * {@link url} (external) or {@link goToPage} (internal, 0-based page index) must
+ * be set. Like the other elements, `x`/`y` is the top-left corner in PDF points
+ * (top-left origin); the renderer flips Y when authoring the link rect.
+ */
+export interface LinkElement {
+	type: 'link';
+	id: string;
+	/** Distance from the left edge, in PDF points. */
+	x: number;
+	/** Distance from the top edge, in PDF points (top-left origin). */
+	y: number;
+	/** Link rect width in PDF points. */
+	width: number;
+	/** Link rect height in PDF points. */
+	height: number;
+	/** Zero-based output page index. Defaults to 0. */
+	page?: number;
+	/** External URL target; mutually exclusive with {@link goToPage}. */
+	url?: string;
+	/** Internal 0-based page target; mutually exclusive with {@link url}. */
+	goToPage?: number;
+}
+
+/**
+ * A custom TrueType/OpenType font uploaded in the editor and embedded into the
+ * exported PDF. Referenced by {@link TextElement.fontId}.
+ */
+export interface EmbeddedFontAsset {
+	/** Stable id referenced by {@link TextElement.fontId}. */
+	id: string;
+	/** Display name (the uploaded file's name). */
+	name: string;
+	/** Raw font-program bytes (the .ttf/.otf file contents). */
+	bytes: Uint8Array;
+}
+
+/**
  * The kinds of AcroForm field the editor can read and author.
  *
  * `dropdown` and `combo` both author via `addDropdown`; `combo` is an editable
@@ -260,4 +367,7 @@ export type EditElement =
 	| SignatureElement
 	| ImageElement
 	| ShapeElement
+	| PathElement
+	| PolygonElement
+	| LinkElement
 	| FieldElement;

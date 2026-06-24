@@ -23,9 +23,35 @@
 
 	function onPagePointerDown(event: PointerEvent, pageIndex: number) {
 		if (event.target !== event.currentTarget) return;
-		editor.beginShapeDraw(event, event.currentTarget as HTMLElement, pageIndex);
+		const el = event.currentTarget as HTMLElement;
+		// Drag-drawn kinds claim the gesture on pointerdown; the first that matches
+		// the active tool handles it (each no-ops when its tool isn't active).
+		if (editor.beginShapeDraw(event, el, pageIndex)) return;
+		if (editor.beginFreehandDraw(event, el, pageIndex)) return;
+		editor.beginLinkDraw(event, el, pageIndex);
+	}
+
+	function onPageDblClick(event: MouseEvent) {
+		// Double-click closes an in-progress polygon.
+		if (editor.polygonDraftId) {
+			event.preventDefault();
+			editor.closePolygon();
+		}
+	}
+
+	function onKeyDown(event: KeyboardEvent) {
+		if (!editor.polygonDraftId) return;
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			editor.closePolygon();
+		} else if (event.key === 'Escape') {
+			event.preventDefault();
+			editor.cancelPolygon();
+		}
 	}
 </script>
+
+<svelte:window onkeydown={onKeyDown} />
 
 <div class="flex-1 overflow-auto p-8">
 	<div class="mx-auto flex w-fit flex-col gap-6">
@@ -35,6 +61,7 @@
 				class="relative bg-white shadow-lg"
 				style="width: {page.width * SCALE}px; height: {page.height * SCALE}px;"
 				onclick={(e) => onPageClick(e, pageIndex)}
+				ondblclick={onPageDblClick}
 				onpointerdown={(e) => onPagePointerDown(e, pageIndex)}
 			>
 				{#if editor.pageRender(pageIndex)}

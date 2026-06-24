@@ -33,35 +33,43 @@ page.drawText(text, { font: PdfFont, ... })   // pass an embedded PdfFont handle
 
 ```ts
 export interface PathElement {
-  type: 'path';
-  id: string;
-  x: number; y: number;            // bounding-box top-left (top-left origin, PDF pts)
-  page?: number;
-  points: { x: number; y: number }[]; // absolute top-left-origin PDF points
-  closed?: boolean;                 // false for freehand polyline; true for closed shape
-  strokeColor?: { r:number;g:number;b:number };
-  strokeWidth?: number;
-  fillColor?: { r:number;g:number;b:number };
-  opacity?: number;
+	type: 'path';
+	id: string;
+	x: number;
+	y: number; // bounding-box top-left (top-left origin, PDF pts)
+	page?: number;
+	points: { x: number; y: number }[]; // absolute top-left-origin PDF points
+	closed?: boolean; // false for freehand polyline; true for closed shape
+	strokeColor?: { r: number; g: number; b: number };
+	strokeWidth?: number;
+	fillColor?: { r: number; g: number; b: number };
+	opacity?: number;
 }
 
 export interface PolygonElement {
-  type: 'polygon';
-  id: string;
-  x: number; y: number;
-  page?: number;
-  points: { x: number; y: number }[]; // absolute top-left-origin PDF points
-  closed?: boolean;                 // default true
-  strokeColor?; strokeWidth?; fillColor?; opacity?;  // same shapes as PathElement
+	type: 'polygon';
+	id: string;
+	x: number;
+	y: number;
+	page?: number;
+	points: { x: number; y: number }[]; // absolute top-left-origin PDF points
+	closed?: boolean; // default true
+	strokeColor?;
+	strokeWidth?;
+	fillColor?;
+	opacity?; // same shapes as PathElement
 }
 
 export interface LinkElement {
-  type: 'link';
-  id: string;
-  x: number; y: number; width: number; height: number; // top-left origin
-  page?: number;
-  url?: string;        // external; mutually exclusive with goToPage
-  goToPage?: number;   // 0-based internal target
+	type: 'link';
+	id: string;
+	x: number;
+	y: number;
+	width: number;
+	height: number; // top-left origin
+	page?: number;
+	url?: string; // external; mutually exclusive with goToPage
+	goToPage?: number; // 0-based internal target
 }
 ```
 
@@ -71,7 +79,11 @@ points so `startDrag` moves the whole element (translate all points by delta).
 For embedded fonts, extend `EditState` and `TextElement`:
 
 ```ts
-export interface EmbeddedFontAsset { id: string; name: string; bytes: Uint8Array; }
+export interface EmbeddedFontAsset {
+	id: string;
+	name: string;
+	bytes: Uint8Array;
+}
 // EditState gains:  fonts?: EmbeddedFontAsset[];
 // TextElement gains: fontId?: string;   // references EmbeddedFontAsset.id; overrides `font`
 ```
@@ -111,6 +123,7 @@ asset referenced by no text element is simply unused (harmless).
 
 Extend `DrawKind` with `'path' | 'polygon' | 'link'`. (They stay in the drawing
 group, separate from fields.) Wire creation:
+
 - `path` (freehand): pointerdown→move samples points into a new `PathElement`
   (`closed:false`); pointerup commits + `resetTool()`. Reuse the
   `beginShapeDraw` pattern (a new `beginFreehandDraw`).
@@ -119,8 +132,8 @@ group, separate from fields.) Wire creation:
   acceptable if multi-click proves fiddly — but prefer real multi-vertex.)
 - `link`: drag a rect like a shape → `LinkElement` (default `url:''`); the
   floating toolbar edits the target.
-Add `selectedPath`/`selectedPolygon`/`selectedLink` deriveds as needed.
-`startDrag` must translate `points[]` for path/polygon (not just x/y).
+  Add `selectedPath`/`selectedPolygon`/`selectedLink` deriveds as needed.
+  `startDrag` must translate `points[]` for path/polygon (not just x/y).
 
 ## Overlays
 
@@ -128,7 +141,7 @@ Add `selectedPath`/`selectedPolygon`/`selectedLink` deriveds as needed.
   `<svg>` (scaled by SCALE) showing the polyline/polygon; selectable + draggable.
 - `overlays/LinkOverlay.svelte`: a translucent rectangle (dashed border) showing
   the link target; selectable + draggable + resizable.
-Register all three in `overlays/index.ts`.
+  Register all three in `overlays/index.ts`.
 
 ## Floating toolbar — `src/routes/editor/FloatingToolbar.svelte`
 
@@ -155,6 +168,7 @@ the `EditState` (or include all; unused are harmless). Add a reader
 ## Validation — `src/routes/editor/export-validate.ts`
 
 Add cases (required, or new-element exports 422):
+
 - `path` / `polygon`: `points` is an array (len ≥ 2 for polygon, ≥ 1 for path) of
   `{x,y}` finite numbers; cap point count (e.g. ≤ 10_000); finite stroke width /
   opacity if present.
@@ -162,7 +176,7 @@ Add cases (required, or new-element exports 422):
   (finite int ≥ 0). Reject both-or-neither.
 - `text`: accept optional `fontId` (string).
 - Validate `state.fonts` if present: array, each `{ id:string, name:string,
-  bytes:Uint8Array }`, bytes size cap (e.g. ≤ 5MB each), count cap.
+bytes:Uint8Array }`, bytes size cap (e.g. ≤ 5MB each), count cap.
 
 ## Tests (unit-first, both projects)
 

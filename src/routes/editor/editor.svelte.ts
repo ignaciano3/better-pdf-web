@@ -1,12 +1,17 @@
 import type {
 	EditElement,
 	EditState,
+	EmbeddedFontAsset,
 	FieldElement,
 	FieldKind,
 	ImageElement,
+	LinkElement,
 	PageOp,
+	PathElement,
+	PolygonElement,
 	ShapeElement,
-	SignatureElement
+	SignatureElement,
+	TextElement
 } from '$lib/pdf/types';
 import { renderSourcePdf, type RenderedPage, PdfRenderError } from '$lib/pdf/render';
 import { exportPdf } from './export.remote';
@@ -16,11 +21,14 @@ import {
 	SCALE,
 	MAX_PDF_BYTES,
 	MAX_IMAGE_BYTES,
+	MAX_FONT_BYTES,
 	SIGNATURE_DEFAULT_WIDTH,
 	IMAGE_DEFAULT_WIDTH,
 	SHAPE_DEFAULT_STROKE,
 	SHAPE_DEFAULT_STROKE_WIDTH,
 	SHAPE_MIN_SIZE,
+	VECTOR_DEFAULT_STROKE_WIDTH,
+	LINK_DEFAULT_SIZE,
 	FIELD_DEFAULT_SIZE,
 	SELECT_TOOL,
 	type Tool,
@@ -107,6 +115,13 @@ export class EditorState {
 	/** Stroke color applied to newly drawn shapes (RGB 0..1). */
 	shapeStroke = $state<{ r: number; g: number; b: number }>({ ...SHAPE_DEFAULT_STROKE });
 
+	/**
+	 * Id of the polygon currently being drawn vertex-by-vertex, or null. While
+	 * non-null, page clicks add a vertex; Enter/double-click closes it and Esc
+	 * cancels (removing it). Drives the in-progress overlay highlight.
+	 */
+	polygonDraftId = $state<string | null>(null);
+
 	/** True while the field-properties modal is open for the selected field. */
 	fieldModalOpen = $state(false);
 
@@ -120,10 +135,24 @@ export class EditorState {
 	/** Object URLs for raster previews, cached per element id. Not reactive. */
 	#rasterUrls: Record<string, string> = {};
 
+	/**
+	 * Custom fonts uploaded in this session, keyed by asset id. A Record (not a
+	 * Map) so it works in reactive Svelte state under the project's eslint rules.
+	 * Referenced by {@link TextElement.fontId}; included in the export state.
+	 */
+	embeddedFonts = $state<Record<string, EmbeddedFontAsset>>({});
+
 	selected = $derived(this.elements.find((e) => e.id === this.selectedId) ?? null);
 	selectedText = $derived(this.selected?.type === 'text' ? this.selected : null);
 	selectedShape = $derived(this.selected?.type === 'shape' ? this.selected : null);
 	selectedField = $derived(this.selected?.type === 'field' ? this.selected : null);
+	selectedPath = $derived(this.selected?.type === 'path' ? this.selected : null);
+	selectedPolygon = $derived(this.selected?.type === 'polygon' ? this.selected : null);
+	selectedLink = $derived(this.selected?.type === 'link' ? this.selected : null);
+	/** A path or polygon — both share the same stroke/fill/opacity controls. */
+	selectedVector = $derived<PathElement | PolygonElement | null>(
+		this.selected?.type === 'path' || this.selected?.type === 'polygon' ? this.selected : null
+	);
 
 	nextId(prefix: string): string {
 		return `${prefix}${this.#nextId++}`;
@@ -363,7 +392,22 @@ export class EditorState {
 
 		if (this.tool.type !== 'draw') return;
 		const kind = this.tool.kind;
-		if (kind === 'line' || kind === 'rectangle' || kind === 'ellipse') return;
+		// Drag-drawn kinds are committed on pointerdown→up, not on click.
+		if (
+			kind === 'line' ||
+			kind === 'rectangle' ||
+			kind === 'ellipse' ||
+			kind === 'path' ||
+			kind === 'link'
+		) {
+			return;
+		}
+
+		// Polygon is multi-click: add a vertex and keep the tool active.
+		if (kind === 'polygon') {
+			this.addPolygonVertex(x, y, pageIndex);
+			return;
+		}
 
 		if (kind === 'signature') {
 			if (!this.pendingSignature) return;
@@ -445,6 +489,159 @@ export class EditorState {
 		return true;
 	}
 
+	// --- vector paths / polygons / links -------------------------------------
+
+	/**
+	 * Begin a freehand path: pointerdown starts it, each pointermove samples a
+	 * point, pointerup commits it (`closed:false`) and resets to select. Returns
+	 * false (no-op) when the path tool isn't active. Points are absolute
+	 * top-left-origin PDF points.
+	 */
+	beginFreehandDraw(event: PointerEvent, pageEl: HTMLElement, pageIndex: number): boolean {
+		if (!(this.tool.type === 'draw' && this.tool.kind === 'path')) return false;
+		event.preventDefault();
+		const rect = pageEl.getBoundingClientRect();
+		const at = (e: PointerEvent) => ({
+			x: (e.clientX - rect.left) / SCALE,
+			y: (e.clientY - rect.top) / SCALE
+		});
+		const start = at(event);
+		const stroke = $state.snapshot(this.shapeStroke);
+		const el: PathElement = {
+			type: 'path',
+			id: this.nextId('pa'),
+			x: start.x,
+			y: start.y,
+			page: pageIndex,
+			points: [start],
+			closed: false,
+			strokeColor: stroke,
+			strokeWidth: VECTOR_DEFAULT_STROKE_WIDTH
+		};
+		this.add(el);
+
+		const move = (e: PointerEvent) => {
+			const p = at(e);
+			// Skip near-duplicate samples to keep the point list manageable.
+			const last = el.points[el.points.length - 1];
+			if (last && Math.hypot(p.x - last.x, p.y - last.y) < 1) return;
+			el.points = [...el.points, p];
+			const box = boundingBox(el.points);
+			el.x = box.x;
+			el.y = box.y;
+		};
+		const up = () => {
+			window.removeEventListener('pointermove', move);
+			window.removeEventListener('pointerup', up);
+			this.resetTool();
+		};
+		window.addEventListener('pointermove', move);
+		window.addEventListener('pointerup', up);
+		return true;
+	}
+
+	/**
+	 * Begin a link rect: press one corner, drag to size, release commits a
+	 * {@link LinkElement} (default empty `url`) and resets to select. The floating
+	 * toolbar then edits the target. Returns false when the link tool isn't active.
+	 */
+	beginLinkDraw(event: PointerEvent, pageEl: HTMLElement, pageIndex: number): boolean {
+		if (!(this.tool.type === 'draw' && this.tool.kind === 'link')) return false;
+		event.preventDefault();
+		const rect = pageEl.getBoundingClientRect();
+		const startX = (event.clientX - rect.left) / SCALE;
+		const startY = (event.clientY - rect.top) / SCALE;
+		const el: LinkElement = {
+			type: 'link',
+			id: this.nextId('ln'),
+			x: startX,
+			y: startY,
+			width: 0,
+			height: 0,
+			page: pageIndex,
+			url: ''
+		};
+		this.add(el);
+
+		const move = (e: PointerEvent) => {
+			const curX = (e.clientX - rect.left) / SCALE;
+			const curY = (e.clientY - rect.top) / SCALE;
+			el.x = Math.min(startX, curX);
+			el.y = Math.min(startY, curY);
+			el.width = Math.abs(curX - startX);
+			el.height = Math.abs(curY - startY);
+		};
+		const up = () => {
+			window.removeEventListener('pointermove', move);
+			window.removeEventListener('pointerup', up);
+			if (el.width < SHAPE_MIN_SIZE) el.width = LINK_DEFAULT_SIZE.width;
+			if (el.height < SHAPE_MIN_SIZE) el.height = LINK_DEFAULT_SIZE.height;
+			this.resetTool();
+		};
+		window.addEventListener('pointermove', move);
+		window.addEventListener('pointerup', up);
+		return true;
+	}
+
+	/**
+	 * Add a polygon vertex at top-left PDF-point coords. Starts a new draft on the
+	 * first click and appends to it on subsequent clicks. The polygon tool stays
+	 * active until {@link closePolygon} or {@link cancelPolygon}.
+	 */
+	addPolygonVertex(x: number, y: number, pageIndex: number) {
+		const draft = this.polygonDraftId
+			? this.elements.find((e) => e.id === this.polygonDraftId && e.type === 'polygon')
+			: null;
+		if (draft && draft.type === 'polygon') {
+			draft.points = [...draft.points, { x, y }];
+			const box = boundingBox(draft.points);
+			draft.x = box.x;
+			draft.y = box.y;
+			return;
+		}
+		const stroke = $state.snapshot(this.shapeStroke);
+		const el: PolygonElement = {
+			type: 'polygon',
+			id: this.nextId('pg'),
+			x,
+			y,
+			page: pageIndex,
+			points: [{ x, y }],
+			closed: true,
+			strokeColor: stroke,
+			strokeWidth: VECTOR_DEFAULT_STROKE_WIDTH
+		};
+		this.add(el);
+		this.polygonDraftId = el.id;
+	}
+
+	/**
+	 * Finish the in-progress polygon. A polygon with fewer than 2 vertices is
+	 * discarded (nothing to draw). Returns to the select tool.
+	 */
+	closePolygon() {
+		const id = this.polygonDraftId;
+		this.polygonDraftId = null;
+		if (!id) return;
+		const el = this.elements.find((e) => e.id === id);
+		if (el && el.type === 'polygon' && el.points.length < 2) {
+			this.elements = this.elements.filter((e) => e.id !== id);
+			this.selectedId = null;
+		}
+		this.resetTool();
+	}
+
+	/** Abandon the in-progress polygon, removing it. Returns to the select tool. */
+	cancelPolygon() {
+		const id = this.polygonDraftId;
+		this.polygonDraftId = null;
+		if (id) {
+			this.elements = this.elements.filter((e) => e.id !== id);
+			if (this.selectedId === id) this.selectedId = null;
+		}
+		this.resetTool();
+	}
+
 	// --- drag / resize -------------------------------------------------------
 
 	startDrag(event: PointerEvent, el: EditElement) {
@@ -453,14 +650,23 @@ export class EditorState {
 		const startY = event.clientY;
 		const originX = el.x;
 		const originY = el.y;
+		// Path/polygon carry absolute points; snapshot them so the whole element
+		// translates with the bounding box (x/y) rather than only the box moving.
+		const hasPoints = el.type === 'path' || el.type === 'polygon';
+		const originPoints = hasPoints ? el.points.map((p) => ({ x: p.x, y: p.y })) : null;
 		let dragging = false;
 
 		const move = (e: PointerEvent) => {
 			// Threshold so a plain click still places the text caret for editing.
 			if (!dragging && Math.hypot(e.clientX - startX, e.clientY - startY) < 4) return;
 			dragging = true;
-			el.x = originX + (e.clientX - startX) / SCALE;
-			el.y = originY + (e.clientY - startY) / SCALE;
+			const dx = (e.clientX - startX) / SCALE;
+			const dy = (e.clientY - startY) / SCALE;
+			el.x = originX + dx;
+			el.y = originY + dy;
+			if (originPoints && (el.type === 'path' || el.type === 'polygon')) {
+				el.points = originPoints.map((p) => ({ x: p.x + dx, y: p.y + dy }));
+			}
 		};
 		const up = () => {
 			window.removeEventListener('pointermove', move);
@@ -472,7 +678,7 @@ export class EditorState {
 
 	startResize(
 		event: PointerEvent,
-		el: SignatureElement | ImageElement | ShapeElement | FieldElement
+		el: SignatureElement | ImageElement | ShapeElement | FieldElement | LinkElement
 	) {
 		event.stopPropagation();
 		event.preventDefault();
@@ -481,8 +687,8 @@ export class EditorState {
 		const startY = event.clientY;
 		const startWidth = el.width;
 		const startHeight = el.height;
-		// Rasters resize about their aspect ratio; shapes/fields resize freely.
-		const free = el.type === 'shape' || el.type === 'field';
+		// Rasters resize about their aspect ratio; shapes/fields/links resize freely.
+		const free = el.type === 'shape' || el.type === 'field' || el.type === 'link';
 		const aspect = el.width / el.height;
 
 		const minSide = free ? SHAPE_MIN_SIZE : 20;
@@ -567,6 +773,7 @@ export class EditorState {
 		this.errorMessage = null;
 		this.pendingSignature = null;
 		this.pendingImage = null;
+		this.polygonDraftId = null;
 	}
 
 	// --- raster uploads ------------------------------------------------------
@@ -593,6 +800,47 @@ export class EditorState {
 		}
 	}
 
+	// --- custom fonts --------------------------------------------------------
+
+	/**
+	 * Read a .ttf/.otf file into an {@link EmbeddedFontAsset} (with a size cap) and
+	 * register it on {@link embeddedFonts}. Returns the asset, or null on a bad
+	 * type / oversize / read error (with {@link errorMessage} set).
+	 */
+	async readFont(file: File): Promise<EmbeddedFontAsset | null> {
+		this.errorMessage = null;
+		const name = file.name.toLowerCase();
+		const ok = name.endsWith('.ttf') || name.endsWith('.otf');
+		if (!ok) {
+			this.errorMessage = 'Please choose a .ttf or .otf font file.';
+			return null;
+		}
+		if (file.size > MAX_FONT_BYTES) {
+			this.errorMessage = `That font is too large (max ${Math.round(MAX_FONT_BYTES / 1024 / 1024)} MB).`;
+			return null;
+		}
+		try {
+			const bytes = new Uint8Array(await file.arrayBuffer());
+			const asset: EmbeddedFontAsset = { id: this.nextId('fnt'), name: file.name, bytes };
+			this.embeddedFonts = { ...this.embeddedFonts, [asset.id]: asset };
+			return asset;
+		} catch {
+			this.errorMessage = 'Could not read that font.';
+			return null;
+		}
+	}
+
+	/** Upload a custom font and apply it to a text element (sets its `fontId`). */
+	async applyCustomFont(file: File, el: TextElement): Promise<void> {
+		const asset = await this.readFont(file);
+		if (asset) el.fontId = asset.id;
+	}
+
+	/** Revert a text element to its standard font (clears `fontId`). */
+	clearCustomFont(el: TextElement): void {
+		delete el.fontId;
+	}
+
 	// --- export --------------------------------------------------------------
 
 	async export() {
@@ -600,11 +848,18 @@ export class EditorState {
 		this.errorMessage = null;
 		try {
 			const firstPage = this.pages[0] ?? { width: DEFAULT_PAGE[0], height: DEFAULT_PAGE[1] };
+			// Only ship fonts actually referenced by a text element (unused are harmless,
+			// but trimming keeps the payload small).
+			const referenced = this.elements
+				.filter((e): e is TextElement => e.type === 'text' && typeof e.fontId === 'string')
+				.map((e) => e.fontId as string);
+			const fonts = Object.values(this.embeddedFonts).filter((f) => referenced.includes(f.id));
 			const state: EditState = {
 				pageSize: [firstPage.width, firstPage.height],
 				elements: $state.snapshot(this.elements) as EditElement[],
 				...(this.sourceBytes ? { sourcePdf: this.sourceBytes } : {}),
-				...(this.pageOps.length > 0 ? { pageOps: $state.snapshot(this.pageOps) as PageOp[] } : {})
+				...(this.pageOps.length > 0 ? { pageOps: $state.snapshot(this.pageOps) as PageOp[] } : {}),
+				...(fonts.length > 0 ? { fonts: $state.snapshot(fonts) as EmbeddedFontAsset[] } : {})
 			};
 			const bytes = await exportPdf({ state, fingerprint: getFingerprint() });
 			downloadPdf(bytes);
@@ -623,6 +878,18 @@ export class EditorState {
 	dismissUpsell() {
 		this.upsell = null;
 	}
+}
+
+/** Top-left bounding box (x/y = min corner) of a list of points. */
+function boundingBox(points: { x: number; y: number }[]): { x: number; y: number } {
+	if (points.length === 0) return { x: 0, y: 0 };
+	let minX = Infinity;
+	let minY = Infinity;
+	for (const p of points) {
+		if (p.x < minX) minX = p.x;
+		if (p.y < minY) minY = p.y;
+	}
+	return { x: minX, y: minY };
 }
 
 function imageAspect(file: File): Promise<number> {

@@ -14,11 +14,32 @@ const MAX_FIELD_NAME_LEN = 256;
 const MAX_FIELD_OPTIONS = 1_000;
 // Signature dataURLs are stored in `value`; cap generously (~2 MB of base64).
 const MAX_FIELD_VALUE_LEN = 2_000_000;
+// Vector point caps so a runaway path/polygon can't blow up the renderer.
+const MAX_POINTS = 10_000;
+const MAX_URL_LEN = 2_048;
+// Embedded custom-font caps.
+const MAX_FONTS = 50;
+const MAX_FONT_BYTES = 5 * 1024 * 1024; // 5 MB per font
 
 const FIELD_KINDS = ['text', 'checkbox', 'radio', 'dropdown', 'signature', 'listbox', 'combo'];
 
 function isFiniteNumber(n: unknown): n is number {
 	return typeof n === 'number' && Number.isFinite(n);
+}
+
+/**
+ * Validate a vector point list: an array (length within `[min, MAX_POINTS]`) of
+ * `{x, y}` finite numbers. Throws a 422 on any violation.
+ */
+function validatePoints(points: unknown, min: number): void {
+	if (!Array.isArray(points)) error(422, 'Invalid points');
+	if (points.length < min) error(422, 'Too few points');
+	if (points.length > MAX_POINTS) error(422, 'Too many points');
+	for (const p of points as unknown[]) {
+		if (!p || typeof p !== 'object') error(422, 'Invalid point');
+		const pt = p as { x?: unknown; y?: unknown };
+		if (!isFiniteNumber(pt.x) || !isFiniteNumber(pt.y)) error(422, 'Invalid point coordinate');
+	}
 }
 
 /**
@@ -43,6 +64,8 @@ function validateElement(el: EditElement): void {
 			}
 			if (el.maxWidth !== undefined && !isFiniteNumber(el.maxWidth))
 				error(422, 'Invalid max width');
+			if (el.fontId !== undefined && typeof el.fontId !== 'string')
+				error(422, 'Invalid text fontId');
 			break;
 		case 'signature':
 		case 'image':
@@ -59,6 +82,42 @@ function validateElement(el: EditElement): void {
 			}
 			if (!['line', 'rectangle', 'ellipse'].includes(el.shape)) error(422, 'Invalid shape kind');
 			break;
+		case 'path':
+			validatePoints(el.points, 1);
+			if (el.strokeWidth !== undefined && !isFiniteNumber(el.strokeWidth)) {
+				error(422, 'Invalid path stroke width');
+			}
+			if (el.opacity !== undefined && !isFiniteNumber(el.opacity)) {
+				error(422, 'Invalid path opacity');
+			}
+			break;
+		case 'polygon':
+			validatePoints(el.points, 2);
+			if (el.strokeWidth !== undefined && !isFiniteNumber(el.strokeWidth)) {
+				error(422, 'Invalid polygon stroke width');
+			}
+			if (el.opacity !== undefined && !isFiniteNumber(el.opacity)) {
+				error(422, 'Invalid polygon opacity');
+			}
+			break;
+		case 'link': {
+			if (!isFiniteNumber(el.width) || !isFiniteNumber(el.height)) {
+				error(422, 'Invalid link geometry');
+			}
+			const hasUrl = el.url !== undefined;
+			const hasGoTo = el.goToPage !== undefined;
+			// Exactly one target — reject both-or-neither.
+			if (hasUrl === hasGoTo) error(422, 'Link must have exactly one of url or goToPage');
+			if (hasUrl) {
+				if (typeof el.url !== 'string' || el.url.length === 0) error(422, 'Invalid link url');
+				if (el.url.length > MAX_URL_LEN) error(422, 'Link url too large');
+			} else {
+				if (!isFiniteNumber(el.goToPage) || !Number.isInteger(el.goToPage) || el.goToPage < 0) {
+					error(422, 'Invalid link goToPage');
+				}
+			}
+			break;
+		}
 		case 'field':
 			if (!isFiniteNumber(el.width) || !isFiniteNumber(el.height)) {
 				error(422, 'Invalid field geometry');
@@ -135,6 +194,18 @@ export function validateExportInput(input: unknown): ExportInput {
 	if (state.pageOps !== undefined) {
 		if (!Array.isArray(state.pageOps)) error(422, 'Invalid page operations');
 		if (state.pageOps.length > MAX_PAGE_OPS) error(422, 'Too many page operations');
+	}
+
+	if (state.fonts !== undefined) {
+		if (!Array.isArray(state.fonts)) error(422, 'Invalid fonts');
+		if (state.fonts.length > MAX_FONTS) error(422, 'Too many fonts');
+		for (const font of state.fonts) {
+			if (!font || typeof font !== 'object') error(422, 'Invalid font asset');
+			if (typeof font.id !== 'string' || font.id.length === 0) error(422, 'Invalid font id');
+			if (typeof font.name !== 'string') error(422, 'Invalid font name');
+			if (!(font.bytes instanceof Uint8Array)) error(422, 'Invalid font bytes');
+			if (font.bytes.byteLength > MAX_FONT_BYTES) error(413, 'Font too large');
+		}
 	}
 
 	return { state: state as EditState, fingerprint };
