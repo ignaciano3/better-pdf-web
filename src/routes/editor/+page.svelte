@@ -6,6 +6,7 @@
 	import Canvas from './Canvas.svelte';
 	import PageManager from './PageManager.svelte';
 	import FloatingToolbar from './FloatingToolbar.svelte';
+	import ZoomControls from './ZoomControls.svelte';
 	import FieldPropertiesModal from './FieldPropertiesModal.svelte';
 	import DocumentPropertiesModal from './DocumentPropertiesModal.svelte';
 	import OutlineEditor from './OutlineEditor.svelte';
@@ -18,9 +19,11 @@
 	let started = $state(false);
 	const showEmptyState = $derived(!editor.sourceBytes && !started && editor.elements.length === 0);
 
-	// Deep-link from the home "Edit existing PDF" button.
+	// Deep-link from the home CTAs via `?operation=`:
+	//   new    → jump straight into a blank canvas (skip the empty state)
+	//   upload → show the upload-or-blank empty state
 	$effect(() => {
-		if (page.url.searchParams.get('upload') === '1') started = false;
+		if (page.url.searchParams.get('operation') === 'new') started = true;
 	});
 
 	function startBlank() {
@@ -81,6 +84,7 @@
 			</div>
 		{:else}
 			<Canvas {editor} />
+			<ZoomControls {editor} />
 		{/if}
 		<FloatingToolbar {editor} />
 	</div>

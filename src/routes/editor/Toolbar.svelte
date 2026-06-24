@@ -6,20 +6,21 @@
 	let { editor, onDrawSignature }: { editor: EditorState; onDrawSignature: () => void } = $props();
 
 	let fieldMenuOpen = $state(false);
-	let sizeMenuOpen = $state(false);
+	let docMenuOpen = $state(false);
 
 	async function onMergeChange(event: Event) {
 		const input = event.currentTarget as HTMLInputElement;
 		const file = input.files?.[0];
 		if (file) await editor.appendPdf(file);
 		input.value = '';
+		docMenuOpen = false;
 	}
 
 	function applyPageSize(size: [number, number], landscape: boolean) {
 		const [w, h] = size;
 		const dims: [number, number] = landscape ? [Math.max(w, h), Math.min(w, h)] : [w, h];
 		editor.setAllPageSizes(dims);
-		sizeMenuOpen = false;
+		docMenuOpen = false;
 	}
 
 	const fieldTools: { kind: FieldKind; label: string }[] = [
@@ -82,19 +83,36 @@
 
 	function toolClass(active: boolean): string {
 		return active
-			? 'rounded bg-blue-600 px-2.5 py-1.5 text-sm font-medium text-white'
-			: 'rounded px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100';
+			? 'shrink-0 rounded bg-blue-600 px-2.5 py-1.5 text-sm font-medium text-white'
+			: 'shrink-0 rounded px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100';
 	}
+
+	const menuItem = 'block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100';
 </script>
 
-<header class="flex items-center gap-4 border-b border-gray-200 bg-white px-4 py-2">
-	<!-- Left: File -->
-	<div class="flex items-center gap-2">
-		<span class="text-sm font-semibold text-gray-900">better-pdf</span>
+<header class="flex items-center gap-3 border-b border-gray-200 bg-white px-3 py-2">
+	<!-- Left: File (icons) -->
+	<div class="flex shrink-0 items-center gap-1">
 		<label
-			class="cursor-pointer rounded bg-gray-100 px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200"
+			class="flex cursor-pointer items-center gap-1.5 rounded bg-gray-100 px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200"
+			title="Upload a PDF"
 		>
-			{editor.loadingPdf ? 'Loading…' : 'Upload PDF'}
+			<!-- upload icon -->
+			<svg
+				class="h-4 w-4"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				aria-hidden="true"
+			>
+				<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+				<polyline points="17 8 12 3 7 8" />
+				<line x1="12" y1="3" x2="12" y2="15" />
+			</svg>
+			{editor.loadingPdf ? 'Loading…' : 'Upload'}
 			<input
 				type="file"
 				accept="application/pdf,.pdf"
@@ -106,16 +124,17 @@
 		{#if editor.sourceBytes}
 			<button
 				onclick={() => editor.clearSource()}
-				class="rounded px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+				class="shrink-0 rounded px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
 			>
 				New blank
 			</button>
 		{/if}
 	</div>
 
-	<!-- Center: Insert tools — Drawings | Form fields (fields land in PR2) -->
-	<div class="mx-auto flex items-center gap-3">
-		<div class="flex items-center gap-1 rounded-lg border border-gray-200 p-1">
+	<!-- Center: Insert tools. Scrolls internally on narrow screens so the right
+	     zone (Export) is never pushed off-screen. -->
+	<div class="flex min-w-0 flex-1 items-center gap-3">
+		<div class="flex items-center gap-1 overflow-x-auto rounded-lg border border-gray-200 p-1">
 			<button class={toolClass(editor.tool.type === 'select')} onclick={() => editor.resetTool()}>
 				Select
 			</button>
@@ -140,7 +159,7 @@
 				/>
 			</label>
 			<label
-				class="cursor-pointer rounded px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+				class="shrink-0 cursor-pointer rounded px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
 			>
 				Upload sig
 				<input
@@ -153,9 +172,9 @@
 		</div>
 
 		<!-- Form fields — a separate group from the drawing tools. -->
-		<div class="relative flex items-center gap-1 rounded-lg border border-gray-200 p-1">
+		<div class="relative shrink-0">
 			<button
-				class={toolClass(editor.activeFieldKind !== null)}
+				class={toolClass(editor.activeFieldKind !== null) + ' border border-gray-200'}
 				aria-haspopup="menu"
 				aria-expanded={fieldMenuOpen}
 				onclick={() => (fieldMenuOpen = !fieldMenuOpen)}
@@ -169,8 +188,7 @@
 				>
 					{#each fieldTools as f (f.kind)}
 						<button
-							class="block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100 {editor.activeFieldKind ===
-							f.kind
+							class="{menuItem} {editor.activeFieldKind === f.kind
 								? 'font-semibold text-blue-600'
 								: ''}"
 							role="menuitem"
@@ -184,96 +202,68 @@
 		</div>
 	</div>
 
-	<!-- Right: document controls + zoom + export -->
-	<div class="flex items-center gap-2">
-		<!-- Merge another PDF -->
-		<label
-			class="cursor-pointer rounded px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
-			title="Merge / append another PDF"
-		>
-			Merge PDF
-			<input
-				type="file"
-				accept="application/pdf,.pdf"
-				class="hidden"
-				disabled={editor.loadingPdf}
-				onchange={onMergeChange}
-			/>
-		</label>
-
-		<!-- Page size -->
-		{#if editor.pageOps.length > 0}
-			<div class="relative">
-				<button
-					class="rounded px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
-					aria-haspopup="menu"
-					aria-expanded={sizeMenuOpen}
-					onclick={() => (sizeMenuOpen = !sizeMenuOpen)}
+	<!-- Right: document menu + export (pinned; never scrolls off) -->
+	<div class="flex shrink-0 items-center gap-2">
+		<div class="relative">
+			<button
+				class="rounded px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+				aria-haspopup="menu"
+				aria-expanded={docMenuOpen}
+				onclick={() => (docMenuOpen = !docMenuOpen)}
+			>
+				Document ▾
+			</button>
+			{#if docMenuOpen}
+				<div
+					class="absolute top-full right-0 z-30 mt-1 max-h-96 w-52 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+					role="menu"
 				>
-					Page size ▾
-				</button>
-				{#if sizeMenuOpen}
-					<div
-						class="absolute top-full right-0 z-30 mt-1 w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
-						role="menu"
+					<label class="{menuItem} block cursor-pointer">
+						Merge / append PDF…
+						<input
+							type="file"
+							accept="application/pdf,.pdf"
+							class="hidden"
+							disabled={editor.loadingPdf}
+							onchange={onMergeChange}
+						/>
+					</label>
+					<button
+						class={menuItem}
+						role="menuitem"
+						onclick={() => {
+							editor.docPropsModalOpen = true;
+							docMenuOpen = false;
+						}}
 					>
+						Properties…
+					</button>
+					<button
+						class={menuItem}
+						role="menuitem"
+						onclick={() => {
+							editor.outlineEditorOpen = true;
+							docMenuOpen = false;
+						}}
+					>
+						Outline / bookmarks…
+					</button>
+					{#if editor.pageOps.length > 0}
+						<div class="my-1 border-t border-gray-100"></div>
+						<p class="px-3 py-1 text-xs font-medium tracking-wide text-gray-400 uppercase">
+							Page size
+						</p>
 						{#each NAMED_PAGE_SIZES as s (s.label)}
-							<button
-								class="block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100"
-								role="menuitem"
-								onclick={() => applyPageSize(s.size, false)}
-							>
+							<button class={menuItem} role="menuitem" onclick={() => applyPageSize(s.size, false)}>
 								{s.label} portrait
 							</button>
-							<button
-								class="block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100"
-								role="menuitem"
-								onclick={() => applyPageSize(s.size, true)}
-							>
+							<button class={menuItem} role="menuitem" onclick={() => applyPageSize(s.size, true)}>
 								{s.label} landscape
 							</button>
 						{/each}
-					</div>
-				{/if}
-			</div>
-		{/if}
-
-		<!-- Document properties + outline -->
-		<button
-			class="rounded px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
-			onclick={() => (editor.docPropsModalOpen = true)}
-		>
-			Properties
-		</button>
-		<button
-			class="rounded px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
-			onclick={() => (editor.outlineEditorOpen = true)}
-		>
-			Outline
-		</button>
-
-		<!-- Zoom -->
-		<div class="flex items-center gap-0.5 rounded-lg border border-gray-200 p-0.5">
-			<button
-				class="rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
-				title="Zoom out"
-				onclick={() => editor.zoomOut()}>−</button
-			>
-			<button
-				class="w-12 rounded px-1 py-1 text-center text-xs text-gray-700 hover:bg-gray-100"
-				title="Reset zoom"
-				onclick={() => editor.resetZoom()}>{Math.round(editor.zoom * 100)}%</button
-			>
-			<button
-				class="rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
-				title="Zoom in"
-				onclick={() => editor.zoomIn()}>+</button
-			>
-			<button
-				class="rounded px-2 py-1 text-xs text-gray-700 hover:bg-gray-100"
-				title="Fit to width"
-				onclick={() => editor.fitToWidth()}>Fit</button
-			>
+					{/if}
+				</div>
+			{/if}
 		</div>
 
 		<button

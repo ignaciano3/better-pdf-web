@@ -42,29 +42,21 @@ describe('Toolbar', () => {
 		expect(editor.activeFieldKind).toBe('checkbox');
 	});
 
-	it('zoom in / out buttons change zoom', async () => {
+	it('opens the document-properties and outline modals from the Document menu', async () => {
 		const user = userEvent.setup();
 		const editor = new EditorState();
 		render(Toolbar, { props: { editor, onDrawSignature: () => {} } });
 
-		await user.click(screen.getByTitle('Zoom in'));
+		await user.click(screen.getByRole('button', { name: 'Document ▾' }));
 		flushSync();
-		expect(editor.zoom).toBeCloseTo(1.25, 5);
-		await user.click(screen.getByTitle('Zoom out'));
-		flushSync();
-		expect(editor.zoom).toBeCloseTo(1, 5);
-	});
-
-	it('opens the document-properties and outline modals', async () => {
-		const user = userEvent.setup();
-		const editor = new EditorState();
-		render(Toolbar, { props: { editor, onDrawSignature: () => {} } });
-
-		await user.click(screen.getByRole('button', { name: 'Properties' }));
+		await user.click(screen.getByRole('menuitem', { name: 'Properties…' }));
 		flushSync();
 		expect(editor.docPropsModalOpen).toBe(true);
 
-		await user.click(screen.getByRole('button', { name: 'Outline' }));
+		// Selecting an item closes the menu; reopen for the next pick.
+		await user.click(screen.getByRole('button', { name: 'Document ▾' }));
+		flushSync();
+		await user.click(screen.getByRole('menuitem', { name: 'Outline / bookmarks…' }));
 		flushSync();
 		expect(editor.outlineEditorOpen).toBe(true);
 	});

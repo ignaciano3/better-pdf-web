@@ -10,13 +10,13 @@
 	</p>
 	<div class="flex flex-wrap items-center justify-center gap-4">
 		<a
-			href={resolve('/editor')}
+			href="{resolve('/editor')}?operation=new"
 			class="rounded-lg bg-blue-600 px-6 py-3 text-base font-semibold text-white hover:bg-blue-700"
 		>
 			Create new PDF
 		</a>
 		<a
-			href="{resolve('/editor')}?upload=1"
+			href="{resolve('/editor')}?operation=upload"
 			class="rounded-lg border border-gray-300 px-6 py-3 text-base font-semibold text-gray-800 hover:bg-gray-50"
 		>
 			Edit existing PDF

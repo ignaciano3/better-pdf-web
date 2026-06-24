@@ -491,6 +491,7 @@ export class EditorState {
 				: null;
 		if (!kind) return false;
 		event.preventDefault();
+		pageEl.setPointerCapture(event.pointerId);
 		const rect = pageEl.getBoundingClientRect();
 		const startX = (event.clientX - rect.left) / this.cssScale;
 		const startY = (event.clientY - rect.top) / this.cssScale;
@@ -509,21 +510,23 @@ export class EditorState {
 			strokeWidth: SHAPE_DEFAULT_STROKE_WIDTH
 		};
 		this.add(el);
+		// Use the reactive proxy version so mutations trigger re-renders.
+		const live = this.elements[this.elements.length - 1] as ShapeElement;
 
 		const move = (e: PointerEvent) => {
 			const curX = (e.clientX - rect.left) / this.cssScale;
 			const curY = (e.clientY - rect.top) / this.cssScale;
-			el.x = Math.min(startX, curX);
-			el.y = Math.min(startY, curY);
-			el.width = Math.abs(curX - startX);
-			el.height = Math.abs(curY - startY);
+			live.x = Math.min(startX, curX);
+			live.y = Math.min(startY, curY);
+			live.width = Math.abs(curX - startX);
+			live.height = Math.abs(curY - startY);
 		};
 		const up = () => {
 			window.removeEventListener('pointermove', move);
 			window.removeEventListener('pointerup', up);
 			// A stray click with no real drag still yields a visible default shape.
-			if (el.width < SHAPE_MIN_SIZE) el.width = SHAPE_MIN_SIZE * 4;
-			if (el.shape !== 'line' && el.height < SHAPE_MIN_SIZE) el.height = SHAPE_MIN_SIZE * 4;
+			if (live.width < SHAPE_MIN_SIZE) live.width = SHAPE_MIN_SIZE * 4;
+			if (live.shape !== 'line' && live.height < SHAPE_MIN_SIZE) live.height = SHAPE_MIN_SIZE * 4;
 			// One-shot tool: return to select after drawing.
 			this.resetTool();
 		};
@@ -543,6 +546,7 @@ export class EditorState {
 	beginFreehandDraw(event: PointerEvent, pageEl: HTMLElement, pageIndex: number): boolean {
 		if (!(this.tool.type === 'draw' && this.tool.kind === 'path')) return false;
 		event.preventDefault();
+		pageEl.setPointerCapture(event.pointerId);
 		const rect = pageEl.getBoundingClientRect();
 		const at = (e: PointerEvent) => ({
 			x: (e.clientX - rect.left) / this.cssScale,
@@ -562,20 +566,27 @@ export class EditorState {
 			strokeWidth: VECTOR_DEFAULT_STROKE_WIDTH
 		};
 		this.add(el);
+		// Use the reactive proxy version so mutations trigger re-renders.
+		const live = this.elements[this.elements.length - 1] as PathElement;
 
 		const move = (e: PointerEvent) => {
 			const p = at(e);
 			// Skip near-duplicate samples to keep the point list manageable.
-			const last = el.points[el.points.length - 1];
+			const last = live.points[live.points.length - 1];
 			if (last && Math.hypot(p.x - last.x, p.y - last.y) < 1) return;
-			el.points = [...el.points, p];
-			const box = boundingBox(el.points);
-			el.x = box.x;
-			el.y = box.y;
+			live.points = [...live.points, p];
+			const box = boundingBox(live.points);
+			live.x = box.x;
+			live.y = box.y;
 		};
 		const up = () => {
 			window.removeEventListener('pointermove', move);
 			window.removeEventListener('pointerup', up);
+			// Discard single-point taps that produce no visible stroke.
+			if (live.points.length < 2) {
+				this.elements = this.elements.filter((e) => e.id !== live.id);
+				this.selectedId = null;
+			}
 			this.resetTool();
 		};
 		window.addEventListener('pointermove', move);
@@ -591,6 +602,7 @@ export class EditorState {
 	beginLinkDraw(event: PointerEvent, pageEl: HTMLElement, pageIndex: number): boolean {
 		if (!(this.tool.type === 'draw' && this.tool.kind === 'link')) return false;
 		event.preventDefault();
+		pageEl.setPointerCapture(event.pointerId);
 		const rect = pageEl.getBoundingClientRect();
 		const startX = (event.clientX - rect.left) / this.cssScale;
 		const startY = (event.clientY - rect.top) / this.cssScale;
@@ -605,20 +617,22 @@ export class EditorState {
 			url: ''
 		};
 		this.add(el);
+		// Use the reactive proxy version so mutations trigger re-renders.
+		const live = this.elements[this.elements.length - 1] as LinkElement;
 
 		const move = (e: PointerEvent) => {
 			const curX = (e.clientX - rect.left) / this.cssScale;
 			const curY = (e.clientY - rect.top) / this.cssScale;
-			el.x = Math.min(startX, curX);
-			el.y = Math.min(startY, curY);
-			el.width = Math.abs(curX - startX);
-			el.height = Math.abs(curY - startY);
+			live.x = Math.min(startX, curX);
+			live.y = Math.min(startY, curY);
+			live.width = Math.abs(curX - startX);
+			live.height = Math.abs(curY - startY);
 		};
 		const up = () => {
 			window.removeEventListener('pointermove', move);
 			window.removeEventListener('pointerup', up);
-			if (el.width < SHAPE_MIN_SIZE) el.width = LINK_DEFAULT_SIZE.width;
-			if (el.height < SHAPE_MIN_SIZE) el.height = LINK_DEFAULT_SIZE.height;
+			if (live.width < SHAPE_MIN_SIZE) live.width = LINK_DEFAULT_SIZE.width;
+			if (live.height < SHAPE_MIN_SIZE) live.height = LINK_DEFAULT_SIZE.height;
 			this.resetTool();
 		};
 		window.addEventListener('pointermove', move);

@@ -21,7 +21,8 @@ function fakePage(): HTMLElement {
 			x: 0,
 			y: 0,
 			toJSON() {}
-		})
+		}),
+		setPointerCapture: () => {}
 	} as unknown as HTMLElement;
 }
 
