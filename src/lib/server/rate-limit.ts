@@ -10,8 +10,12 @@
 
 export type IdentityKind = 'anon' | 'user';
 
-/** Billing/usage tier that selects the cap. */
-export type Tier = 'anonymous' | 'free' | 'pro';
+/**
+ * Billing/usage tier that selects the cap. `root` is a private, highest-privilege
+ * tier (the operator and invited friends) — unlimited, like `pro`, granted only
+ * by a `subscription` row with `plan='root'`.
+ */
+export type Tier = 'anonymous' | 'free' | 'pro' | 'root';
 
 /** Sliding window in milliseconds. */
 export const WINDOW_MS = 60 * 60 * 1000; // 1 hour
@@ -26,7 +30,8 @@ export const UNLIMITED = Infinity;
 export const CAPS: Record<Tier, number> = {
 	anonymous: 2,
 	free: 5,
-	pro: UNLIMITED
+	pro: UNLIMITED,
+	root: UNLIMITED
 };
 
 export interface RateDecision {

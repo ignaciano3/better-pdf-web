@@ -34,10 +34,20 @@ describe('decide', () => {
 		});
 	});
 
+	it('always allows a root caller (unlimited)', () => {
+		expect(decide('root', 0)).toEqual({ allowed: true, limit: UNLIMITED, remaining: UNLIMITED });
+		expect(decide('root', 1_000_000)).toEqual({
+			allowed: true,
+			limit: UNLIMITED,
+			remaining: UNLIMITED
+		});
+	});
+
 	it('uses the configured caps', () => {
 		expect(CAPS.anonymous).toBe(2);
 		expect(CAPS.free).toBe(5);
 		expect(CAPS.pro).toBe(UNLIMITED);
+		expect(CAPS.root).toBe(UNLIMITED);
 	});
 });
 
