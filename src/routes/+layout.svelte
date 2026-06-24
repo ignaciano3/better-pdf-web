@@ -7,7 +7,7 @@
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
-<Header user={data.user} />
+<Header user={data.user} isRoot={data.isRoot} />
 <main class="px-6 py-6">
 	{@render children()}
 </main>
