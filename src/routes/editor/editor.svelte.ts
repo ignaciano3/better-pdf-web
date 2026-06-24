@@ -1,4 +1,10 @@
-import type { EditElement, EditState, ImageElement, SignatureElement } from '$lib/pdf/types';
+import type {
+	EditElement,
+	EditState,
+	ImageElement,
+	PageOp,
+	SignatureElement
+} from '$lib/pdf/types';
 import { renderSourcePdf, type RenderedPage, PdfRenderError } from '$lib/pdf/render';
 import { exportPdf } from './export.remote';
 import {
@@ -40,9 +46,42 @@ export interface UpsellInfo {
 export class EditorState {
 	elements = $state<EditElement[]>([]);
 	selectedId = $state<string | null>(null);
-	pages = $state<PageInfo[]>([{ width: DEFAULT_PAGE[0], height: DEFAULT_PAGE[1] }]);
+	/**
+	 * Original source-page renders, indexed by their **original** zero-based page
+	 * in the loaded PDF. Stays fixed after load; page operations reorder via
+	 * {@link pageOps} (which carries `sourceIndex`) rather than by mutating this.
+	 * Empty in blank mode.
+	 */
 	rendered = $state<RenderedPage[]>([]);
 	sourceBytes = $state<Uint8Array | null>(null);
+	/**
+	 * Ordered output pages (reorder / delete / insert-blank / rotate). One entry
+	 * per visible page, in display order — this is exactly what the exporter
+	 * receives. Element `page` indices are positions into this list. In blank
+	 * mode (no source) it stays empty and {@link pages} falls back to a single
+	 * default page.
+	 */
+	pageOps = $state<PageOp[]>([]);
+
+	/**
+	 * Per-page geometry for the canvas, derived from {@link pageOps}. In blank
+	 * mode (no page ops) it is a single default page. Rotation by 90/270 swaps
+	 * width/height so the displayed box matches the exported rotated page.
+	 */
+	pages = $derived<PageInfo[]>(
+		this.pageOps.length === 0
+			? [{ width: DEFAULT_PAGE[0], height: DEFAULT_PAGE[1] }]
+			: this.pageOps.map((op) => {
+					const [w, h] =
+						op.kind === 'source'
+							? [
+									this.rendered[op.sourceIndex]?.width ?? DEFAULT_PAGE[0],
+									this.rendered[op.sourceIndex]?.height ?? DEFAULT_PAGE[1]
+								]
+							: op.size;
+					return op.rotation % 180 === 0 ? { width: w, height: h } : { width: h, height: w };
+				})
+	);
 
 	pendingSignature = $state<PendingRaster | null>(null);
 	pendingImage = $state<PendingRaster | null>(null);
@@ -82,6 +121,95 @@ export class EditorState {
 
 	elementsForPage(pageIndex: number): EditElement[] {
 		return this.elements.filter((e) => (e.page ?? 0) === pageIndex);
+	}
+
+	/** Source-page render to display behind an output page, or null for blanks. */
+	pageRender(pageIndex: number): RenderedPage | null {
+		const op = this.pageOps[pageIndex];
+		if (!op || op.kind !== 'source') return null;
+		return this.rendered[op.sourceIndex] ?? null;
+	}
+
+	/** Clockwise rotation (0/90/180/270) of an output page, for display. */
+	pageRotation(pageIndex: number): number {
+		return this.pageOps[pageIndex]?.rotation ?? 0;
+	}
+
+	// --- page operations -----------------------------------------------------
+
+	/**
+	 * Shift every element's `page` index to follow a remap of output positions.
+	 * `remap[newIndex] = oldIndex | -1` (−1 means the page is freshly inserted and
+	 * carries no prior elements). Elements on dropped pages are removed.
+	 */
+	#remapElementPages(remap: number[]) {
+		const oldToNew = new Map<number, number>();
+		remap.forEach((oldIndex, newIndex) => {
+			if (oldIndex >= 0) oldToNew.set(oldIndex, newIndex);
+		});
+		this.elements = this.elements.filter((e) => oldToNew.has(e.page ?? 0));
+		for (const e of this.elements) {
+			const next = oldToNew.get(e.page ?? 0);
+			if (next !== undefined) e.page = next;
+		}
+	}
+
+	/** Move the page at `from` to `to` (output positions). */
+	movePage(from: number, to: number) {
+		const n = this.pageOps.length;
+		if (from < 0 || from >= n || to < 0 || to >= n || from === to) return;
+		const ops = this.pageOps.slice();
+		const [op] = ops.splice(from, 1);
+		if (!op) return;
+		ops.splice(to, 0, op);
+		const remap = Array.from({ length: n }, (_, i) => i);
+		remap.splice(from, 1);
+		remap.splice(to, 0, from);
+		this.pageOps = ops;
+		this.#remapElementPages(remap);
+		this.selectedId = null;
+	}
+
+	/** Move a page up one position (toward the front). */
+	movePageUp(index: number) {
+		this.movePage(index, index - 1);
+	}
+
+	/** Move a page down one position (toward the back). */
+	movePageDown(index: number) {
+		this.movePage(index, index + 1);
+	}
+
+	/** Delete the output page at `index` and drop its elements. */
+	deletePage(index: number) {
+		if (this.pageOps.length <= 1) return; // keep at least one page
+		if (index < 0 || index >= this.pageOps.length) return;
+		const remap = this.pageOps.map((_, i) => i).filter((i) => i !== index);
+		this.pageOps = this.pageOps.filter((_, i) => i !== index);
+		this.#remapElementPages(remap);
+		this.selectedId = null;
+	}
+
+	/** Rotate the output page at `index` clockwise by 90°. */
+	rotatePage(index: number) {
+		const op = this.pageOps[index];
+		if (!op) return;
+		op.rotation = (op.rotation + 90) % 360;
+	}
+
+	/** Insert a blank page after `afterIndex` (−1 inserts at the front). */
+	insertBlankPage(afterIndex: number) {
+		// Match the dominant page size (first source page) so blanks fit in.
+		const first = this.pages[0] ?? { width: DEFAULT_PAGE[0], height: DEFAULT_PAGE[1] };
+		const blank: PageOp = { kind: 'blank', size: [first.width, first.height], rotation: 0 };
+		const at = afterIndex + 1;
+		const ops = this.pageOps.slice();
+		ops.splice(at, 0, blank);
+		const remap = this.pageOps.map((_, i) => i);
+		remap.splice(at, 0, -1);
+		this.pageOps = ops;
+		this.#remapElementPages(remap);
+		this.selectedId = null;
 	}
 
 	// --- placement -----------------------------------------------------------
@@ -221,7 +349,8 @@ export class EditorState {
 			const exportCopy = bytes.slice();
 			const result = await renderSourcePdf(bytes, SCALE);
 			this.rendered = result;
-			this.pages = result.map((p) => ({ width: p.width, height: p.height }));
+			// One source-page op per page, in original order, unrotated.
+			this.pageOps = result.map((_, i) => ({ kind: 'source', sourceIndex: i, rotation: 0 }));
 			this.sourceBytes = exportCopy;
 			this.elements = [];
 			this.selectedId = null;
@@ -238,7 +367,7 @@ export class EditorState {
 	clearSource() {
 		this.sourceBytes = null;
 		this.rendered = [];
-		this.pages = [{ width: DEFAULT_PAGE[0], height: DEFAULT_PAGE[1] }];
+		this.pageOps = [];
 		this.elements = [];
 		this.selectedId = null;
 		this.errorMessage = null;
@@ -280,7 +409,8 @@ export class EditorState {
 			const state: EditState = {
 				pageSize: [firstPage.width, firstPage.height],
 				elements: $state.snapshot(this.elements) as EditElement[],
-				...(this.sourceBytes ? { sourcePdf: this.sourceBytes } : {})
+				...(this.sourceBytes ? { sourcePdf: this.sourceBytes } : {}),
+				...(this.pageOps.length > 0 ? { pageOps: $state.snapshot(this.pageOps) as PageOp[] } : {})
 			};
 			const bytes = await exportPdf({ state, fingerprint: getFingerprint() });
 			downloadPdf(bytes);

@@ -17,7 +17,39 @@ export interface EditState {
 	 * creating a fresh single-page document.
 	 */
 	sourcePdf?: Uint8Array;
+	/**
+	 * Ordered list of output pages (reorder / delete / insert-blank / rotate).
+	 * When present, it fully describes the page layout of the exported document:
+	 * one {@link PageOp} per output page, in output order. Element `page` indices
+	 * are **output positions** — i.e. the index of the page in this list — so
+	 * stamping resolves to the right page after any reordering or insertion.
+	 *
+	 * When absent the builder keeps the source document's pages as-is.
+	 */
+	pageOps?: PageOp[];
 }
+
+/**
+ * One output page. Either it mirrors a page from the loaded source document
+ * (`kind: 'source'`, identified by its original zero-based index) or it is a
+ * freshly inserted blank page (`kind: 'blank'`, with its own size). Both carry a
+ * rotation in degrees (a multiple of 90).
+ */
+export type PageOp =
+	| {
+			kind: 'source';
+			/** Zero-based index of the page in the originally loaded source PDF. */
+			sourceIndex: number;
+			/** Clockwise rotation applied on export; normalised to 0/90/180/270. */
+			rotation: number;
+	  }
+	| {
+			kind: 'blank';
+			/** Size of the inserted blank page in PDF points: [width, height]. */
+			size: [number, number];
+			/** Clockwise rotation applied on export; normalised to 0/90/180/270. */
+			rotation: number;
+	  };
 
 export interface TextElement {
 	type: 'text';

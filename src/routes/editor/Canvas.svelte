@@ -26,11 +26,15 @@
 				style="width: {page.width * SCALE}px; height: {page.height * SCALE}px;"
 				onclick={(e) => onPageClick(e, pageIndex)}
 			>
-				{#if editor.rendered[pageIndex]}
+				{#if editor.pageRender(pageIndex)}
+					{@const render = editor.pageRender(pageIndex)}
+					{@const rot = editor.pageRotation(pageIndex)}
 					<img
-						src={editor.rendered[pageIndex].dataUrl}
+						src={render?.dataUrl}
 						alt={`Page ${pageIndex + 1}`}
-						class="pointer-events-none absolute inset-0 h-full w-full select-none"
+						class="pointer-events-none absolute top-1/2 left-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 select-none"
+						style="width: {(render?.width ?? page.width) * SCALE}px; height: {(render?.height ??
+							page.height) * SCALE}px; transform: translate(-50%, -50%) rotate({rot}deg);"
 						draggable="false"
 					/>
 				{/if}
