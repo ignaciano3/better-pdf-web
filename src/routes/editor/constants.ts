@@ -55,6 +55,20 @@ export const LINK_DEFAULT_SIZE: { width: number; height: number } = { width: 120
 
 /** Max custom-font upload size (bytes); mirrors the server-side cap. */
 export const MAX_FONT_BYTES = 5 * 1024 * 1024;
+
+/** Canvas zoom bounds (1 = 100%). */
+export const ZOOM_MIN = 0.25;
+export const ZOOM_MAX = 4;
+/** Zoom step for the −/+ buttons. */
+export const ZOOM_STEP = 0.25;
+
+/** Named output page sizes (PDF points) the page-size dropdown offers. */
+export const NAMED_PAGE_SIZES: { label: string; size: [number, number] }[] = [
+	{ label: 'A4', size: [595.28, 841.89] },
+	{ label: 'Letter', size: [612, 792] },
+	{ label: 'Legal', size: [612, 1008] },
+	{ label: 'A3', size: [841.89, 1190.55] }
+];
 export type { FieldKind } from '$lib/pdf/types';
 import type { FieldKind } from '$lib/pdf/types';
 export type Tool =

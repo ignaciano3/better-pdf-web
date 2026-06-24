@@ -7,6 +7,8 @@
 	import PageManager from './PageManager.svelte';
 	import FloatingToolbar from './FloatingToolbar.svelte';
 	import FieldPropertiesModal from './FieldPropertiesModal.svelte';
+	import DocumentPropertiesModal from './DocumentPropertiesModal.svelte';
+	import OutlineEditor from './OutlineEditor.svelte';
 	import UpsellModal from './UpsellModal.svelte';
 
 	const editor = new EditorState();
@@ -88,5 +90,7 @@
 	{/if}
 
 	<FieldPropertiesModal {editor} />
+	<DocumentPropertiesModal {editor} />
+	<OutlineEditor {editor} />
 	<UpsellModal {editor} {signedIn} />
 </div>

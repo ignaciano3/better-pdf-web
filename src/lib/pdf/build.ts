@@ -1,7 +1,15 @@
 import { PdfDocument, PdfError, rgb } from '@ignaciano3/better-pdf';
 import type { Color, PdfFont } from '@ignaciano3/better-pdf/generate';
 import type { FormBuilder } from '@ignaciano3/better-pdf/generate';
-import type { EditElement, EditState, EmbeddedFontAsset, FieldElement, PageOp } from './types';
+import type {
+	DocumentMetadataInput,
+	EditElement,
+	EditState,
+	EmbeddedFontAsset,
+	FieldElement,
+	OutlineItem,
+	PageOp
+} from './types';
 import { renderElement } from './renderers';
 import { topLeftToPdfY } from './coords';
 
@@ -37,11 +45,61 @@ export class PdfBuildError extends Error {
  * on import.
  */
 export async function buildPdf(state: EditState): Promise<Uint8Array> {
-	const hasSource = !!(state.sourcePdf && state.sourcePdf.byteLength > 0);
+	const sources = resolveSources(state);
+	const hasSource = sources.some((s) => s && s.byteLength > 0);
 	if (!hasSource) {
 		return buildBlankRebuild(state);
 	}
-	return buildSourceRebuild(state);
+	return buildSourceRebuild(state, sources);
+}
+
+/**
+ * Unify the legacy single {@link EditState.sourcePdf} field with the
+ * multi-source {@link EditState.sources} array. `sources` wins when present;
+ * otherwise the single `sourcePdf` becomes `sources[0]`.
+ */
+function resolveSources(state: EditState): Uint8Array[] {
+	if (state.sources && state.sources.length > 0) return state.sources;
+	if (state.sourcePdf && state.sourcePdf.byteLength > 0) return [state.sourcePdf];
+	return [];
+}
+
+/** Apply document metadata + a fresh modification date, then the outline. */
+function applyDocumentProps(
+	doc: PdfDocument,
+	metadata: DocumentMetadataInput | undefined,
+	outline: OutlineItem[] | undefined,
+	pageCount: number
+): void {
+	if (metadata) {
+		if (metadata.title !== undefined) doc.setTitle(metadata.title);
+		if (metadata.author !== undefined) doc.setAuthor(metadata.author);
+		if (metadata.subject !== undefined) doc.setSubject(metadata.subject);
+		if (metadata.keywords !== undefined) doc.setKeywords(metadata.keywords);
+		if (metadata.creator !== undefined) doc.setCreator(metadata.creator);
+		if (metadata.producer !== undefined) doc.setProducer(metadata.producer);
+	}
+	// Always stamp a modification date on export (server-side; new Date() is fine).
+	doc.setModificationDate(new Date());
+
+	if (outline && outline.length > 0) {
+		const clamped = clampOutline(outline, pageCount);
+		if (clamped.length > 0) doc.setOutline(clamped);
+	}
+}
+
+/**
+ * Drop outline entries whose page index is out of range, recursively. Keeps the
+ * export robust against a bookmark pointing at a page that was later removed.
+ */
+function clampOutline(items: OutlineItem[], pageCount: number): OutlineItem[] {
+	const out: OutlineItem[] = [];
+	for (const item of items) {
+		if (!Number.isInteger(item.page) || item.page < 0 || item.page >= pageCount) continue;
+		const children = item.children ? clampOutline(item.children, pageCount) : undefined;
+		out.push({ title: item.title, page: item.page, ...(children ? { children } : {}) });
+	}
+	return out;
 }
 
 /** RGB 0..1 helper → lib Color. */
@@ -111,46 +169,46 @@ async function buildBlankRebuild(state: EditState): Promise<Uint8Array> {
 
 	const fonts = await embedFonts(doc, state.fonts);
 	await stampAndAuthor(doc, state.elements, pageHeights, fonts);
+	applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
 	return doc.save();
 }
 
-/** Build a fresh document from an embedded source PDF with stamps + fields (D3). */
-async function buildSourceRebuild(state: EditState): Promise<Uint8Array> {
-	const sourcePdf = state.sourcePdf as Uint8Array;
+/** Build a fresh document from one or more embedded source PDFs with stamps + fields (D3). */
+async function buildSourceRebuild(state: EditState, sources: Uint8Array[]): Promise<Uint8Array> {
 	try {
 		const doc = await PdfDocument.create();
 		const pageHeights: number[] = [];
 
 		// One output page per pageOp (order / blank / rotation), or 1:1 with the
-		// source pages when there are no page ops.
+		// pages of the primary source when there are no page ops.
 		const ops: PageOp[] = state.pageOps && state.pageOps.length > 0 ? [...state.pageOps] : [];
 		if (ops.length === 0) {
-			// Probe the source page count by embedding sequentially until it throws.
-			const src = await PdfDocument.load(sourcePdf);
+			const primary = sources[0] as Uint8Array;
+			const src = await PdfDocument.load(primary);
 			const count = src.getPageCount();
-			for (let i = 0; i < count; i++) ops.push({ kind: 'source', sourceIndex: i, rotation: 0 });
+			for (let i = 0; i < count; i++)
+				ops.push({ kind: 'source', sourceIndex: i, rotation: 0, docIndex: 0 });
 		}
 
 		for (const op of ops) {
 			if (op.kind === 'source') {
-				const embedded = await doc.embedPdfPage(sourcePdf, op.sourceIndex);
+				const docIndex = op.docIndex ?? 0;
+				const sourceBytes = sources[docIndex];
+				if (!sourceBytes) {
+					throw new PdfBuildError('Referenced a source document that was not provided.');
+				}
+				const embedded = await doc.embedPdfPage(sourceBytes, op.sourceIndex);
 				const rotated = normalizeRotation(op.rotation) % 180 !== 0;
-				const [w, h] = rotated
-					? [embedded.height, embedded.width]
-					: [embedded.width, embedded.height];
+				// Output content box: the override size when set, else the source size.
+				const [boxW, boxH] = op.size ? op.size : [embedded.width, embedded.height];
+				const [w, h] = rotated ? [boxH, boxW] : [boxW, boxH];
 				const page = doc.addPage([w, h]);
-				// Draw the embedded source content at its intrinsic size. Rotation is
-				// applied to the page itself (matching the canvas display model).
-				page.drawPage(embedded, {
-					x: 0,
-					y: rotated ? 0 : 0,
-					width: embedded.width,
-					height: embedded.height
-				});
+				// Draw the embedded source content scaled to fill the (un-rotated)
+				// content box. Rotation is applied to the page itself.
+				page.drawPage(embedded, { x: 0, y: 0, width: boxW, height: boxH });
 				if (op.rotation) page.setRotation(normalizeRotation(op.rotation));
-				// Field/stamp coords are authored against the un-rotated content box, so
-				// the page height used for the Y flip is the content height.
-				pageHeights.push(embedded.height);
+				// Field/stamp coords are authored against the un-rotated content box.
+				pageHeights.push(boxH);
 			} else {
 				const rotated = normalizeRotation(op.rotation) % 180 !== 0;
 				const [w, h] = rotated ? [op.size[1], op.size[0]] : op.size;
@@ -162,6 +220,7 @@ async function buildSourceRebuild(state: EditState): Promise<Uint8Array> {
 
 		const fonts = await embedFonts(doc, state.fonts);
 		await stampAndAuthor(doc, state.elements, pageHeights, fonts);
+		applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
 		return await doc.save();
 	} catch (cause) {
 		if (cause instanceof PdfBuildError) throw cause;

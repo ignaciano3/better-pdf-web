@@ -41,4 +41,31 @@ describe('Toolbar', () => {
 		flushSync();
 		expect(editor.activeFieldKind).toBe('checkbox');
 	});
+
+	it('zoom in / out buttons change zoom', async () => {
+		const user = userEvent.setup();
+		const editor = new EditorState();
+		render(Toolbar, { props: { editor, onDrawSignature: () => {} } });
+
+		await user.click(screen.getByTitle('Zoom in'));
+		flushSync();
+		expect(editor.zoom).toBeCloseTo(1.25, 5);
+		await user.click(screen.getByTitle('Zoom out'));
+		flushSync();
+		expect(editor.zoom).toBeCloseTo(1, 5);
+	});
+
+	it('opens the document-properties and outline modals', async () => {
+		const user = userEvent.setup();
+		const editor = new EditorState();
+		render(Toolbar, { props: { editor, onDrawSignature: () => {} } });
+
+		await user.click(screen.getByRole('button', { name: 'Properties' }));
+		flushSync();
+		expect(editor.docPropsModalOpen).toBe(true);
+
+		await user.click(screen.getByRole('button', { name: 'Outline' }));
+		flushSync();
+		expect(editor.outlineEditorOpen).toBe(true);
+	});
 });

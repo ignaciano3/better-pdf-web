@@ -1,10 +1,26 @@
 <script lang="ts">
 	import type { EditorState } from './editor.svelte';
 	import type { DrawKind, FieldKind } from './constants';
+	import { NAMED_PAGE_SIZES } from './constants';
 
 	let { editor, onDrawSignature }: { editor: EditorState; onDrawSignature: () => void } = $props();
 
 	let fieldMenuOpen = $state(false);
+	let sizeMenuOpen = $state(false);
+
+	async function onMergeChange(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (file) await editor.appendPdf(file);
+		input.value = '';
+	}
+
+	function applyPageSize(size: [number, number], landscape: boolean) {
+		const [w, h] = size;
+		const dims: [number, number] = landscape ? [Math.max(w, h), Math.min(w, h)] : [w, h];
+		editor.setAllPageSizes(dims);
+		sizeMenuOpen = false;
+	}
 
 	const fieldTools: { kind: FieldKind; label: string }[] = [
 		{ kind: 'text', label: 'Text field' },
@@ -168,12 +184,104 @@
 		</div>
 	</div>
 
-	<!-- Right: Export -->
-	<button
-		onclick={() => editor.export()}
-		disabled={editor.exporting}
-		class="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-	>
-		{editor.exporting ? 'Exporting…' : 'Export PDF'}
-	</button>
+	<!-- Right: document controls + zoom + export -->
+	<div class="flex items-center gap-2">
+		<!-- Merge another PDF -->
+		<label
+			class="cursor-pointer rounded px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+			title="Merge / append another PDF"
+		>
+			Merge PDF
+			<input
+				type="file"
+				accept="application/pdf,.pdf"
+				class="hidden"
+				disabled={editor.loadingPdf}
+				onchange={onMergeChange}
+			/>
+		</label>
+
+		<!-- Page size -->
+		{#if editor.pageOps.length > 0}
+			<div class="relative">
+				<button
+					class="rounded px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+					aria-haspopup="menu"
+					aria-expanded={sizeMenuOpen}
+					onclick={() => (sizeMenuOpen = !sizeMenuOpen)}
+				>
+					Page size ▾
+				</button>
+				{#if sizeMenuOpen}
+					<div
+						class="absolute top-full right-0 z-30 mt-1 w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+						role="menu"
+					>
+						{#each NAMED_PAGE_SIZES as s (s.label)}
+							<button
+								class="block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100"
+								role="menuitem"
+								onclick={() => applyPageSize(s.size, false)}
+							>
+								{s.label} portrait
+							</button>
+							<button
+								class="block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100"
+								role="menuitem"
+								onclick={() => applyPageSize(s.size, true)}
+							>
+								{s.label} landscape
+							</button>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		{/if}
+
+		<!-- Document properties + outline -->
+		<button
+			class="rounded px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+			onclick={() => (editor.docPropsModalOpen = true)}
+		>
+			Properties
+		</button>
+		<button
+			class="rounded px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+			onclick={() => (editor.outlineEditorOpen = true)}
+		>
+			Outline
+		</button>
+
+		<!-- Zoom -->
+		<div class="flex items-center gap-0.5 rounded-lg border border-gray-200 p-0.5">
+			<button
+				class="rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+				title="Zoom out"
+				onclick={() => editor.zoomOut()}>−</button
+			>
+			<button
+				class="w-12 rounded px-1 py-1 text-center text-xs text-gray-700 hover:bg-gray-100"
+				title="Reset zoom"
+				onclick={() => editor.resetZoom()}>{Math.round(editor.zoom * 100)}%</button
+			>
+			<button
+				class="rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+				title="Zoom in"
+				onclick={() => editor.zoomIn()}>+</button
+			>
+			<button
+				class="rounded px-2 py-1 text-xs text-gray-700 hover:bg-gray-100"
+				title="Fit to width"
+				onclick={() => editor.fitToWidth()}>Fit</button
+			>
+		</div>
+
+		<button
+			onclick={() => editor.export()}
+			disabled={editor.exporting}
+			class="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+		>
+			{editor.exporting ? 'Exporting…' : 'Export PDF'}
+		</button>
+	</div>
 </header>

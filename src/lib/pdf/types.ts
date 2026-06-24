@@ -1,3 +1,20 @@
+import type { OutlineItem } from '@ignaciano3/better-pdf';
+
+export type { OutlineItem };
+
+/**
+ * Editable document metadata. Each field maps to a `doc.setX` call at export.
+ * All fields are optional; omitted ones are not written.
+ */
+export interface DocumentMetadataInput {
+	title?: string;
+	author?: string;
+	subject?: string;
+	keywords?: string[];
+	creator?: string;
+	producer?: string;
+}
+
 /**
  * Editor document state. Coordinates use a top-left origin in PDF points
  * (the canvas convention); the PDF builder flips the Y axis to the
@@ -15,8 +32,30 @@ export interface EditState {
 	 * Raw bytes of an uploaded source PDF. When present, the builder loads this
 	 * document and stamps elements on top of its existing pages instead of
 	 * creating a fresh single-page document.
+	 *
+	 * Back-compat single-source field. When {@link sources} is also set, the
+	 * builder uses {@link sources}; otherwise it treats `sourcePdf` as
+	 * `sources[0]`. A `source` {@link PageOp} with no `docIndex` (or `docIndex: 0`)
+	 * embeds from this document.
 	 */
 	sourcePdf?: Uint8Array;
+	/**
+	 * Multiple uploaded source documents, for merge/append. Index 0 is the
+	 * primary document (equivalent to {@link sourcePdf}); later indices are
+	 * appended documents. A `source` {@link PageOp} selects its document via
+	 * `docIndex`. When present this takes precedence over {@link sourcePdf}.
+	 */
+	sources?: Uint8Array[];
+	/**
+	 * Document metadata applied on export via `doc.setTitle`/`setAuthor`/etc.
+	 * Any field left undefined is not written.
+	 */
+	metadata?: DocumentMetadataInput;
+	/**
+	 * Document outline (bookmarks). Applied via `doc.setOutline` when non-empty.
+	 * Each item's `page` is a zero-based **output** page index.
+	 */
+	outline?: OutlineItem[];
 	/**
 	 * Ordered list of output pages (reorder / delete / insert-blank / rotate).
 	 * When present, it fully describes the page layout of the exported document:
@@ -48,6 +87,17 @@ export type PageOp =
 			sourceIndex: number;
 			/** Clockwise rotation applied on export; normalised to 0/90/180/270. */
 			rotation: number;
+			/**
+			 * Which source document this page comes from (index into
+			 * {@link EditState.sources}). Defaults to 0 (the primary document).
+			 */
+			docIndex?: number;
+			/**
+			 * Explicit output page-size override in PDF points: [width, height].
+			 * When set, the output page is created at this size and the embedded
+			 * source content is scaled to fit. Omit to keep the source page's size.
+			 */
+			size?: [number, number];
 	  }
 	| {
 			kind: 'blank';

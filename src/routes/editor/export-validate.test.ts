@@ -235,4 +235,135 @@ describe('validateExportInput', () => {
 		};
 		expect(() => validateExportInput(input)).toThrow();
 	});
+
+	// --- PR4 -----------------------------------------------------------------
+
+	it('accepts a multi-source sources array', () => {
+		const input = {
+			fingerprint: 'fp',
+			state: {
+				pageSize: [300, 400],
+				elements: [],
+				sources: [new Uint8Array([1, 2]), new Uint8Array([3, 4])]
+			}
+		};
+		expect(() => validateExportInput(input)).not.toThrow();
+	});
+
+	it('rejects sources with a non-Uint8Array entry', () => {
+		const input = {
+			fingerprint: 'fp',
+			state: { pageSize: [300, 400], elements: [], sources: [new Uint8Array([1]), [3, 4]] }
+		};
+		expect(() => validateExportInput(input)).toThrow();
+	});
+
+	it('accepts a source pageOp with size and docIndex', () => {
+		const input = {
+			fingerprint: 'fp',
+			state: {
+				pageSize: [300, 400],
+				elements: [],
+				sources: [new Uint8Array([1]), new Uint8Array([2])],
+				pageOps: [{ kind: 'source', sourceIndex: 0, rotation: 0, docIndex: 1, size: [612, 792] }]
+			}
+		};
+		expect(() => validateExportInput(input)).not.toThrow();
+	});
+
+	it('rejects a source pageOp docIndex out of range', () => {
+		const input = {
+			fingerprint: 'fp',
+			state: {
+				pageSize: [300, 400],
+				elements: [],
+				sources: [new Uint8Array([1])],
+				pageOps: [{ kind: 'source', sourceIndex: 0, rotation: 0, docIndex: 5 }]
+			}
+		};
+		expect(() => validateExportInput(input)).toThrow();
+	});
+
+	it('rejects a source pageOp with a non-finite size', () => {
+		const input = {
+			fingerprint: 'fp',
+			state: {
+				pageSize: [300, 400],
+				elements: [],
+				sourcePdf: new Uint8Array([1]),
+				pageOps: [{ kind: 'source', sourceIndex: 0, rotation: 0, size: [Infinity, 100] }]
+			}
+		};
+		expect(() => validateExportInput(input)).toThrow();
+	});
+
+	it('accepts metadata with strings and keywords', () => {
+		const input = {
+			fingerprint: 'fp',
+			state: {
+				pageSize: [300, 400],
+				elements: [],
+				metadata: { title: 'T', author: 'A', keywords: ['x', 'y'] }
+			}
+		};
+		expect(() => validateExportInput(input)).not.toThrow();
+	});
+
+	it('rejects metadata with a non-string title', () => {
+		const input = {
+			fingerprint: 'fp',
+			state: { pageSize: [300, 400], elements: [], metadata: { title: 5 } }
+		};
+		expect(() => validateExportInput(input)).toThrow();
+	});
+
+	it('rejects metadata keywords that are not all strings', () => {
+		const input = {
+			fingerprint: 'fp',
+			state: { pageSize: [300, 400], elements: [], metadata: { keywords: ['x', 7] } }
+		};
+		expect(() => validateExportInput(input)).toThrow();
+	});
+
+	it('accepts a valid outline with nesting', () => {
+		const input = {
+			fingerprint: 'fp',
+			state: {
+				pageSize: [300, 400],
+				elements: [],
+				pageOps: [
+					{ kind: 'blank', size: [300, 400], rotation: 0 },
+					{ kind: 'blank', size: [300, 400], rotation: 0 }
+				],
+				outline: [{ title: 'A', page: 0, children: [{ title: 'A.1', page: 1 }] }]
+			}
+		};
+		expect(() => validateExportInput(input)).not.toThrow();
+	});
+
+	it('rejects an outline page index out of range', () => {
+		const input = {
+			fingerprint: 'fp',
+			state: {
+				pageSize: [300, 400],
+				elements: [],
+				pageOps: [{ kind: 'blank', size: [300, 400], rotation: 0 }],
+				outline: [{ title: 'A', page: 9 }]
+			}
+		};
+		expect(() => validateExportInput(input)).toThrow();
+	});
+
+	it('rejects an outline entry with a non-string title', () => {
+		const input = {
+			fingerprint: 'fp',
+			state: {
+				pageSize: [300, 400],
+				elements: [],
+				pageOps: [{ kind: 'blank', size: [300, 400], rotation: 0 }],
+				outline: [{ title: 123, page: 0 }]
+			}
+		};
+		expect(() => validateExportInput(input)).toThrow();
+	});
 });
