@@ -3,8 +3,14 @@ import { eq } from 'drizzle-orm';
 import { getDb } from './db';
 import { subscription } from './db/schema.app';
 
-/** Billing plan for a user. Absence of a subscription row means 'free'. */
-export type Plan = 'free' | 'pro';
+/**
+ * Billing plan for a user. Absence of a subscription row means 'free'.
+ *
+ * `root` is a private, highest-privilege plan (the operator + invited friends);
+ * it is unlimited like `pro` and is never written by billing — only seeded
+ * manually (see `scripts/seed-root.ts`). It ranks above `pro`.
+ */
+export type Plan = 'free' | 'pro' | 'root';
 
 /**
  * Resolve a user's plan from the `subscription` table.
@@ -33,10 +39,12 @@ export async function resolvePlan(userId: string | undefined): Promise<Plan> {
 		.limit(1);
 
 	const row = rows[0];
-	if (!row || row.plan !== 'pro' || row.status !== 'active') return 'free';
-	// An entitlement that has run out is no longer pro.
+	if (!row || row.status !== 'active' || (row.plan !== 'pro' && row.plan !== 'root')) {
+		return 'free';
+	}
+	// An entitlement that has run out is no longer privileged.
 	if (row.currentPeriodEnd && row.currentPeriodEnd.getTime() < Date.now()) return 'free';
-	return 'pro';
+	return row.plan === 'root' ? 'root' : 'pro';
 }
 
 /**
@@ -45,7 +53,8 @@ export async function resolvePlan(userId: string | undefined): Promise<Plan> {
  * features a single seam to guard behind. Returns normally for pro.
  */
 export function assertPro(plan: Plan): void {
-	if (plan !== 'pro') {
+	// `root` outranks `pro`, so it passes every pro-only gate.
+	if (plan !== 'pro' && plan !== 'root') {
 		error(402, JSON.stringify({ reason: 'pro_required', upgradeUrl: '/pricing' }));
 	}
 }

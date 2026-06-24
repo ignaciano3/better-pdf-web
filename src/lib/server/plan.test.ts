@@ -6,6 +6,10 @@ describe('assertPro', () => {
 		expect(() => assertPro('pro')).not.toThrow();
 	});
 
+	it('returns normally for the root plan (outranks pro)', () => {
+		expect(() => assertPro('root')).not.toThrow();
+	});
+
 	it('throws 402 for a free plan', () => {
 		try {
 			assertPro('free');
