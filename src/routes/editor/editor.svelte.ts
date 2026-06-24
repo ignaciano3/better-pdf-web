@@ -1,4 +1,5 @@
 import type {
+	DocumentMetadataInput,
 	EditElement,
 	EditState,
 	EmbeddedFontAsset,
@@ -6,6 +7,7 @@ import type {
 	FieldKind,
 	ImageElement,
 	LinkElement,
+	OutlineItem,
 	PageOp,
 	PathElement,
 	PolygonElement,
@@ -31,6 +33,9 @@ import {
 	LINK_DEFAULT_SIZE,
 	FIELD_DEFAULT_SIZE,
 	SELECT_TOOL,
+	ZOOM_MIN,
+	ZOOM_MAX,
+	ZOOM_STEP,
 	type Tool,
 	type DrawKind,
 	type PageInfo,
@@ -71,8 +76,19 @@ export class EditorState {
 	 * {@link pageOps} (which carries `sourceIndex`) rather than by mutating this.
 	 * Empty in blank mode.
 	 */
-	rendered = $state<RenderedPage[]>([]);
-	sourceBytes = $state<Uint8Array | null>(null);
+	/**
+	 * Rendered pages per source document. `renderedByDoc[d][i]` is the i-th page
+	 * of source document `d`. Index 0 is the primary (first-uploaded) document;
+	 * later indices are appended (merged) documents. Stays fixed after each load;
+	 * page operations reference renders via `(docIndex, sourceIndex)`.
+	 */
+	renderedByDoc = $state<RenderedPage[][]>([]);
+	/** Raw bytes per source document, parallel to {@link renderedByDoc}. */
+	sources = $state<Uint8Array[]>([]);
+	/** Renders of the primary document. Back-compat alias for `renderedByDoc[0]`. */
+	rendered = $derived<RenderedPage[]>(this.renderedByDoc[0] ?? []);
+	/** Bytes of the primary document, or null in blank mode. */
+	sourceBytes = $derived<Uint8Array | null>(this.sources[0] ?? null);
 	/**
 	 * Ordered output pages (reorder / delete / insert-blank / rotate). One entry
 	 * per visible page, in display order — this is exactly what the exporter
@@ -91,13 +107,20 @@ export class EditorState {
 		this.pageOps.length === 0
 			? [{ width: DEFAULT_PAGE[0], height: DEFAULT_PAGE[1] }]
 			: this.pageOps.map((op) => {
-					const [w, h] =
-						op.kind === 'source'
-							? [
-									this.rendered[op.sourceIndex]?.width ?? DEFAULT_PAGE[0],
-									this.rendered[op.sourceIndex]?.height ?? DEFAULT_PAGE[1]
-								]
-							: op.size;
+					let w: number;
+					let h: number;
+					if (op.kind === 'source') {
+						// An explicit size override wins over the source page's size.
+						if (op.size) {
+							[w, h] = op.size;
+						} else {
+							const render = this.renderedByDoc[op.docIndex ?? 0]?.[op.sourceIndex];
+							w = render?.width ?? DEFAULT_PAGE[0];
+							h = render?.height ?? DEFAULT_PAGE[1];
+						}
+					} else {
+						[w, h] = op.size;
+					}
 					return op.rotation % 180 === 0 ? { width: w, height: h } : { width: h, height: w };
 				})
 	);
@@ -124,6 +147,26 @@ export class EditorState {
 
 	/** True while the field-properties modal is open for the selected field. */
 	fieldModalOpen = $state(false);
+
+	/**
+	 * Canvas zoom multiplier (1 = 100%). Clamped to [{@link ZOOM_MIN},
+	 * {@link ZOOM_MAX}]. Applied as a CSS transform on the page wrapper; pointer
+	 * math divides by {@link cssScale} so drawing/dragging land correctly.
+	 */
+	zoom = $state(1);
+	/** CSS px per PDF point at the current zoom — used in all pointer→point math. */
+	cssScale = $derived(SCALE * this.zoom);
+	/** Live canvas-area width (CSS px), bound from the Canvas component for fit-to-width. */
+	canvasWidth = $state(0);
+
+	/** Document metadata applied on export (title/author/etc.). */
+	metadata = $state<DocumentMetadataInput>({});
+	/** Document outline (bookmarks) applied on export when non-empty. */
+	outline = $state<OutlineItem[]>([]);
+	/** True while the document-properties modal is open. */
+	docPropsModalOpen = $state(false);
+	/** True while the outline editor is open. */
+	outlineEditorOpen = $state(false);
 
 	exporting = $state(false);
 	loadingPdf = $state(false);
@@ -197,7 +240,7 @@ export class EditorState {
 	pageRender(pageIndex: number): RenderedPage | null {
 		const op = this.pageOps[pageIndex];
 		if (!op || op.kind !== 'source') return null;
-		return this.rendered[op.sourceIndex] ?? null;
+		return this.renderedByDoc[op.docIndex ?? 0]?.[op.sourceIndex] ?? null;
 	}
 
 	/** Clockwise rotation (0/90/180/270) of an output page, for display. */
@@ -381,8 +424,8 @@ export class EditorState {
 	 * active draw or field tool creates; shape kinds are drawn by drag, not click. */
 	placeAtClient(clientX: number, clientY: number, pageEl: HTMLElement, pageIndex: number) {
 		const rect = pageEl.getBoundingClientRect();
-		const x = (clientX - rect.left) / SCALE;
-		const y = (clientY - rect.top) / SCALE;
+		const x = (clientX - rect.left) / this.cssScale;
+		const y = (clientY - rect.top) / this.cssScale;
 
 		if (this.tool.type === 'field') {
 			this.placeFieldAt(this.tool.kind, x, y, pageIndex);
@@ -449,8 +492,8 @@ export class EditorState {
 		if (!kind) return false;
 		event.preventDefault();
 		const rect = pageEl.getBoundingClientRect();
-		const startX = (event.clientX - rect.left) / SCALE;
-		const startY = (event.clientY - rect.top) / SCALE;
+		const startX = (event.clientX - rect.left) / this.cssScale;
+		const startY = (event.clientY - rect.top) / this.cssScale;
 
 		const stroke = $state.snapshot(this.shapeStroke);
 		const el: ShapeElement = {
@@ -468,8 +511,8 @@ export class EditorState {
 		this.add(el);
 
 		const move = (e: PointerEvent) => {
-			const curX = (e.clientX - rect.left) / SCALE;
-			const curY = (e.clientY - rect.top) / SCALE;
+			const curX = (e.clientX - rect.left) / this.cssScale;
+			const curY = (e.clientY - rect.top) / this.cssScale;
 			el.x = Math.min(startX, curX);
 			el.y = Math.min(startY, curY);
 			el.width = Math.abs(curX - startX);
@@ -502,8 +545,8 @@ export class EditorState {
 		event.preventDefault();
 		const rect = pageEl.getBoundingClientRect();
 		const at = (e: PointerEvent) => ({
-			x: (e.clientX - rect.left) / SCALE,
-			y: (e.clientY - rect.top) / SCALE
+			x: (e.clientX - rect.left) / this.cssScale,
+			y: (e.clientY - rect.top) / this.cssScale
 		});
 		const start = at(event);
 		const stroke = $state.snapshot(this.shapeStroke);
@@ -549,8 +592,8 @@ export class EditorState {
 		if (!(this.tool.type === 'draw' && this.tool.kind === 'link')) return false;
 		event.preventDefault();
 		const rect = pageEl.getBoundingClientRect();
-		const startX = (event.clientX - rect.left) / SCALE;
-		const startY = (event.clientY - rect.top) / SCALE;
+		const startX = (event.clientX - rect.left) / this.cssScale;
+		const startY = (event.clientY - rect.top) / this.cssScale;
 		const el: LinkElement = {
 			type: 'link',
 			id: this.nextId('ln'),
@@ -564,8 +607,8 @@ export class EditorState {
 		this.add(el);
 
 		const move = (e: PointerEvent) => {
-			const curX = (e.clientX - rect.left) / SCALE;
-			const curY = (e.clientY - rect.top) / SCALE;
+			const curX = (e.clientX - rect.left) / this.cssScale;
+			const curY = (e.clientY - rect.top) / this.cssScale;
 			el.x = Math.min(startX, curX);
 			el.y = Math.min(startY, curY);
 			el.width = Math.abs(curX - startX);
@@ -660,8 +703,8 @@ export class EditorState {
 			// Threshold so a plain click still places the text caret for editing.
 			if (!dragging && Math.hypot(e.clientX - startX, e.clientY - startY) < 4) return;
 			dragging = true;
-			const dx = (e.clientX - startX) / SCALE;
-			const dy = (e.clientY - startY) / SCALE;
+			const dx = (e.clientX - startX) / this.cssScale;
+			const dy = (e.clientY - startY) / this.cssScale;
 			el.x = originX + dx;
 			el.y = originY + dy;
 			if (originPoints && (el.type === 'path' || el.type === 'polygon')) {
@@ -693,9 +736,9 @@ export class EditorState {
 
 		const minSide = free ? SHAPE_MIN_SIZE : 20;
 		const move = (e: PointerEvent) => {
-			el.width = Math.max(minSide, startWidth + (e.clientX - startX) / SCALE);
+			el.width = Math.max(minSide, startWidth + (e.clientX - startX) / this.cssScale);
 			if (free) {
-				el.height = Math.max(minSide, startHeight + (e.clientY - startY) / SCALE);
+				el.height = Math.max(minSide, startHeight + (e.clientY - startY) / this.cssScale);
 			} else {
 				el.height = el.width / aspect;
 			}
@@ -739,10 +782,15 @@ export class EditorState {
 			// pdf.js detaches the buffer it renders, so keep a copy for export.
 			const exportCopy = bytes.slice();
 			const result = await renderSourcePdf(bytes, SCALE);
-			this.rendered = result;
-			// One source-page op per page, in original order, unrotated.
-			this.pageOps = result.map((_, i) => ({ kind: 'source', sourceIndex: i, rotation: 0 }));
-			this.sourceBytes = exportCopy;
+			this.renderedByDoc = [result];
+			// One source-page op per page, in original order, unrotated, from doc 0.
+			this.pageOps = result.map((_, i) => ({
+				kind: 'source',
+				sourceIndex: i,
+				rotation: 0,
+				docIndex: 0
+			}));
+			this.sources = [exportCopy];
 			this.selectedId = null;
 			// Detect AcroForm fields (D1, server-side). Failures are swallowed: the
 			// editor still opens for stamping with no fields surfaced.
@@ -765,8 +813,8 @@ export class EditorState {
 	}
 
 	clearSource() {
-		this.sourceBytes = null;
-		this.rendered = [];
+		this.sources = [];
+		this.renderedByDoc = [];
 		this.pageOps = [];
 		this.elements = [];
 		this.selectedId = null;
@@ -774,6 +822,148 @@ export class EditorState {
 		this.pendingSignature = null;
 		this.pendingImage = null;
 		this.polygonDraftId = null;
+		this.metadata = {};
+		this.outline = [];
+	}
+
+	/**
+	 * Merge/append another PDF after the current pages. Renders the new document
+	 * (client, pdf.js), stores its bytes as a new source doc, and appends one
+	 * `source` page op per page tagged with the new `docIndex`. Works on a blank
+	 * editor too (it becomes doc 0).
+	 */
+	async appendPdf(file: File) {
+		this.errorMessage = null;
+		if (file.type && file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+			this.errorMessage = 'Please choose a PDF file.';
+			return;
+		}
+		if (file.size > MAX_PDF_BYTES) {
+			this.errorMessage = `That file is too large (max ${Math.round(MAX_PDF_BYTES / 1024 / 1024)} MB).`;
+			return;
+		}
+		this.loadingPdf = true;
+		try {
+			const bytes = new Uint8Array(await file.arrayBuffer());
+			const exportCopy = bytes.slice();
+			const result = await renderSourcePdf(bytes, SCALE);
+			const docIndex = this.renderedByDoc.length;
+			this.renderedByDoc = [...this.renderedByDoc, result];
+			this.sources = [...this.sources, exportCopy];
+			// If the editor was blank (no source pages), drop the implicit blank page
+			// by starting page ops fresh; otherwise append after the existing pages.
+			const appended: PageOp[] = result.map((_, i) => ({
+				kind: 'source',
+				sourceIndex: i,
+				rotation: 0,
+				docIndex
+			}));
+			this.pageOps = [...this.pageOps, ...appended];
+			this.selectedId = null;
+		} catch (e) {
+			this.errorMessage =
+				e instanceof PdfRenderError
+					? e.message
+					: 'Could not open that PDF. It may be corrupt or unsupported.';
+		} finally {
+			this.loadingPdf = false;
+		}
+	}
+
+	// --- zoom ----------------------------------------------------------------
+
+	/** Set the canvas zoom, clamped to [{@link ZOOM_MIN}, {@link ZOOM_MAX}]. */
+	setZoom(z: number) {
+		this.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+	}
+
+	/** Step zoom in/out by {@link ZOOM_STEP}. */
+	zoomIn() {
+		this.setZoom(this.zoom + ZOOM_STEP);
+	}
+	zoomOut() {
+		this.setZoom(this.zoom - ZOOM_STEP);
+	}
+	resetZoom() {
+		this.setZoom(1);
+	}
+
+	/**
+	 * Fit the first page's width to `containerWidth` (CSS px), so one page width
+	 * fills the available canvas area. Clamped to the zoom bounds.
+	 */
+	fitToWidth(containerWidth = this.canvasWidth) {
+		const first = this.pages[0];
+		// Account for the canvas padding (p-8 → 32px each side) so the page fits.
+		const usable = containerWidth - 64;
+		if (!first || first.width <= 0 || usable <= 0) return;
+		// usable = first.width * SCALE * zoom  →  solve for zoom.
+		this.setZoom(usable / (first.width * SCALE));
+	}
+
+	// --- page size -----------------------------------------------------------
+
+	/**
+	 * Override the output size of one page (PDF points). Only meaningful for a
+	 * `source` page op; blanks already carry their own size.
+	 */
+	setPageSize(pageIndex: number, size: [number, number]) {
+		const op = this.pageOps[pageIndex];
+		if (!op) return;
+		op.size = size;
+		this.selectedId = null;
+	}
+
+	/** Override the output size of every page. */
+	setAllPageSizes(size: [number, number]) {
+		for (const op of this.pageOps) {
+			op.size = [size[0], size[1]];
+		}
+		this.selectedId = null;
+	}
+
+	/** Clear a page's size override, reverting to its source/blank size. */
+	clearPageSize(pageIndex: number) {
+		const op = this.pageOps[pageIndex];
+		if (op && op.kind === 'source') delete op.size;
+	}
+
+	// --- outline / bookmarks -------------------------------------------------
+
+	/** Add a top-level bookmark pointing at `page` (0-based output index). */
+	addBookmark(title = 'New bookmark', page = 0) {
+		this.outline = [...this.outline, { title, page }];
+	}
+
+	/** Remove the top-level bookmark at `index` (and its children). */
+	removeBookmark(index: number) {
+		this.outline = this.outline.filter((_, i) => i !== index);
+	}
+
+	/** Move a top-level bookmark up/down among its siblings. */
+	moveBookmark(index: number, delta: number) {
+		const to = index + delta;
+		if (index < 0 || index >= this.outline.length || to < 0 || to >= this.outline.length) return;
+		const items = this.outline.slice();
+		const [item] = items.splice(index, 1);
+		if (!item) return;
+		items.splice(to, 0, item);
+		this.outline = items;
+	}
+
+	/**
+	 * Nest the top-level bookmark at `index` under its previous sibling (demote),
+	 * making the outline tree one level deeper. No-op for the first item.
+	 */
+	nestBookmark(index: number) {
+		if (index <= 0 || index >= this.outline.length) return;
+		const items = this.outline.slice();
+		const item = items[index];
+		const parent = items[index - 1];
+		if (!item || !parent) return;
+		parent.children = [...(parent.children ?? []), item];
+		items.splice(index, 1);
+		this.outline = items;
 	}
 
 	// --- raster uploads ------------------------------------------------------
@@ -854,12 +1044,20 @@ export class EditorState {
 				.filter((e): e is TextElement => e.type === 'text' && typeof e.fontId === 'string')
 				.map((e) => e.fontId as string);
 			const fonts = Object.values(this.embeddedFonts).filter((f) => referenced.includes(f.id));
+			const metadata = this.cleanMetadata();
+			const outline = $state.snapshot(this.outline) as OutlineItem[];
 			const state: EditState = {
 				pageSize: [firstPage.width, firstPage.height],
 				elements: $state.snapshot(this.elements) as EditElement[],
-				...(this.sourceBytes ? { sourcePdf: this.sourceBytes } : {}),
+				// Multi-source: ship the full sources array when present; the builder
+				// treats sources[0] as the primary (back-compat with sourcePdf).
+				...(this.sources.length > 0
+					? { sources: $state.snapshot(this.sources) as Uint8Array[] }
+					: {}),
 				...(this.pageOps.length > 0 ? { pageOps: $state.snapshot(this.pageOps) as PageOp[] } : {}),
-				...(fonts.length > 0 ? { fonts: $state.snapshot(fonts) as EmbeddedFontAsset[] } : {})
+				...(fonts.length > 0 ? { fonts: $state.snapshot(fonts) as EmbeddedFontAsset[] } : {}),
+				...(metadata ? { metadata } : {}),
+				...(outline.length > 0 ? { outline } : {})
 			};
 			const bytes = await exportPdf({ state, fingerprint: getFingerprint() });
 			downloadPdf(bytes);
@@ -877,6 +1075,22 @@ export class EditorState {
 
 	dismissUpsell() {
 		this.upsell = null;
+	}
+
+	/**
+	 * Snapshot {@link metadata} keeping only non-empty fields, or null when every
+	 * field is blank (so the export omits the metadata block entirely).
+	 */
+	cleanMetadata(): DocumentMetadataInput | null {
+		const m = $state.snapshot(this.metadata) as DocumentMetadataInput;
+		const out: DocumentMetadataInput = {};
+		for (const key of ['title', 'author', 'subject', 'creator', 'producer'] as const) {
+			const v = m[key];
+			if (typeof v === 'string' && v.length > 0) out[key] = v;
+		}
+		const keywords = (m.keywords ?? []).map((k) => k.trim()).filter((k) => k.length > 0);
+		if (keywords.length > 0) out.keywords = keywords;
+		return Object.keys(out).length > 0 ? out : null;
 	}
 }
 

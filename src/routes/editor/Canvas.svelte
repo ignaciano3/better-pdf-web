@@ -53,8 +53,11 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
-<div class="flex-1 overflow-auto p-8">
-	<div class="mx-auto flex w-fit flex-col gap-6">
+<div class="flex-1 overflow-auto p-8" bind:clientWidth={editor.canvasWidth}>
+	<div
+		class="mx-auto flex w-fit flex-col gap-6"
+		style="transform: scale({editor.zoom}); transform-origin: top center;"
+	>
 		{#each editor.pages as page, pageIndex (pageIndex)}
 			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 			<div

@@ -1,5 +1,11 @@
 import { error } from '@sveltejs/kit';
-import type { EditElement, EditState } from '$lib/pdf/types';
+import type {
+	DocumentMetadataInput,
+	EditElement,
+	EditState,
+	OutlineItem,
+	PageOp
+} from '$lib/pdf/types';
 
 // Server-side hard limits. These cap the attack surface of the WASM/PDF
 // parsers for the export endpoint. Kept in a non-remote module so they can be
@@ -20,6 +26,16 @@ const MAX_URL_LEN = 2_048;
 // Embedded custom-font caps.
 const MAX_FONTS = 50;
 const MAX_FONT_BYTES = 5 * 1024 * 1024; // 5 MB per font
+// Multi-source merge caps.
+const MAX_SOURCES = 5;
+const MAX_TOTAL_SOURCE_BYTES = 60 * 1024 * 1024; // 60 MB across all sources
+// Document-properties caps.
+const MAX_METADATA_STR_LEN = 10_000;
+const MAX_KEYWORDS = 1_000;
+// Outline caps.
+const MAX_OUTLINE_ITEMS = 5_000;
+const MAX_OUTLINE_DEPTH = 32;
+const MAX_OUTLINE_TITLE_LEN = 2_000;
 
 const FIELD_KINDS = ['text', 'checkbox', 'radio', 'dropdown', 'signature', 'listbox', 'combo'];
 
@@ -147,6 +163,58 @@ function validateElement(el: EditElement): void {
 	}
 }
 
+/** Validate document metadata: capped strings + a bounded keywords array. */
+function validateMetadata(meta: unknown): void {
+	if (!meta || typeof meta !== 'object') error(422, 'Invalid metadata');
+	const m = meta as DocumentMetadataInput;
+	for (const key of ['title', 'author', 'subject', 'creator', 'producer'] as const) {
+		const v = m[key];
+		if (v !== undefined) {
+			if (typeof v !== 'string') error(422, `Invalid metadata ${key}`);
+			if (v.length > MAX_METADATA_STR_LEN) error(422, `Metadata ${key} too large`);
+		}
+	}
+	if (m.keywords !== undefined) {
+		if (!Array.isArray(m.keywords)) error(422, 'Invalid metadata keywords');
+		if (m.keywords.length > MAX_KEYWORDS) error(422, 'Too many keywords');
+		for (const k of m.keywords) {
+			if (typeof k !== 'string') error(422, 'Invalid metadata keyword');
+			if (k.length > MAX_METADATA_STR_LEN) error(422, 'Metadata keyword too large');
+		}
+	}
+}
+
+/**
+ * Validate an outline tree: bounded total item count + depth, string titles, and
+ * page indices that are finite non-negative integers (and, when the output page
+ * count is known, within range).
+ */
+function validateOutline(outline: unknown, pageCount: number | undefined): void {
+	if (!Array.isArray(outline)) error(422, 'Invalid outline');
+	let total = 0;
+	const walk = (items: unknown[], depth: number): void => {
+		if (depth > MAX_OUTLINE_DEPTH) error(422, 'Outline too deep');
+		for (const raw of items) {
+			if (++total > MAX_OUTLINE_ITEMS) error(422, 'Too many outline items');
+			if (!raw || typeof raw !== 'object') error(422, 'Invalid outline item');
+			const item = raw as Partial<OutlineItem>;
+			if (typeof item.title !== 'string') error(422, 'Invalid outline title');
+			if (item.title.length > MAX_OUTLINE_TITLE_LEN) error(422, 'Outline title too large');
+			if (!Number.isInteger(item.page) || (item.page as number) < 0) {
+				error(422, 'Invalid outline page');
+			}
+			if (pageCount !== undefined && (item.page as number) >= pageCount) {
+				error(422, 'Outline page out of range');
+			}
+			if (item.children !== undefined) {
+				if (!Array.isArray(item.children)) error(422, 'Invalid outline children');
+				walk(item.children, depth + 1);
+			}
+		}
+	};
+	walk(outline, 1);
+}
+
 /** Wire shape of the export command input: edit state plus client fingerprint. */
 export interface ExportInput {
 	state: EditState;
@@ -191,10 +259,54 @@ export function validateExportInput(input: unknown): ExportInput {
 		if (state.sourcePdf.byteLength > MAX_SOURCE_PDF_BYTES) error(413, 'Source PDF too large');
 	}
 
+	// Multi-source merge: an array of source documents (sources[0] is primary).
+	if (state.sources !== undefined) {
+		if (!Array.isArray(state.sources)) error(422, 'Invalid sources');
+		if (state.sources.length > MAX_SOURCES) error(422, 'Too many source documents');
+		let total = 0;
+		for (const s of state.sources) {
+			if (!(s instanceof Uint8Array)) error(422, 'Invalid source document');
+			if (s.byteLength > MAX_SOURCE_PDF_BYTES) error(413, 'Source PDF too large');
+			total += s.byteLength;
+		}
+		if (total > MAX_TOTAL_SOURCE_BYTES) error(413, 'Source documents too large');
+	}
+
+	// How many source documents are addressable by a source PageOp's docIndex.
+	const sourceCount =
+		state.sources !== undefined ? state.sources.length : state.sourcePdf !== undefined ? 1 : 0;
+
 	if (state.pageOps !== undefined) {
 		if (!Array.isArray(state.pageOps)) error(422, 'Invalid page operations');
 		if (state.pageOps.length > MAX_PAGE_OPS) error(422, 'Too many page operations');
+		for (const op of state.pageOps as PageOp[]) {
+			if (!op || typeof op !== 'object') error(422, 'Invalid page operation');
+			if (op.kind === 'source') {
+				if (op.docIndex !== undefined) {
+					if (!Number.isInteger(op.docIndex) || op.docIndex < 0 || op.docIndex >= sourceCount) {
+						error(422, 'Invalid page operation docIndex');
+					}
+				}
+				if (op.size !== undefined) {
+					if (
+						!Array.isArray(op.size) ||
+						op.size.length !== 2 ||
+						!op.size.every((n) => isFiniteNumber(n) && n > 0)
+					) {
+						error(422, 'Invalid page operation size');
+					}
+				}
+			}
+		}
 	}
+
+	// Output page count for outline range checks. Known exactly only when pageOps
+	// describe the output layout; otherwise indices are only checked >= 0.
+	const outputPageCount =
+		state.pageOps !== undefined && Array.isArray(state.pageOps) ? state.pageOps.length : undefined;
+
+	if (state.metadata !== undefined) validateMetadata(state.metadata);
+	if (state.outline !== undefined) validateOutline(state.outline, outputPageCount);
 
 	if (state.fonts !== undefined) {
 		if (!Array.isArray(state.fonts)) error(422, 'Invalid fonts');
