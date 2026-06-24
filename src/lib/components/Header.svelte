@@ -19,6 +19,7 @@
 <header class="flex items-center justify-between border-b border-gray-200 px-6 py-3">
 	<a href={resolve('/')} class="text-lg font-semibold text-gray-900">better-pdf-web</a>
 	<nav class="flex items-center gap-4 text-sm">
+		<a href={resolve('/pricing')} class="text-gray-600 hover:text-gray-900">Pricing</a>
 		{#if user}
 			{#if isRoot}
 				<a href={resolve('/admin')} class="font-medium text-purple-700 hover:underline">Admin</a>
