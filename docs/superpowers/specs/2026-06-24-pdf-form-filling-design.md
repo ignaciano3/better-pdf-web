@@ -101,9 +101,18 @@ in the plan (see Risks).
 
 ### Tool model (PR1)
 
-- New `tool` state on `EditorState`: `'select' | 'text' | 'image' | 'signature'
-  | 'line' | 'rectangle' | 'ellipse' | 'field-text' | 'field-checkbox' |
-  'field-radio' | 'field-dropdown' | 'field-signature'`. Default `'select'`.
+- New `tool` state on `EditorState`, grouped into two distinct categories that
+  the UI also keeps visually separate:
+  - **Drawings (stamps):** `'text' | 'image' | 'signature' | 'line' |
+    'rectangle' | 'ellipse'`.
+  - **Form fields:** `'field-text' | 'field-checkbox' | 'field-radio' |
+    'field-dropdown' | 'field-signature'`.
+  - Plus the default `'select'`.
+- Modeled so the two categories never blur: e.g.
+  `type Tool = 'select' | { group: 'draw'; kind: DrawKind } | { group: 'field';
+  kind: FieldKind }` (or an equivalent tagged enum) — drawings produce static
+  stamp elements, fields produce `FieldElement`s. (Form-field tools are wired in
+  PR2; PR1 ships the grouping and the drawing tools.)
 - Page click creates an element only when a create-tool is active; `'select'`
   never creates. This removes click-to-add-text (kills the "lottery") and the
   trailing-click-after-shape-draw text collision in one change.
@@ -115,8 +124,9 @@ in the plan (see Risks).
 `Toolbar.svelte` becomes a clean three-zone app bar:
 
 - **Left — File:** Upload PDF · New blank · (filename + page count when loaded).
-- **Center — Insert:** segmented control `Select · Text · Image · Signature ·
-  Line · Rect · Ellipse · Field ▾`, active-state highlighted.
+- **Center — Insert:** two visually separated groups, active-state highlighted —
+  **Drawings** (`Select · Text · Image · Signature · Line · Rect · Ellipse`) and
+  **Form fields** (`Field ▾`: Text / Checkbox / Radio / Dropdown / Signature).
 - **Right:** Export PDF (primary).
 
 Per-selection controls leave the header (see floating toolbar).
@@ -237,3 +247,6 @@ Playwright: keep a single thin smoke (upload → fill a field → export; rate-l
 - **PR1** (polish + fixes + tool model + floating toolbar) ships first and is
   independent of better-pdf form APIs.
 - **PR2** (form-filling) builds on PR1's tool model and floating toolbar.
+- **PR3 — canvas & document controls (later):** zoom in/out (and fit-to-width),
+  change page sizes (per-page / on blank insert), and related viewport/page
+  management. Out of scope for PR1/PR2; its own spec → plan when reached.
