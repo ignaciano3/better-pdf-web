@@ -6,11 +6,13 @@
 	let { editor }: { editor: EditorState } = $props();
 
 	function onPageClick(event: MouseEvent, pageIndex: number) {
-		// Only add when clicking the bare page, not an existing element overlay.
+		// Only act on the bare page, not an existing element overlay.
 		if (event.target !== event.currentTarget) return;
-		// A shape draw was started on pointerdown and committed on pointerup; the
-		// trailing click must not also drop a text element.
-		if (editor.shapeTool) return;
+		if (editor.tool.type === 'select') {
+			editor.select(null);
+			return;
+		}
+		// Shape kinds were drawn on pointerdown→up; placeAtClient ignores them.
 		editor.placeAtClient(
 			event.clientX,
 			event.clientY,
@@ -20,7 +22,6 @@
 	}
 
 	function onPagePointerDown(event: PointerEvent, pageIndex: number) {
-		// Begin a shape drag only when pressing the bare page with a tool active.
 		if (event.target !== event.currentTarget) return;
 		editor.beginShapeDraw(event, event.currentTarget as HTMLElement, pageIndex);
 	}

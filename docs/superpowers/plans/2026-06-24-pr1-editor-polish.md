@@ -40,11 +40,13 @@
 ## Task 1: Set up Svelte component/runes testing (official)
 
 **Files:**
+
 - Modify: `vite.config.ts`
 - Create: `vitest-setup-client.ts`
 - Create: `src/routes/editor/editor.svelte.test.ts` (smoke only in this task)
 
 **Interfaces:**
+
 - Produces: a `client` vitest project (jsdom) running `*.svelte.{test,spec}.ts`; `flushSync` (from `svelte`) + `$effect.root` available; `@testing-library/svelte` `render`/`screen` + `@testing-library/user-event`.
 
 - [ ] **Step 1: Install dev dependencies**
@@ -66,28 +68,28 @@ import '@testing-library/jest-dom/vitest';
 In `vite.config.ts`, change the `test.projects` array to include both projects (keep the existing `env` block above `projects` unchanged):
 
 ```ts
-		projects: [
-			{
-				extends: './vite.config.ts',
-				test: {
-					name: 'client',
-					environment: 'jsdom',
-					// Use browser builds of packages under test (official Svelte guidance).
-					resolve: { conditions: ['browser'] },
-					include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
-					setupFiles: ['./vitest-setup-client.ts']
-				}
-			},
-			{
-				extends: './vite.config.ts',
-				test: {
-					name: 'server',
-					environment: 'node',
-					include: ['src/**/*.{test,spec}.{js,ts}'],
-					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
-				}
-			}
-		]
+projects: [
+	{
+		extends: './vite.config.ts',
+		test: {
+			name: 'client',
+			environment: 'jsdom',
+			// Use browser builds of packages under test (official Svelte guidance).
+			resolve: { conditions: ['browser'] },
+			include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+			setupFiles: ['./vitest-setup-client.ts']
+		}
+	},
+	{
+		extends: './vite.config.ts',
+		test: {
+			name: 'server',
+			environment: 'node',
+			include: ['src/**/*.{test,spec}.{js,ts}'],
+			exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+		}
+	}
+];
 ```
 
 - [ ] **Step 4: Write a smoke runes test**
@@ -135,11 +137,13 @@ git commit -m "test: add Svelte client (jsdom) vitest project per official docs"
 ## Task 2: Unified Tool model on EditorState
 
 **Files:**
+
 - Modify: `src/routes/editor/constants.ts`
 - Modify: `src/routes/editor/editor.svelte.ts`
 - Test: `src/routes/editor/editor.svelte.test.ts`
 
 **Interfaces:**
+
 - Consumes: nothing new.
 - Produces:
   - `type DrawKind = 'text' | 'image' | 'signature' | 'line' | 'rectangle' | 'ellipse'`
@@ -157,7 +161,15 @@ import { SELECT_TOOL } from './constants';
 function fakePage(): HTMLElement {
 	return {
 		getBoundingClientRect: () => ({
-			left: 0, top: 0, right: 240, bottom: 320, width: 240, height: 320, x: 0, y: 0, toJSON() {}
+			left: 0,
+			top: 0,
+			right: 240,
+			bottom: 320,
+			width: 240,
+			height: 320,
+			x: 0,
+			y: 0,
+			toJSON() {}
 		})
 	} as unknown as HTMLElement;
 }
@@ -257,19 +269,19 @@ import {
 2. Remove the `shapeTool` field and its comment:
 
 ```ts
-	/** When set, dragging on a page draws a shape of this kind instead of
-	 * click-to-add-text. Cleared after one shape is drawn. */
-	shapeTool = $state<ShapeKind | null>(null);
+/** When set, dragging on a page draws a shape of this kind instead of
+ * click-to-add-text. Cleared after one shape is drawn. */
+shapeTool = $state<ShapeKind | null>(null);
 ```
 
 and replace with:
 
 ```ts
-	/** Active tool. `select` (default) edits existing elements; a `draw` tool
-	 * makes the next page click/drag create that element, then resets to select. */
-	tool = $state<Tool>(SELECT_TOOL);
-	/** The draw kind in effect, or null when selecting. */
-	activeDrawKind = $derived<DrawKind | null>(this.tool.type === 'draw' ? this.tool.kind : null);
+/** Active tool. `select` (default) edits existing elements; a `draw` tool
+ * makes the next page click/drag create that element, then resets to select. */
+tool = $state<Tool>(SELECT_TOOL);
+/** The draw kind in effect, or null when selecting. */
+activeDrawKind = $derived<DrawKind | null>(this.tool.type === 'draw' ? this.tool.kind : null);
 ```
 
 3. Remove the `setShapeTool` method:
@@ -327,33 +339,33 @@ and replace with:
 5. In `beginShapeDraw`, replace the first lines:
 
 ```ts
-		const kind = this.shapeTool;
-		if (!kind) return false;
+const kind = this.shapeTool;
+if (!kind) return false;
 ```
 
 with:
 
 ```ts
-		const kind =
-			this.tool.type === 'draw' &&
-			(this.tool.kind === 'line' || this.tool.kind === 'rectangle' || this.tool.kind === 'ellipse')
-				? this.tool.kind
-				: null;
-		if (!kind) return false;
+const kind =
+	this.tool.type === 'draw' &&
+	(this.tool.kind === 'line' || this.tool.kind === 'rectangle' || this.tool.kind === 'ellipse')
+		? this.tool.kind
+		: null;
+if (!kind) return false;
 ```
 
 6. In `beginShapeDraw`'s `up()` handler, replace:
 
 ```ts
-			// One-shot tool: return to normal mode after drawing.
-			this.shapeTool = null;
+// One-shot tool: return to normal mode after drawing.
+this.shapeTool = null;
 ```
 
 with:
 
 ```ts
-			// One-shot tool: return to select after drawing.
-			this.resetTool();
+// One-shot tool: return to select after drawing.
+this.resetTool();
 ```
 
 - [ ] **Step 5: Run the tests to verify they pass**
@@ -378,11 +390,13 @@ git commit -m "feat(editor): unified Select-default tool model gating element cr
 ## Task 3: Wire Canvas + Toolbar to the tool model
 
 **Files:**
+
 - Modify: `src/routes/editor/Canvas.svelte`
 - Modify: `src/routes/editor/Toolbar.svelte` (header redesign + tool buttons)
 - Test: `src/routes/editor/Toolbar.svelte.test.ts`
 
 **Interfaces:**
+
 - Consumes: `editor.tool`, `editor.activeDrawKind`, `editor.setTool`, `editor.resetTool`, `editor.select`, `editor.placeAtClient`, `editor.beginShapeDraw`.
 
 - [ ] **Step 1: Update `Canvas.svelte` click/pointerdown handlers**
@@ -550,10 +564,7 @@ Replace the entire contents of `src/routes/editor/Toolbar.svelte`:
 					{t.label}
 				</button>
 			{/each}
-			<button
-				class={toolClass(editor.activeDrawKind === 'signature')}
-				onclick={onDrawSignature}
-			>
+			<button class={toolClass(editor.activeDrawKind === 'signature')} onclick={onDrawSignature}>
 				Signature
 			</button>
 			<label class={toolClass(editor.activeDrawKind === 'image') + ' cursor-pointer'}>
@@ -565,7 +576,9 @@ Replace the entire contents of `src/routes/editor/Toolbar.svelte`:
 					onchange={onImageUpload}
 				/>
 			</label>
-			<label class="cursor-pointer rounded px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100">
+			<label
+				class="cursor-pointer rounded px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+			>
 				Upload sig
 				<input
 					type="file"
@@ -610,6 +623,7 @@ git commit -m "feat(editor): redesigned header with separated drawing/field tool
 ## Task 4: Rich static text — model, renderer, validation
 
 **Files:**
+
 - Modify: `src/lib/pdf/types.ts`
 - Modify: `src/lib/pdf/renderers/text.ts`
 - Modify: `src/routes/editor/export.remote.ts`
@@ -617,6 +631,7 @@ git commit -m "feat(editor): redesigned header with separated drawing/field tool
 - Test: `src/lib/pdf/build.text-rich.test.ts`, `src/routes/editor/export-validate.test.ts`
 
 **Interfaces:**
+
 - Consumes: existing `buildPdf`, `renderText`, `validateElement`.
 - Produces: `TextElement` gains optional `font`, `color`, `opacity`, `rotation`, `lineHeight`, `maxWidth`; `type StandardFontName`. `validateElement` accepts these.
 
@@ -790,9 +805,7 @@ describe('validateExportInput', () => {
 			fingerprint: 'fp',
 			state: {
 				pageSize: [300, 400],
-				elements: [
-					{ type: 'text', id: 't0', text: 'hi', x: 1, y: 2, size: 12, opacity: Infinity }
-				]
+				elements: [{ type: 'text', id: 't0', text: 'hi', x: 1, y: 2, size: 12, opacity: Infinity }]
 			}
 		};
 		expect(() => validateExportInput(input)).toThrow();
@@ -865,12 +878,12 @@ Replace the styled `<div>` in `src/routes/editor/overlays/TextOverlay.svelte` wi
 Add to the `<script>` (after the `text` derived):
 
 ```ts
-	function fontCss(font: string | undefined): string {
-		if (!font) return 'Helvetica, Arial, sans-serif';
-		if (font.startsWith('Times')) return '"Times New Roman", Times, serif';
-		if (font.startsWith('Courier')) return '"Courier New", Courier, monospace';
-		return 'Helvetica, Arial, sans-serif';
-	}
+function fontCss(font: string | undefined): string {
+	if (!font) return 'Helvetica, Arial, sans-serif';
+	if (font.startsWith('Times')) return '"Times New Roman", Times, serif';
+	if (font.startsWith('Courier')) return '"Courier New", Courier, monospace';
+	return 'Helvetica, Arial, sans-serif';
+}
 ```
 
 - [ ] **Step 11: Full check + tests + lint**
@@ -890,12 +903,14 @@ git commit -m "feat(editor): rich static text (font/color/opacity/rotation/wrap)
 ## Task 5: Floating contextual toolbar
 
 **Files:**
+
 - Create: `src/routes/editor/FloatingToolbar.svelte`
 - Modify: `src/routes/editor/+page.svelte` (mount it)
 - Modify: `src/routes/editor/editor.svelte.ts` (add `duplicateSelected`)
 - Test: `src/routes/editor/editor.svelte.test.ts` (duplicate), `src/routes/editor/FloatingToolbar.svelte.test.ts`
 
 **Interfaces:**
+
 - Consumes: `editor.selected`, `editor.selectedText`, `editor.selectedShape`, `editor.removeSelected`.
 - Produces: `editor.duplicateSelected(): void`; a `FloatingToolbar` component that renders contextual controls for the current selection.
 
@@ -967,7 +982,15 @@ import { EditorState } from './editor.svelte';
 function fakePage(): HTMLElement {
 	return {
 		getBoundingClientRect: () => ({
-			left: 0, top: 0, right: 240, bottom: 320, width: 240, height: 320, x: 0, y: 0, toJSON() {}
+			left: 0,
+			top: 0,
+			right: 240,
+			bottom: 320,
+			width: 240,
+			height: 320,
+			x: 0,
+			y: 0,
+			toJSON() {}
 		})
 	} as unknown as HTMLElement;
 }
@@ -1055,7 +1078,8 @@ Create `src/routes/editor/FloatingToolbar.svelte`:
 			<select
 				class="rounded border px-1 py-0.5 text-sm"
 				value={t.font ?? 'Helvetica'}
-				onchange={(e) => (t.font = (e.currentTarget as HTMLSelectElement).value as StandardFontName)}
+				onchange={(e) =>
+					(t.font = (e.currentTarget as HTMLSelectElement).value as StandardFontName)}
 			>
 				{#each fonts as f (f)}
 					<option value={f}>{f}</option>
@@ -1135,17 +1159,17 @@ Create `src/routes/editor/FloatingToolbar.svelte`:
 In `src/routes/editor/+page.svelte`, import and render it inside the page-relative container. Add the import:
 
 ```svelte
-	import FloatingToolbar from './FloatingToolbar.svelte';
+import FloatingToolbar from './FloatingToolbar.svelte';
 ```
 
 The toolbar is absolutely positioned in canvas coordinates, so it must live inside the scrolling canvas. Simplest correct placement for PR1: render it at the editor root and let it overlay; wrap the `<Canvas>` area. Replace the `<div class="flex min-h-0 flex-1">` block with:
 
 ```svelte
-	<div class="relative flex min-h-0 flex-1">
-		<PageManager {editor} />
-		<Canvas {editor} />
-		<FloatingToolbar {editor} />
-	</div>
+<div class="relative flex min-h-0 flex-1">
+	<PageManager {editor} />
+	<Canvas {editor} />
+	<FloatingToolbar {editor} />
+</div>
 ```
 
 - [ ] **Step 9: Run the FloatingToolbar test to verify it passes**
@@ -1170,11 +1194,13 @@ git commit -m "feat(editor): Sejda-style floating contextual toolbar for the sel
 ## Task 6: Home landing + editor empty-state
 
 **Files:**
+
 - Modify: `src/routes/+page.svelte`
 - Modify: `src/routes/editor/+page.svelte`
 - Test: manual (visual) — no unit assertions for static marketing markup.
 
 **Interfaces:**
+
 - Consumes: `resolve` from `$app/paths` (lint rule `svelte/no-navigation-without-resolve`).
 
 - [ ] **Step 1: Write the home landing**
@@ -1240,28 +1266,40 @@ In `src/routes/editor/+page.svelte`, replace the `<Canvas {editor} />` usage are
 Then wrap the canvas region:
 
 ```svelte
-	<div class="relative flex min-h-0 flex-1">
-		<PageManager {editor} />
-		{#if showEmptyState}
-			<div class="flex flex-1 items-center justify-center">
-				<div class="flex flex-col items-center gap-4 rounded-xl border border-dashed border-gray-300 bg-white px-12 py-16">
-					<p class="text-lg font-medium text-gray-700">Upload a PDF or start blank</p>
-					<div class="flex gap-3">
-						<label class="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
-							Upload PDF
-							<input type="file" accept="application/pdf,.pdf" class="hidden" onchange={onEmptyUpload} />
-						</label>
-						<button onclick={startBlank} class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50">
-							Start blank
-						</button>
-					</div>
+<div class="relative flex min-h-0 flex-1">
+	<PageManager {editor} />
+	{#if showEmptyState}
+		<div class="flex flex-1 items-center justify-center">
+			<div
+				class="flex flex-col items-center gap-4 rounded-xl border border-dashed border-gray-300 bg-white px-12 py-16"
+			>
+				<p class="text-lg font-medium text-gray-700">Upload a PDF or start blank</p>
+				<div class="flex gap-3">
+					<label
+						class="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+					>
+						Upload PDF
+						<input
+							type="file"
+							accept="application/pdf,.pdf"
+							class="hidden"
+							onchange={onEmptyUpload}
+						/>
+					</label>
+					<button
+						onclick={startBlank}
+						class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+					>
+						Start blank
+					</button>
 				</div>
 			</div>
-		{:else}
-			<Canvas {editor} />
-		{/if}
-		<FloatingToolbar {editor} />
-	</div>
+		</div>
+	{:else}
+		<Canvas {editor} />
+	{/if}
+	<FloatingToolbar {editor} />
+</div>
 ```
 
 - [ ] **Step 3: Type-check + lint**

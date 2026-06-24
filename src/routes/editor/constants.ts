@@ -34,3 +34,10 @@ export const SHAPE_DEFAULT_STROKE_WIDTH = 1;
 
 /** Minimum bounding-box side (PDF points) so a stray click still yields a shape. */
 export const SHAPE_MIN_SIZE = 6;
+
+/** What a page click/drag does. `select` edits existing elements only. */
+export type DrawKind = 'text' | 'image' | 'signature' | 'line' | 'rectangle' | 'ellipse';
+export type Tool = { type: 'select' } | { type: 'draw'; kind: DrawKind };
+
+/** The idle tool: clicks select/deselect, never create. */
+export const SELECT_TOOL: Tool = { type: 'select' };

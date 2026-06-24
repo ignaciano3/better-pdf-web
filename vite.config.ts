@@ -33,6 +33,19 @@ export default defineConfig({
 		projects: [
 			{
 				extends: './vite.config.ts',
+				// Use browser builds of packages under test (official Svelte guidance).
+				resolve: { conditions: ['browser'] },
+				test: {
+					name: 'client',
+					environment: 'jsdom',
+					// Register @testing-library/svelte's automatic post-test DOM cleanup.
+					globals: true,
+					include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+					setupFiles: ['./vitest-setup-client.ts']
+				}
+			},
+			{
+				extends: './vite.config.ts',
 				test: {
 					name: 'server',
 					environment: 'node',
