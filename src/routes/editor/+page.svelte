@@ -4,6 +4,7 @@
 	import { EditorState } from './editor.svelte';
 	import Toolbar from './Toolbar.svelte';
 	import Canvas from './Canvas.svelte';
+	import PageManager from './PageManager.svelte';
 	import UpsellModal from './UpsellModal.svelte';
 
 	const editor = new EditorState();
@@ -25,7 +26,10 @@
 		</div>
 	{/if}
 
-	<Canvas {editor} />
+	<div class="flex min-h-0 flex-1">
+		<PageManager {editor} />
+		<Canvas {editor} />
+	</div>
 
 	{#if showSignaturePad}
 		<SignaturePad onuse={onSignatureDrawn} oncancel={() => (showSignaturePad = false)} />
