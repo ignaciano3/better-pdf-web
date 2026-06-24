@@ -27,3 +27,10 @@ export interface PendingRaster {
 	format: 'png' | 'jpg';
 	aspect: number;
 }
+
+/** Default stroke for a newly drawn shape (black, 1pt). */
+export const SHAPE_DEFAULT_STROKE: { r: number; g: number; b: number } = { r: 0, g: 0, b: 0 };
+export const SHAPE_DEFAULT_STROKE_WIDTH = 1;
+
+/** Minimum bounding-box side (PDF points) so a stray click still yields a shape. */
+export const SHAPE_MIN_SIZE = 6;

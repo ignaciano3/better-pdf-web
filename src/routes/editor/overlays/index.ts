@@ -3,6 +3,7 @@ import type { EditElement } from '$lib/pdf/types';
 import type { EditorState } from '../editor.svelte';
 import TextOverlay from './TextOverlay.svelte';
 import RasterOverlay from './RasterOverlay.svelte';
+import ShapeOverlay from './ShapeOverlay.svelte';
 
 /** Props every overlay component receives. */
 export interface OverlayProps {
@@ -18,7 +19,8 @@ export interface OverlayProps {
 const registry: Record<EditElement['type'], Component<OverlayProps>> = {
 	text: TextOverlay,
 	signature: RasterOverlay,
-	image: RasterOverlay
+	image: RasterOverlay,
+	shape: ShapeOverlay
 };
 
 export function overlayFor(type: EditElement['type']): Component<OverlayProps> {

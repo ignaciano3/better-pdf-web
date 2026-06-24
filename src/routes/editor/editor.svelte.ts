@@ -1,4 +1,11 @@
-import type { EditElement, EditState, ImageElement, SignatureElement } from '$lib/pdf/types';
+import type {
+	EditElement,
+	EditState,
+	ImageElement,
+	ShapeElement,
+	ShapeKind,
+	SignatureElement
+} from '$lib/pdf/types';
 import { renderSourcePdf, type RenderedPage, PdfRenderError } from '$lib/pdf/render';
 import { exportPdf } from './export.remote';
 import {
@@ -8,6 +15,9 @@ import {
 	MAX_IMAGE_BYTES,
 	SIGNATURE_DEFAULT_WIDTH,
 	IMAGE_DEFAULT_WIDTH,
+	SHAPE_DEFAULT_STROKE,
+	SHAPE_DEFAULT_STROKE_WIDTH,
+	SHAPE_MIN_SIZE,
 	type PageInfo,
 	type PendingRaster
 } from './constants';
@@ -47,6 +57,12 @@ export class EditorState {
 	pendingSignature = $state<PendingRaster | null>(null);
 	pendingImage = $state<PendingRaster | null>(null);
 
+	/** When set, dragging on a page draws a shape of this kind instead of
+	 * click-to-add-text. Cleared after one shape is drawn. */
+	shapeTool = $state<ShapeKind | null>(null);
+	/** Stroke color applied to newly drawn shapes (RGB 0..1). */
+	shapeStroke = $state<{ r: number; g: number; b: number }>({ ...SHAPE_DEFAULT_STROKE });
+
 	exporting = $state(false);
 	loadingPdf = $state(false);
 	errorMessage = $state<string | null>(null);
@@ -59,6 +75,7 @@ export class EditorState {
 
 	selected = $derived(this.elements.find((e) => e.id === this.selectedId) ?? null);
 	selectedText = $derived(this.selected?.type === 'text' ? this.selected : null);
+	selectedShape = $derived(this.selected?.type === 'shape' ? this.selected : null);
 
 	nextId(prefix: string): string {
 		return `${prefix}${this.#nextId++}`;
@@ -144,6 +161,65 @@ export class EditorState {
 		this.addTextAt(x, y, pageIndex);
 	}
 
+	// --- shapes --------------------------------------------------------------
+
+	/** Toggle the active shape tool (null = back to text/click mode). */
+	setShapeTool(kind: ShapeKind | null) {
+		this.shapeTool = this.shapeTool === kind ? null : kind;
+		if (this.shapeTool) this.selectedId = null;
+	}
+
+	/**
+	 * Begin drawing a shape: press defines one corner, drag sizes the bounding
+	 * box, release commits it. No-op (returns false) when no shape tool is active
+	 * so the page keeps its normal click-to-add-text behaviour. Called from the
+	 * page's pointerdown.
+	 */
+	beginShapeDraw(event: PointerEvent, pageEl: HTMLElement, pageIndex: number): boolean {
+		const kind = this.shapeTool;
+		if (!kind) return false;
+		event.preventDefault();
+		const rect = pageEl.getBoundingClientRect();
+		const startX = (event.clientX - rect.left) / SCALE;
+		const startY = (event.clientY - rect.top) / SCALE;
+
+		const stroke = $state.snapshot(this.shapeStroke);
+		const el: ShapeElement = {
+			type: 'shape',
+			id: this.nextId('sh'),
+			shape: kind,
+			x: startX,
+			y: startY,
+			width: 0,
+			height: 0,
+			page: pageIndex,
+			strokeColor: stroke,
+			strokeWidth: SHAPE_DEFAULT_STROKE_WIDTH
+		};
+		this.add(el);
+
+		const move = (e: PointerEvent) => {
+			const curX = (e.clientX - rect.left) / SCALE;
+			const curY = (e.clientY - rect.top) / SCALE;
+			el.x = Math.min(startX, curX);
+			el.y = Math.min(startY, curY);
+			el.width = Math.abs(curX - startX);
+			el.height = Math.abs(curY - startY);
+		};
+		const up = () => {
+			window.removeEventListener('pointermove', move);
+			window.removeEventListener('pointerup', up);
+			// A stray click with no real drag still yields a visible default shape.
+			if (el.width < SHAPE_MIN_SIZE) el.width = SHAPE_MIN_SIZE * 4;
+			if (el.shape !== 'line' && el.height < SHAPE_MIN_SIZE) el.height = SHAPE_MIN_SIZE * 4;
+			// One-shot tool: return to normal mode after drawing.
+			this.shapeTool = null;
+		};
+		window.addEventListener('pointermove', move);
+		window.addEventListener('pointerup', up);
+		return true;
+	}
+
 	// --- drag / resize -------------------------------------------------------
 
 	startDrag(event: PointerEvent, el: EditElement) {
@@ -169,17 +245,26 @@ export class EditorState {
 		window.addEventListener('pointerup', up);
 	}
 
-	startResize(event: PointerEvent, el: SignatureElement | ImageElement) {
+	startResize(event: PointerEvent, el: SignatureElement | ImageElement | ShapeElement) {
 		event.stopPropagation();
 		event.preventDefault();
 		this.selectedId = el.id;
 		const startX = event.clientX;
+		const startY = event.clientY;
 		const startWidth = el.width;
+		const startHeight = el.height;
+		// Rasters resize about their aspect ratio; shapes resize freely on both axes.
+		const free = el.type === 'shape';
 		const aspect = el.width / el.height;
 
+		const minSide = free ? SHAPE_MIN_SIZE : 20;
 		const move = (e: PointerEvent) => {
-			el.width = Math.max(20, startWidth + (e.clientX - startX) / SCALE);
-			el.height = el.width / aspect;
+			el.width = Math.max(minSide, startWidth + (e.clientX - startX) / SCALE);
+			if (free) {
+				el.height = Math.max(minSide, startHeight + (e.clientY - startY) / SCALE);
+			} else {
+				el.height = el.width / aspect;
+			}
 		};
 		const up = () => {
 			window.removeEventListener('pointermove', move);

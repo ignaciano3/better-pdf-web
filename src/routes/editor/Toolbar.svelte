@@ -31,12 +31,36 @@
 	}
 
 	const hint = $derived(
-		editor.pendingSignature
-			? 'Click a page to place your signature.'
-			: editor.pendingImage
-				? 'Click a page to place your image.'
-				: 'Click a page to add text. Drag to move.'
+		editor.shapeTool
+			? `Drag on a page to draw a ${editor.shapeTool}.`
+			: editor.pendingSignature
+				? 'Click a page to place your signature.'
+				: editor.pendingImage
+					? 'Click a page to place your image.'
+					: 'Click a page to add text. Drag to move.'
 	);
+
+	/** #rrggbb (0..255) ⇄ {r,g,b} (0..1) bridges for the color inputs. */
+	function toHex(c: { r: number; g: number; b: number }): string {
+		const h = (v: number) =>
+			Math.round(Math.max(0, Math.min(1, v)) * 255)
+				.toString(16)
+				.padStart(2, '0');
+		return `#${h(c.r)}${h(c.g)}${h(c.b)}`;
+	}
+	function fromHex(hex: string): { r: number; g: number; b: number } {
+		return {
+			r: parseInt(hex.slice(1, 3), 16) / 255,
+			g: parseInt(hex.slice(3, 5), 16) / 255,
+			b: parseInt(hex.slice(5, 7), 16) / 255
+		};
+	}
+
+	const shapeTools = [
+		{ kind: 'line', label: 'Line' },
+		{ kind: 'rectangle', label: 'Rect' },
+		{ kind: 'ellipse', label: 'Ellipse' }
+	] as const;
 </script>
 
 <header class="flex items-center gap-3 border-b bg-white px-4 py-2 shadow-sm">
@@ -91,6 +115,63 @@
 				onchange={onImageUpload}
 			/>
 		</label>
+		<div class="flex items-center gap-1 rounded bg-gray-100 p-0.5">
+			{#each shapeTools as tool (tool.kind)}
+				<button
+					onclick={() => editor.setShapeTool(tool.kind)}
+					class="rounded px-2 py-1 text-sm font-medium {editor.shapeTool === tool.kind
+						? 'bg-blue-600 text-white'
+						: 'text-gray-700 hover:bg-gray-200'}"
+				>
+					{tool.label}
+				</button>
+			{/each}
+			<label class="flex items-center gap-1 px-1 text-sm" title="Shape stroke color">
+				<input
+					type="color"
+					value={toHex(editor.shapeStroke)}
+					oninput={(e) =>
+						(editor.shapeStroke = fromHex((e.currentTarget as HTMLInputElement).value))}
+					class="h-6 w-6 cursor-pointer rounded border"
+				/>
+			</label>
+		</div>
+		{#if editor.selectedShape}
+			{@const sh = editor.selectedShape}
+			<label class="flex items-center gap-1 text-sm" title="Stroke color">
+				Stroke
+				<input
+					type="color"
+					value={toHex(sh.strokeColor ?? { r: 0, g: 0, b: 0 })}
+					oninput={(e) => (sh.strokeColor = fromHex((e.currentTarget as HTMLInputElement).value))}
+					class="h-6 w-6 cursor-pointer rounded border"
+				/>
+			</label>
+			{#if sh.shape !== 'line'}
+				<label class="flex items-center gap-1 text-sm" title="Fill color">
+					<input
+						type="checkbox"
+						checked={Boolean(sh.fillColor)}
+						onchange={(e) => {
+							if ((e.currentTarget as HTMLInputElement).checked) {
+								sh.fillColor = { r: 0.8, g: 0.8, b: 0.8 };
+							} else {
+								delete sh.fillColor;
+							}
+						}}
+					/>
+					Fill
+					{#if sh.fillColor}
+						<input
+							type="color"
+							value={toHex(sh.fillColor)}
+							oninput={(e) => (sh.fillColor = fromHex((e.currentTarget as HTMLInputElement).value))}
+							class="h-6 w-6 cursor-pointer rounded border"
+						/>
+					{/if}
+				</label>
+			{/if}
+		{/if}
 		{#if editor.selectedText}
 			<label class="flex items-center gap-1 text-sm">
 				Size

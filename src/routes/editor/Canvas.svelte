@@ -8,12 +8,21 @@
 	function onPageClick(event: MouseEvent, pageIndex: number) {
 		// Only add when clicking the bare page, not an existing element overlay.
 		if (event.target !== event.currentTarget) return;
+		// A shape draw was started on pointerdown and committed on pointerup; the
+		// trailing click must not also drop a text element.
+		if (editor.shapeTool) return;
 		editor.placeAtClient(
 			event.clientX,
 			event.clientY,
 			event.currentTarget as HTMLElement,
 			pageIndex
 		);
+	}
+
+	function onPagePointerDown(event: PointerEvent, pageIndex: number) {
+		// Begin a shape drag only when pressing the bare page with a tool active.
+		if (event.target !== event.currentTarget) return;
+		editor.beginShapeDraw(event, event.currentTarget as HTMLElement, pageIndex);
 	}
 </script>
 
@@ -25,6 +34,7 @@
 				class="relative bg-white shadow-lg"
 				style="width: {page.width * SCALE}px; height: {page.height * SCALE}px;"
 				onclick={(e) => onPageClick(e, pageIndex)}
+				onpointerdown={(e) => onPagePointerDown(e, pageIndex)}
 			>
 				{#if editor.rendered[pageIndex]}
 					<img
