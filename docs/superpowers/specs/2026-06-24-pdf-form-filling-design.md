@@ -5,17 +5,45 @@ Status: Approved (pending written-spec review)
 
 ## Summary
 
-Two shipments on the existing SvelteKit editor:
+Four shipments on the existing SvelteKit editor. A deliberate secondary goal is
+**broad coverage of the `@ignaciano3/better-pdf` API** (dogfooding) — see the
+Feature scope table below for which lib calls each feature exercises.
 
-- **PR1 — editor polish:** a real home landing (Create / Edit), a redesigned
-  editor header, an explicit tool model (Select is the default; create-tools
-  gate page clicks), a Sejda-style floating contextual toolbar anchored to the
-  selection, and two bug fixes (image placement on page ≥ 2; the shape/click
-  text collision). Unit-test-first.
-- **PR2 — form-filling:** read AcroForm fields from uploaded PDFs and overlay
-  real fillable inputs; author new fields; edit field properties (name, options,
-  required) in a modal; export a fresh, fully-fillable PDF via better-pdf. Fields
-  round-trip losslessly (export → re-upload → still editable as fields).
+- **PR1 — editor polish + rich text:** home landing (Create / Edit), redesigned
+  header, explicit tool model (Select default; create-tools gate page clicks;
+  **drawing tools and field tools are separate groups**), Sejda-style floating
+  contextual toolbar, rich static-text properties (font, bold/italic, color,
+  opacity, rotation, line-height, word-wrap), and two bug fixes (image on
+  page ≥ 2; the shape/click text collision).
+- **PR2 — form-filling core:** read AcroForm fields and overlay fillable inputs;
+  author new fields; field properties (name, options, required, **border /
+  background / tooltip / read-only / max-length / multiline / default**) in a
+  modal; field types text / checkbox / radio / dropdown / signature /
+  **listbox / combo**; export a fresh fully-fillable PDF. Fields round-trip.
+- **PR3 — vector & content richness:** freehand / SVG-path & polygon tools,
+  hyperlink elements (external URL or internal go-to-page), custom font
+  upload/embed for static text.
+- **PR4 — canvas & document controls:** zoom + fit-to-width, change page sizes,
+  merge/append a second uploaded PDF, document properties (metadata), and an
+  outline/bookmarks editor.
+
+## Feature scope (lib coverage)
+
+| Feature | PR | better-pdf calls exercised |
+| --- | --- | --- |
+| Rich static text | 1 | `drawText` font/color/opacity/rotate/lineHeight/maxWidth; `StandardFonts` |
+| Form field read | 2 | `getForm().getFields()`, widget `rect`/`page` |
+| Form field authoring | 2 | `createForm()` → `FormBuilder` |
+| Field types (listbox/combo) | 2 | `ChoiceOptions.combo`, `PdfListBox.selectMultiple` |
+| Field properties | 2 | `FieldBorder`, `background`, `tooltip`, `readOnly`, `maxLength`, `multiline` |
+| Fill + export rebuild | 2 | `embedPdfPage`/`drawPage`, `createForm`, `PdfSignature.setImage` |
+| Freehand / polygon | 3 | `drawSvgPath`, `drawPolygon` |
+| Hyperlinks | 3 | `drawLink` (`url` / `goToPage`) |
+| Custom font embed | 3 | `embedFont(bytes)`, `PdfFont` |
+| Zoom / page size | 4 | canvas zoom; `setSize` / `setMediaBox` on export |
+| Merge PDFs | 4 | `embedPdfPage` from a second source |
+| Document properties | 4 | `setTitle`/`setAuthor`/`setSubject`/`setKeywords`/`setCreator` |
+| Outline / bookmarks | 4 | `setOutline(OutlineItem[])` |
 
 Everything writes PDFs through `@ignaciano3/better-pdf` (dogfooding). pdf.js is
 used only to rasterize pages for display. WASM stays server-only: field reading
@@ -29,6 +57,9 @@ client-render / server-finalize split.
   top of any document, including uploaded ones.
 - Authoring new form fields, with per-field properties editable in a modal.
 - Fields survive a full export → re-import round-trip.
+- **Broad better-pdf coverage** as a deliberate dogfooding goal — exercise text
+  styling, custom fonts, vector paths, links, all field types + properties,
+  merge, metadata, and outline (see Feature scope table).
 - Unit/component tests simulating user input are the primary safety net; a thin
   Playwright smoke remains.
 
@@ -104,9 +135,9 @@ in the plan (see Risks).
 - New `tool` state on `EditorState`, grouped into two distinct categories that
   the UI also keeps visually separate:
   - **Drawings (stamps):** `'text' | 'image' | 'signature' | 'line' |
-    'rectangle' | 'ellipse'`.
+    'rectangle' | 'ellipse'` (PR1) + `'path' | 'polygon' | 'link'` (PR3).
   - **Form fields:** `'field-text' | 'field-checkbox' | 'field-radio' |
-    'field-dropdown' | 'field-signature'`.
+    'field-dropdown' | 'field-signature' | 'field-listbox' | 'field-combo'`.
   - Plus the default `'select'`.
 - Modeled so the two categories never blur: e.g.
   `type Tool = 'select' | { group: 'draw'; kind: DrawKind } | { group: 'field';
@@ -136,8 +167,13 @@ Per-selection controls leave the header (see floating toolbar).
 A component anchored just above the selected element, following it on
 move/scroll. Contents adapt to element type:
 
-- Static text: font size, text color, align, duplicate, delete.
-- Shape: stroke color, fill toggle/color, stroke width, duplicate, delete.
+- Static text: font family, bold/italic, size, color, opacity, rotation,
+  line-height, word-wrap (maxWidth), align, duplicate, delete (PR1; custom-font
+  picker entry added in PR3).
+- Shape: stroke color, fill toggle/color, stroke width, opacity, duplicate,
+  delete.
+- Path / polygon (PR3): stroke/fill/width/opacity, duplicate, delete.
+- Link (PR3): edit target (URL / page), duplicate, delete.
 - Image / drawn-signature: duplicate, delete (resize via existing handles).
 - Field: **⚙ Settings** (opens Field Properties modal), duplicate, delete.
 
@@ -146,19 +182,22 @@ move/scroll. Contents adapt to element type:
 Opened from the floating toolbar's ⚙ (or on creating a field). Fields:
 
 - `name` — auto-suggested, must be unique within the document.
-- `required` — toggle.
-- Type-specific: dropdown/radio → options list (add / remove / reorder); text →
-  placeholder, max length, multiline toggle.
+- `required` / `readOnly` — toggles.
+- Appearance: border color + width, background color, tooltip.
+- Type-specific: dropdown/radio/listbox/combo → options list (add / remove /
+  reorder); text → placeholder, max length, multiline toggle, default value.
 - Delete button.
 
 Detected AcroForm fields open the same modal with their read values.
 
-### Data model (PR2)
+### Data model (PR2–PR3)
 
 Extend `src/lib/pdf/types.ts`:
 
 ```ts
-type FieldKind = 'text' | 'checkbox' | 'radio' | 'dropdown' | 'signature';
+type FieldKind =
+  | 'text' | 'checkbox' | 'radio' | 'dropdown'
+  | 'signature' | 'listbox' | 'combo';
 
 interface FieldElementBase {
   type: 'field';
@@ -169,16 +208,27 @@ interface FieldElementBase {
   width: number; height: number;
   page?: number;
   required?: boolean;
+  readOnly?: boolean;
+  tooltip?: string;
+  border?: { color: { r: number; g: number; b: number }; width?: number };
+  background?: { r: number; g: number; b: number };
   value?: string;        // current fill value (PNG dataURL for signature)
 }
 // + per-kind extras: text { placeholder?, maxLength?, multiline? },
-//   dropdown/radio { options: string[] }
+//   dropdown/radio/listbox/combo { options: string[] }
 ```
 
-`EditElement` gains the `'field'` variant. The renderer registry and overlay
-registry gain a `field` entry. The export validator (`export.remote.ts`
-`validateElement`) gains a `'field'` case — **required** so field exports don't
-422 (see memory: export-gate-validation lesson).
+`TextElement` (static text) also gains rich props in **PR1**: `font?` (a
+`StandardFonts` value or embedded `fontId`), `color?`, `opacity?`, `rotation?`,
+`lineHeight?`, `maxWidth?` (word-wrap). **PR3** adds `PathElement`
+(`d: string` SVG path), `PolygonElement` (`points[]`, `closed`), and
+`LinkElement` (`url?` | `goToPage?`).
+
+`EditElement` gains the `'field'` variant (PR2) and `'path' | 'polygon' |
+'link'` (PR3). The renderer registry and overlay registry gain an entry per new
+type. The export validator (`export.remote.ts` `validateElement`) gains a case
+per new type — **required** so new-element exports don't 422 (see memory:
+export-gate-validation lesson).
 
 ### Server remote functions (PR2)
 
@@ -227,7 +277,14 @@ Vitest component/unit tests simulating user input:
 - `extractFields` returns expected names/types/rects for a known fixture form.
 - Export rebuild produces a fillable form; re-detect round-trips field
   names/types/values.
-- `validateElement` accepts `'field'` elements (gate regression guard).
+- `validateElement` accepts every new element type (gate regression guard) —
+  `'field'`, `'path'`, `'polygon'`, `'link'`.
+- Rich text: drawText receives the chosen font/color/opacity/rotation/wrap (PR1).
+- Listbox/combo author + round-trip; field appearance props (border/bg/tooltip/
+  readOnly) survive export→re-detect (PR2).
+- Custom font embed: an embedded font is used and re-rendered (PR3).
+- Merge: appending a second PDF yields the combined page count (PR4).
+- Document properties + outline written and re-readable (PR4).
 
 Playwright: keep a single thin smoke (upload → fill a field → export; rate-limit
 → upsell). No broad e2e expansion.
@@ -241,12 +298,22 @@ Playwright: keep a single thin smoke (upload → fill a field → export; rate-l
    embedded pages saves a valid, re-readable form.
 3. **Signature-zone stamping** — confirm drawn-PNG placement matches the field
    rect after Y-flip.
+4. **`embedFont`** — confirm an uploaded TTF/OTF embeds and renders (subsetting
+   path); fall back to standard fonts on failure (PR3).
+5. **Merge via `embedPdfPage`** — confirm appending a second document's pages
+   composes correctly with the rebuild export (PR4).
 
 ## Sequencing
 
-- **PR1** (polish + fixes + tool model + floating toolbar) ships first and is
-  independent of better-pdf form APIs.
-- **PR2** (form-filling) builds on PR1's tool model and floating toolbar.
-- **PR3 — canvas & document controls (later):** zoom in/out (and fit-to-width),
-  change page sizes (per-page / on blank insert), and related viewport/page
-  management. Out of scope for PR1/PR2; its own spec → plan when reached.
+- **PR1** (polish + fixes + tool model + floating toolbar + rich text) ships
+  first and is independent of better-pdf form APIs.
+- **PR2** (form-filling core, incl. listbox/combo + field appearance props)
+  builds on PR1's tool model and floating toolbar.
+- **PR3** (vector/path/polygon, hyperlinks, custom font embed) extends PR1's
+  drawing tools and PR2's element/registry plumbing.
+- **PR4** (canvas & document controls: zoom + fit-to-width, change page sizes,
+  merge/append PDFs, document properties, outline/bookmarks). Largest UI surface;
+  ships last. May get its own sub-spec when reached.
+
+Each PR is independently shippable; later PRs only add element types/registry
+entries and validator cases, never rewrite earlier ones.
