@@ -6,6 +6,7 @@
 	import Canvas from './Canvas.svelte';
 	import PageManager from './PageManager.svelte';
 	import FloatingToolbar from './FloatingToolbar.svelte';
+	import FieldPropertiesModal from './FieldPropertiesModal.svelte';
 	import UpsellModal from './UpsellModal.svelte';
 
 	const editor = new EditorState();
@@ -86,5 +87,6 @@
 		<SignaturePad onuse={onSignatureDrawn} oncancel={() => (showSignaturePad = false)} />
 	{/if}
 
+	<FieldPropertiesModal {editor} />
 	<UpsellModal {editor} {signedIn} />
 </div>

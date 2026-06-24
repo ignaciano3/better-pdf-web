@@ -110,6 +110,17 @@
 			{/if}
 		{/if}
 
+		{#if editor.selectedField}
+			<button
+				onclick={() => (editor.fieldModalOpen = true)}
+				class="rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+				aria-label="Field settings"
+				title="Field settings"
+			>
+				⚙ Settings
+			</button>
+		{/if}
+
 		<button
 			onclick={() => editor.duplicateSelected()}
 			class="rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 
 vi.mock('./export.remote', () => ({ exportPdf: vi.fn() }));
+vi.mock('./extractFields.remote', () => ({ extractFields: vi.fn() }));
 
 import Toolbar from './Toolbar.svelte';
 import { EditorState } from './editor.svelte';
@@ -27,5 +28,17 @@ describe('Toolbar', () => {
 		await user.click(screen.getByRole('button', { name: 'Rectangle' }));
 		flushSync();
 		expect(editor.activeDrawKind).toBe('rectangle');
+	});
+
+	it('activates a field tool from the Field menu', async () => {
+		const user = userEvent.setup();
+		const editor = new EditorState();
+		render(Toolbar, { props: { editor, onDrawSignature: () => {} } });
+
+		await user.click(screen.getByRole('button', { name: 'Field ▾' }));
+		flushSync();
+		await user.click(screen.getByRole('menuitem', { name: 'Checkbox' }));
+		flushSync();
+		expect(editor.activeFieldKind).toBe('checkbox');
 	});
 });

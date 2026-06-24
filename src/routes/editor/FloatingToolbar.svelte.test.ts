@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 
 vi.mock('./export.remote', () => ({ exportPdf: vi.fn() }));
+vi.mock('./extractFields.remote', () => ({ extractFields: vi.fn() }));
 
 import FloatingToolbar from './FloatingToolbar.svelte';
 import { EditorState } from './editor.svelte';

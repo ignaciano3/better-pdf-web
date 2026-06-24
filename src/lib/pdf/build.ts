@@ -1,6 +1,9 @@
-import { PdfDocument, PdfError } from '@ignaciano3/better-pdf';
-import type { EditElement, EditState, PageOp } from './types';
+import { PdfDocument, PdfError, rgb } from '@ignaciano3/better-pdf';
+import type { Color } from '@ignaciano3/better-pdf/generate';
+import type { FormBuilder } from '@ignaciano3/better-pdf/generate';
+import type { EditElement, EditState, FieldElement, PageOp } from './types';
 import { renderElement } from './renderers';
+import { topLeftToPdfY } from './coords';
 
 /**
  * Error thrown when a source PDF cannot be loaded or stamped. Carries a
@@ -17,71 +20,123 @@ export class PdfBuildError extends Error {
 /**
  * Finalize editor state into PDF bytes using better-pdf.
  *
- * Two modes:
- * - **Blank mode** (no `sourcePdf`): create a fresh single-page document and
- *   draw the elements onto it.
- * - **Source mode** (`sourcePdf` present): load the uploaded PDF and stamp the
- *   elements on top of its existing pages, preserving the original page count.
+ * The export is always a **rebuild** (design decision D3): a fresh document is
+ * created, source pages are embedded as backgrounds via `embedPdfPage` +
+ * `drawPage`, stamps (text/image/shape/signature) are drawn through the renderer
+ * registry, and every {@link FieldElement} is re-authored as a real AcroForm
+ * widget via `createForm()`. This is required because `createForm()` throws on a
+ * `load()`ed document, so fields can only be added to a freshly `create()`d one.
  *
- * This is the dogfooding seam: every editor element is rendered through the
- * better-pdf authoring API (via the renderer registry). Runs server-side
- * (Node/Bun) where the wasm core self-initializes on import.
+ * Verified (spike): `embedPdfPage` embeds page *content* only — source AcroForm
+ * widgets do NOT ride along — so old widgets disappear cleanly and ours are the
+ * only fields in the output. Re-uploading the export re-detects them, so fields
+ * round-trip.
+ *
+ * When there is no source PDF and no fields, a single fresh page is created
+ * (blank mode). Runs server-side (Node/Bun) where the wasm core self-initializes
+ * on import.
  */
 export async function buildPdf(state: EditState): Promise<Uint8Array> {
-	if (state.sourcePdf && state.sourcePdf.byteLength > 0) {
-		return buildFromSource(state.sourcePdf, state.elements, state.pageOps);
+	const hasSource = !!(state.sourcePdf && state.sourcePdf.byteLength > 0);
+	if (!hasSource) {
+		return buildBlankRebuild(state);
 	}
-	return buildBlank(state);
+	return buildSourceRebuild(state);
 }
 
-async function buildBlank(state: EditState): Promise<Uint8Array> {
-	const pageHeight = state.pageSize[1];
-	const doc = await PdfDocument.create();
-	const page = doc.addPage(state.pageSize);
+/** RGB 0..1 helper → lib Color. */
+function toColor(c: { r: number; g: number; b: number }): Color {
+	return rgb(c.r, c.g, c.b);
+}
 
-	for (const element of state.elements) {
-		await renderElement({ doc, page, pageHeight }, element);
+/** Decode a `data:image/...;base64,...` URL to raw bytes, or null if not one. */
+function dataUrlToBytes(value: string | undefined): Uint8Array | null {
+	if (!value || !value.startsWith('data:')) return null;
+	const comma = value.indexOf(',');
+	if (comma === -1) return null;
+	const meta = value.slice(5, comma);
+	const data = value.slice(comma + 1);
+	if (!meta.includes('base64')) return null;
+	try {
+		const bin = atob(data);
+		const out = new Uint8Array(bin.length);
+		for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+		return out;
+	} catch {
+		return null;
+	}
+}
+
+/** Build a fresh single (or page-ops driven) blank document with stamps + fields. */
+async function buildBlankRebuild(state: EditState): Promise<Uint8Array> {
+	const doc = await PdfDocument.create();
+	const pageHeights: number[] = [];
+
+	if (state.pageOps && state.pageOps.length > 0) {
+		for (const op of state.pageOps) {
+			const size = op.kind === 'blank' ? op.size : state.pageSize;
+			const rotated = normalizeRotation(op.rotation) % 180 !== 0;
+			const [w, h] = rotated ? [size[1], size[0]] : size;
+			const page = doc.addPage([w, h]);
+			if (op.rotation) page.setRotation(normalizeRotation(op.rotation));
+			pageHeights.push(h);
+		}
+	} else {
+		doc.addPage(state.pageSize);
+		pageHeights.push(state.pageSize[1]);
 	}
 
+	await stampAndAuthor(doc, state.elements, pageHeights);
 	return doc.save();
 }
 
-async function buildFromSource(
-	sourcePdf: Uint8Array,
-	elements: readonly EditElement[],
-	pageOps?: readonly PageOp[]
-): Promise<Uint8Array> {
+/** Build a fresh document from an embedded source PDF with stamps + fields (D3). */
+async function buildSourceRebuild(state: EditState): Promise<Uint8Array> {
+	const sourcePdf = state.sourcePdf as Uint8Array;
 	try {
-		// Phase 1: if page operations are present, rebuild the document's page
-		// structure (order / deletions / inserted blanks) and save+reload so the
-		// new layout is materialised before we stamp elements onto it. better-pdf's
-		// structural ops (insert/remove/move) are reflected after save + reload.
-		let bytes = sourcePdf;
-		if (pageOps && pageOps.length > 0) {
-			bytes = await restructure(sourcePdf, pageOps);
+		const doc = await PdfDocument.create();
+		const pageHeights: number[] = [];
+
+		// One output page per pageOp (order / blank / rotation), or 1:1 with the
+		// source pages when there are no page ops.
+		const ops: PageOp[] = state.pageOps && state.pageOps.length > 0 ? [...state.pageOps] : [];
+		if (ops.length === 0) {
+			// Probe the source page count by embedding sequentially until it throws.
+			const src = await PdfDocument.load(sourcePdf);
+			const count = src.getPageCount();
+			for (let i = 0; i < count; i++) ops.push({ kind: 'source', sourceIndex: i, rotation: 0 });
 		}
 
-		// Phase 2: stamp elements onto the (possibly restructured) pages. Element
-		// `page` indices are output positions, which now match the page order.
-		const doc = await PdfDocument.load(bytes);
-		const pageCount = doc.getPageCount();
-
-		// Apply rotations to the final pages. (Done here rather than in phase 1 so
-		// the single save below carries them; rotation does not need a reload.)
-		if (pageOps) {
-			for (let i = 0; i < pageOps.length && i < pageCount; i++) {
-				const rotation = normalizeRotation(pageOps[i]?.rotation ?? 0);
-				if (rotation !== 0) doc.getPage(i).setRotation(rotation);
+		for (const op of ops) {
+			if (op.kind === 'source') {
+				const embedded = await doc.embedPdfPage(sourcePdf, op.sourceIndex);
+				const rotated = normalizeRotation(op.rotation) % 180 !== 0;
+				const [w, h] = rotated
+					? [embedded.height, embedded.width]
+					: [embedded.width, embedded.height];
+				const page = doc.addPage([w, h]);
+				// Draw the embedded source content at its intrinsic size. Rotation is
+				// applied to the page itself (matching the canvas display model).
+				page.drawPage(embedded, {
+					x: 0,
+					y: rotated ? 0 : 0,
+					width: embedded.width,
+					height: embedded.height
+				});
+				if (op.rotation) page.setRotation(normalizeRotation(op.rotation));
+				// Field/stamp coords are authored against the un-rotated content box, so
+				// the page height used for the Y flip is the content height.
+				pageHeights.push(embedded.height);
+			} else {
+				const rotated = normalizeRotation(op.rotation) % 180 !== 0;
+				const [w, h] = rotated ? [op.size[1], op.size[0]] : op.size;
+				const page = doc.addPage([w, h]);
+				if (op.rotation) page.setRotation(normalizeRotation(op.rotation));
+				pageHeights.push(op.size[1]);
 			}
 		}
 
-		for (const element of elements) {
-			const pageIndex = element.page ?? 0;
-			if (pageIndex < 0 || pageIndex >= pageCount) continue;
-			const page = doc.getPage(pageIndex);
-			await renderElement({ doc, page, pageHeight: page.height }, element);
-		}
-		// Parsing of malformed input can surface here (lazily at save time).
+		await stampAndAuthor(doc, state.elements, pageHeights);
 		return await doc.save();
 	} catch (cause) {
 		if (cause instanceof PdfBuildError) throw cause;
@@ -95,64 +150,153 @@ async function buildFromSource(
 	}
 }
 
+/**
+ * Stamp non-field elements onto their pages (via the renderer registry), draw
+ * signature-field PNGs at their rect, then author every {@link FieldElement} as
+ * a real AcroForm widget. `pageHeights[i]` is the content height of output page
+ * `i`, used for the top-left → bottom-left Y flip.
+ */
+async function stampAndAuthor(
+	doc: PdfDocument,
+	elements: readonly EditElement[],
+	pageHeights: number[]
+): Promise<void> {
+	const pageCount = pageHeights.length;
+	const fields: FieldElement[] = [];
+
+	for (const element of elements) {
+		const pageIndex = element.page ?? 0;
+		if (pageIndex < 0 || pageIndex >= pageCount) continue;
+		if (element.type === 'field') {
+			fields.push(element);
+			continue;
+		}
+		const page = doc.getPage(pageIndex);
+		await renderElement({ doc, page, pageHeight: pageHeights[pageIndex] as number }, element);
+	}
+
+	// Draw signature-field PNGs (drawn/uploaded) into their rect so they show even
+	// before the field is signed in a viewer. The interactive signature widget is
+	// still authored below so the field round-trips.
+	for (const f of fields) {
+		if (f.field !== 'signature') continue;
+		const bytes = dataUrlToBytes(f.value);
+		if (!bytes) continue;
+		const pageIndex = f.page ?? 0;
+		if (pageIndex < 0 || pageIndex >= pageCount) continue;
+		const page = doc.getPage(pageIndex);
+		try {
+			const img = await doc.embedPng(bytes);
+			page.drawImage(img, {
+				x: f.x,
+				y: topLeftToPdfY(f.y, f.height, pageHeights[pageIndex] as number),
+				width: f.width,
+				height: f.height
+			});
+		} catch {
+			// Undecodable signature PNG — skip drawing; the field is still authored.
+		}
+	}
+
+	if (fields.length > 0) {
+		const form = doc.createForm();
+		for (const f of fields) {
+			authorField(form, f, pageHeights);
+		}
+	}
+}
+
+/** Author one {@link FieldElement} onto the form builder at its position. */
+function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]): void {
+	const page = f.page ?? 0;
+	const pageHeight = pageHeights[page] ?? 0;
+	const y = topLeftToPdfY(f.y, f.height, pageHeight);
+	const base = {
+		page,
+		x: f.x,
+		y,
+		...(f.required ? { required: true } : {}),
+		...(f.readOnly ? { readOnly: true } : {}),
+		...(f.tooltip ? { tooltip: f.tooltip } : {}),
+		...(f.border
+			? {
+					border: {
+						color: toColor(f.border.color),
+						...(f.border.width !== undefined ? { width: f.border.width } : {})
+					}
+				}
+			: {}),
+		...(f.background ? { background: toColor(f.background) } : {})
+	};
+
+	switch (f.field) {
+		case 'text':
+			form.addTextField(f.name, {
+				...base,
+				width: f.width,
+				height: f.height,
+				...(f.value ? { value: f.value } : {}),
+				...(f.maxLength !== undefined ? { maxLength: f.maxLength } : {}),
+				...(f.multiline ? { multiline: true } : {})
+			});
+			break;
+		case 'checkbox':
+			form.addCheckBox(f.name, {
+				...base,
+				size: Math.min(f.width, f.height),
+				...(f.value ? { checked: true } : {})
+			});
+			break;
+		case 'radio': {
+			const options = f.options && f.options.length > 0 ? f.options : ['Option 1'];
+			const size = Math.min(f.width, f.height);
+			// MVP single-widget radios: lay each option out stacked below the anchor.
+			form.addRadioGroup(f.name, {
+				...(f.required ? { required: true } : {}),
+				...(f.readOnly ? { readOnly: true } : {}),
+				...(f.tooltip ? { tooltip: f.tooltip } : {}),
+				...(f.value ? { selected: f.value } : {}),
+				options: options.map((value, i) => ({
+					value,
+					page,
+					x: f.x,
+					y: y - i * (size + 6),
+					size
+				}))
+			});
+			break;
+		}
+		case 'dropdown':
+		case 'combo':
+			// Both author via addDropdown; a plain dropdown is a non-editable combo.
+			form.addDropdown(f.name, {
+				...base,
+				width: f.width,
+				height: f.height,
+				options: f.options ?? [],
+				...(f.value ? { selected: f.value } : {})
+			});
+			break;
+		case 'listbox':
+			form.addListBox(f.name, {
+				...base,
+				width: f.width,
+				height: f.height,
+				options: f.options ?? [],
+				...(f.value ? { selected: f.value } : {})
+			});
+			break;
+		case 'signature':
+			form.addSignatureField(f.name, {
+				...base,
+				width: f.width,
+				height: f.height
+			});
+			break;
+	}
+}
+
 /** Normalise an arbitrary degree value to one of 0/90/180/270. */
 function normalizeRotation(degrees: number): number {
 	return (((Math.round(degrees / 90) * 90) % 360) + 360) % 360;
-}
-
-/**
- * Rebuild the page structure of `sourcePdf` to match `pageOps` (order, deletions,
- * inserted blanks) and return the saved+reloaded bytes. Rotations are NOT applied
- * here — the caller applies them after reload.
- *
- * Strategy: start from the loaded source, append a blank for every `blank` op,
- * then sort all pages into the desired output order with `movePage`, and finally
- * drop any source pages that no output op references.
- */
-async function restructure(sourcePdf: Uint8Array, pageOps: readonly PageOp[]): Promise<Uint8Array> {
-	const doc = await PdfDocument.load(sourcePdf);
-	const originalCount = doc.getPageCount();
-
-	// Track a stable identity for each currently-present page so we can locate it
-	// after moves shift indices. Source pages are 's<index>', blanks are 'b<n>'.
-	const order: string[] = [];
-	for (let i = 0; i < originalCount; i++) order.push(`s${i}`);
-
-	// Append a blank for each blank op (appended pages land at the end for now).
-	let blankCounter = 0;
-	const blankIds: string[] = [];
-	for (const op of pageOps) {
-		if (op.kind === 'blank') {
-			doc.addPage(op.size);
-			const id = `b${blankCounter++}`;
-			order.push(id);
-			blankIds.push(id);
-		}
-	}
-
-	// Desired final order expressed in the same identity space.
-	let blankPick = 0;
-	const target: string[] = pageOps.map((op) =>
-		op.kind === 'source' ? `s${op.sourceIndex}` : (blankIds[blankPick++] as string)
-	);
-
-	// Selection-sort the live `order` into `target` using movePage. Any live page
-	// not in `target` is a deleted source page; it stays at the tail and is
-	// removed afterwards.
-	for (let pos = 0; pos < target.length; pos++) {
-		const wantId = target[pos];
-		const from = order.indexOf(wantId as string);
-		if (from === -1) continue; // referenced source page missing; skip defensively
-		if (from !== pos) {
-			doc.movePage(from, pos);
-			order.splice(pos, 0, order.splice(from, 1)[0] as string);
-		}
-	}
-
-	// Remove trailing pages beyond the target length (deleted source pages).
-	for (let i = order.length - 1; i >= target.length; i--) {
-		doc.removePage(i);
-	}
-
-	return await doc.save();
 }
