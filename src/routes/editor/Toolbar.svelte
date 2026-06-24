@@ -58,7 +58,10 @@
 		{ kind: 'text', label: 'Text' },
 		{ kind: 'line', label: 'Line' },
 		{ kind: 'rectangle', label: 'Rectangle' },
-		{ kind: 'ellipse', label: 'Ellipse' }
+		{ kind: 'ellipse', label: 'Ellipse' },
+		{ kind: 'path', label: 'Draw' },
+		{ kind: 'polygon', label: 'Polygon' },
+		{ kind: 'link', label: 'Link' }
 	];
 
 	function toolClass(active: boolean): string {

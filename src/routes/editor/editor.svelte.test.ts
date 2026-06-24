@@ -152,3 +152,148 @@ describe('EditorState duplicateSelected', () => {
 		expect(e.selected!.x).toBe(original.x + 8);
 	});
 });
+
+function fakePointerDown(): PointerEvent {
+	return {
+		clientX: 40,
+		clientY: 40,
+		target: null,
+		currentTarget: null,
+		preventDefault() {},
+		stopPropagation() {}
+	} as unknown as PointerEvent;
+}
+
+describe('EditorState vector tools', () => {
+	it('polygon tool adds vertices on click and stays active until closed', () => {
+		const e = new EditorState();
+		e.setTool({ type: 'draw', kind: 'polygon' });
+		e.placeAtClient(10, 10, fakePage(), 0);
+		flushSync();
+		e.placeAtClient(60, 10, fakePage(), 0);
+		e.placeAtClient(60, 60, fakePage(), 0);
+		flushSync();
+		// Still drawing: tool not reset, one draft polygon with 3 points.
+		expect(e.tool.type).toBe('draw');
+		expect(e.polygonDraftId).not.toBeNull();
+		const poly = e.elements.find((el) => el.type === 'polygon');
+		expect(poly?.type).toBe('polygon');
+		expect(poly?.type === 'polygon' && poly.points.length).toBe(3);
+
+		e.closePolygon();
+		flushSync();
+		expect(e.tool).toEqual(SELECT_TOOL);
+		expect(e.polygonDraftId).toBeNull();
+		expect(e.elements.filter((el) => el.type === 'polygon').length).toBe(1);
+	});
+
+	it('canceling a polygon removes the draft', () => {
+		const e = new EditorState();
+		e.setTool({ type: 'draw', kind: 'polygon' });
+		e.placeAtClient(10, 10, fakePage(), 0);
+		flushSync();
+		e.cancelPolygon();
+		flushSync();
+		expect(e.elements.length).toBe(0);
+		expect(e.polygonDraftId).toBeNull();
+	});
+
+	it('closePolygon discards a polygon with fewer than 2 vertices', () => {
+		const e = new EditorState();
+		e.setTool({ type: 'draw', kind: 'polygon' });
+		e.placeAtClient(10, 10, fakePage(), 0);
+		flushSync();
+		e.closePolygon();
+		flushSync();
+		expect(e.elements.filter((el) => el.type === 'polygon').length).toBe(0);
+	});
+
+	it('path and link tools do not create on a plain click (drag-based)', () => {
+		const e = new EditorState();
+		e.setTool({ type: 'draw', kind: 'path' });
+		e.placeAtClient(10, 10, fakePage(), 0);
+		flushSync();
+		e.setTool({ type: 'draw', kind: 'link' });
+		e.placeAtClient(10, 10, fakePage(), 0);
+		flushSync();
+		expect(e.elements.length).toBe(0);
+	});
+
+	it('beginFreehandDraw creates a path and resets to select on pointerup', () => {
+		const e = new EditorState();
+		e.setTool({ type: 'draw', kind: 'path' });
+		const handled = e.beginFreehandDraw(fakePointerDown(), fakePage(), 0);
+		flushSync();
+		expect(handled).toBe(true);
+		expect(e.elements[0]?.type).toBe('path');
+		window.dispatchEvent(new Event('pointerup'));
+		flushSync();
+		expect(e.tool).toEqual(SELECT_TOOL);
+	});
+
+	it('beginLinkDraw creates a link with an empty url default', () => {
+		const e = new EditorState();
+		e.setTool({ type: 'draw', kind: 'link' });
+		const handled = e.beginLinkDraw(fakePointerDown(), fakePage(), 0);
+		flushSync();
+		expect(handled).toBe(true);
+		expect(e.selectedLink?.url).toBe('');
+		window.dispatchEvent(new Event('pointerup'));
+		flushSync();
+		expect(e.tool).toEqual(SELECT_TOOL);
+	});
+
+	it('startDrag translates a polygon’s points by the drag delta', () => {
+		const e = new EditorState();
+		e.elements = [
+			{
+				type: 'polygon',
+				id: 'pg',
+				x: 10,
+				y: 10,
+				points: [
+					{ x: 10, y: 10 },
+					{ x: 40, y: 10 },
+					{ x: 40, y: 40 }
+				]
+			}
+		];
+		const down = { clientX: 0, clientY: 0 } as unknown as PointerEvent;
+		e.startDrag(down, e.elements[0]!);
+		// Past the 4px threshold so it registers as a drag (delta / SCALE applied).
+		window.dispatchEvent(
+			new MouseEvent('pointermove', { clientX: 8, clientY: 16 }) as unknown as PointerEvent
+		);
+		flushSync();
+		const poly = e.elements[0];
+		expect(poly?.type === 'polygon' && poly.points[0]?.x).toBe(10 + 8 / 0.8);
+		expect(poly?.type === 'polygon' && poly.points[0]?.y).toBe(10 + 16 / 0.8);
+		window.dispatchEvent(new Event('pointerup'));
+	});
+});
+
+describe('EditorState custom fonts', () => {
+	it('readFont rejects a non-font file type', async () => {
+		const e = new EditorState();
+		const file = new File([new Uint8Array([1, 2, 3])], 'pic.png', { type: 'image/png' });
+		const asset = await e.readFont(file);
+		expect(asset).toBeNull();
+		expect(e.errorMessage).toMatch(/ttf|otf/i);
+	});
+
+	it('readFont registers a .ttf asset and applyCustomFont sets fontId', async () => {
+		const e = new EditorState();
+		e.setTool({ type: 'draw', kind: 'text' });
+		e.placeAtClient(20, 20, fakePage(), 0);
+		flushSync();
+		const t = e.selectedText!;
+		const file = new File([new Uint8Array([1, 2, 3, 4])], 'My Font.ttf');
+		await e.applyCustomFont(file, t);
+		flushSync();
+		expect(t.fontId).toBeTruthy();
+		expect(Object.values(e.embeddedFonts).length).toBe(1);
+		expect(Object.values(e.embeddedFonts)[0]?.name).toBe('My Font.ttf');
+		e.clearCustomFont(t);
+		expect(t.fontId).toBeUndefined();
+	});
+});

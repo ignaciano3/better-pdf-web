@@ -1,5 +1,5 @@
 import type { PdfDocument } from '@ignaciano3/better-pdf';
-import type { PdfPage } from '@ignaciano3/better-pdf/generate';
+import type { PdfFont, PdfPage } from '@ignaciano3/better-pdf/generate';
 import type { EditElement } from '../types';
 
 /**
@@ -11,6 +11,12 @@ export interface RenderContext {
 	doc: PdfDocument;
 	page: PdfPage;
 	pageHeight: number;
+	/**
+	 * Embedded custom-font handles keyed by {@link import('../types').EmbeddedFontAsset.id}.
+	 * Empty when no fonts are embedded (blank / standard-font cases). A text
+	 * element with a `fontId` present here draws with that handle.
+	 */
+	fonts: Record<string, PdfFont>;
 }
 
 /**

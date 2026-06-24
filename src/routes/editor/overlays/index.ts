@@ -5,6 +5,9 @@ import TextOverlay from './TextOverlay.svelte';
 import RasterOverlay from './RasterOverlay.svelte';
 import ShapeOverlay from './ShapeOverlay.svelte';
 import FieldOverlay from './FieldOverlay.svelte';
+import PathOverlay from './PathOverlay.svelte';
+import PolygonOverlay from './PolygonOverlay.svelte';
+import LinkOverlay from './LinkOverlay.svelte';
 
 /** Props every overlay component receives. */
 export interface OverlayProps {
@@ -22,6 +25,9 @@ const registry: Record<EditElement['type'], Component<OverlayProps>> = {
 	signature: RasterOverlay,
 	image: RasterOverlay,
 	shape: ShapeOverlay,
+	path: PathOverlay,
+	polygon: PolygonOverlay,
+	link: LinkOverlay,
 	field: FieldOverlay
 };
 
