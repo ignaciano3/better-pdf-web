@@ -18,9 +18,11 @@ export const renderShape: ElementRenderer<ShapeElement> = ({ page, pageHeight },
 
 	switch (element.shape) {
 		case 'line':
+			// Anti-diagonal lines run top-right → bottom-left; the default diagonal
+			// runs top-left → bottom-right.
 			page.drawLine({
-				start: { x, y: top },
-				end: { x: x + width, y: bottom },
+				start: element.antidiagonal ? { x: x + width, y: top } : { x, y: top },
+				end: element.antidiagonal ? { x, y: bottom } : { x: x + width, y: bottom },
 				stroke,
 				strokeWidth: lineWidth
 			});

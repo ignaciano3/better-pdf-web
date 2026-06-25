@@ -3,7 +3,7 @@
 	import type { EditorState } from '../editor.svelte';
 	import { SCALE } from '../constants';
 
-	let { el, editor }: { el: EditElement; editor: EditorState } = $props();
+	let { el, editor }: { el: EditElement; editor: EditorState; preview?: boolean } = $props();
 	const link = $derived(el as LinkElement);
 
 	const w = $derived(Math.max(link.width, 0) * SCALE);

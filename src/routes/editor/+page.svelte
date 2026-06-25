@@ -5,7 +5,6 @@
 	import Toolbar from './Toolbar.svelte';
 	import Canvas from './Canvas.svelte';
 	import PageManager from './PageManager.svelte';
-	import FloatingToolbar from './FloatingToolbar.svelte';
 	import ZoomControls from './ZoomControls.svelte';
 	import FieldPropertiesModal from './FieldPropertiesModal.svelte';
 	import DocumentPropertiesModal from './DocumentPropertiesModal.svelte';
@@ -17,13 +16,20 @@
 	const signedIn = $derived(Boolean(page.data['user']));
 
 	let started = $state(false);
+	let emptyUploadInput = $state<HTMLInputElement | null>(null);
+	let promptedUpload = false;
 	const showEmptyState = $derived(!editor.sourceBytes && !started && editor.elements.length === 0);
 
 	// Deep-link from the home CTAs via `?operation=`:
 	//   new    → jump straight into a blank canvas (skip the empty state)
-	//   upload → show the upload-or-blank empty state
+	//   upload → open the file picker straight away so the user can choose a PDF
 	$effect(() => {
-		if (page.url.searchParams.get('operation') === 'new') started = true;
+		const op = page.url.searchParams.get('operation');
+		if (op === 'new') started = true;
+		if (op === 'upload' && !promptedUpload && emptyUploadInput) {
+			promptedUpload = true;
+			emptyUploadInput.click();
+		}
 	});
 
 	function startBlank() {
@@ -44,7 +50,7 @@
 	}
 </script>
 
-<div class="flex h-screen flex-col bg-gray-100">
+<div class="flex min-h-0 flex-1 flex-col bg-gray-100">
 	<Toolbar {editor} onDrawSignature={() => (showSignaturePad = true)} />
 
 	{#if editor.errorMessage}
@@ -54,7 +60,22 @@
 	{/if}
 
 	<div class="relative flex min-h-0 flex-1">
-		<PageManager {editor} />
+		{#if !showEmptyState}
+			{#if editor.showPages}
+				<PageManager {editor} />
+			{:else}
+				<!-- Collapsed Pages panel: a thin tab to bring it back. -->
+				<button
+					type="button"
+					class="flex shrink-0 items-center border-r border-gray-200 bg-white px-1.5 text-sm text-gray-500 hover:bg-gray-50"
+					title="Show pages panel"
+					aria-label="Show pages panel"
+					onclick={() => (editor.showPages = true)}
+				>
+					»
+				</button>
+			{/if}
+		{/if}
 		{#if showEmptyState}
 			<div class="flex flex-1 items-center justify-center">
 				<div
@@ -67,6 +88,7 @@
 						>
 							Upload PDF
 							<input
+								bind:this={emptyUploadInput}
 								type="file"
 								accept="application/pdf,.pdf"
 								class="hidden"
@@ -83,10 +105,21 @@
 				</div>
 			</div>
 		{:else}
-			<Canvas {editor} />
-			<ZoomControls {editor} />
+			<!-- Canvas region: its own positioning context so the floating zoom bar and
+			     export button anchor to the gray canvas area, not the Pages sidebar (#1). -->
+			<div class="relative flex min-h-0 min-w-0 flex-1">
+				<Canvas {editor} />
+				<ZoomControls {editor} />
+				<!-- Floating export, pinned bottom-right over the canvas (#13). -->
+				<button
+					onclick={() => editor.export()}
+					disabled={editor.exporting}
+					class="absolute right-6 bottom-6 z-20 rounded-full bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-blue-700 disabled:opacity-50"
+				>
+					{editor.exporting ? 'Exporting…' : 'Export PDF'}
+				</button>
+			</div>
 		{/if}
-		<FloatingToolbar {editor} />
 	</div>
 
 	{#if showSignaturePad}

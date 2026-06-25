@@ -137,4 +137,42 @@ describe('buildPdf field authoring (D3 rebuild)', () => {
 			.filter((f) => f.name === 'existing');
 		expect(named.length).toBe(1);
 	});
+
+	it('places each radio button at its own radioLayout position (#3)', async () => {
+		const state: EditState = {
+			pageSize: [400, 500],
+			elements: [
+				field({
+					field: 'radio',
+					name: 'pick',
+					width: 18,
+					height: 18,
+					options: ['a', 'b'],
+					// One stacked at top-left, the other moved far to the right.
+					radioLayout: [
+						{ x: 50, y: 50 },
+						{ x: 200, y: 300 }
+					]
+				})
+			]
+		};
+
+		const bytes = await buildPdf(state);
+		const doc = await PdfDocument.load(bytes);
+		const radio = doc
+			.getForm()
+			.getFields()
+			.find((f) => f.name === 'pick');
+		expect(radio?.type).toBe('radio');
+		expect(radio?.widgets).toHaveLength(2);
+
+		// rect = [x1, y1, x2, y2] in PDF (bottom-left origin); y flips from top-left.
+		const corners = radio!.widgets.map((wg) => [Math.round(wg.rect[0]), Math.round(wg.rect[1])]);
+		expect(corners).toEqual(
+			expect.arrayContaining([
+				[50, 500 - 50 - 18], // a → y 432
+				[200, 500 - 300 - 18] // b → y 182
+			])
+		);
+	});
 });

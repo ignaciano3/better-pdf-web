@@ -7,6 +7,7 @@ vi.mock('./export.remote', () => ({ exportPdf: vi.fn() }));
 vi.mock('./extractFields.remote', () => ({ extractFields: vi.fn() }));
 
 import { EditorState } from './editor.svelte';
+import { exportPdf } from './export.remote';
 import { SELECT_TOOL } from './constants';
 
 function fakePage(): HTMLElement {
@@ -270,6 +271,138 @@ describe('EditorState vector tools', () => {
 		expect(poly?.type === 'polygon' && poly.points[0]?.x).toBe(10 + 8 / 0.8);
 		expect(poly?.type === 'polygon' && poly.points[0]?.y).toBe(10 + 16 / 0.8);
 		window.dispatchEvent(new Event('pointerup'));
+	});
+});
+
+function dragLine(
+	e: EditorState,
+	from: { x: number; y: number },
+	to: { x: number; y: number }
+) {
+	e.setTool({ type: 'draw', kind: 'line' });
+	const down = {
+		clientX: from.x,
+		clientY: from.y,
+		pointerId: 1,
+		preventDefault() {},
+		stopPropagation() {}
+	} as unknown as PointerEvent;
+	e.beginShapeDraw(down, fakePage(), 0);
+	window.dispatchEvent(new MouseEvent('pointermove', { clientX: to.x, clientY: to.y }));
+	flushSync();
+}
+
+describe('EditorState line direction (#1)', () => {
+	it('marks a line anti-diagonal when X and Y drag in opposite directions', () => {
+		const e = new EditorState();
+		// drag up-and-right: cur.x > start.x, cur.y < start.y → anti-diagonal.
+		dragLine(e, { x: 40, y: 80 }, { x: 120, y: 20 });
+		const sh = e.elements[0];
+		expect(sh?.type === 'shape' && sh.antidiagonal).toBe(true);
+		window.dispatchEvent(new Event('pointerup'));
+	});
+
+	it('leaves a line on the default diagonal when X and Y drag the same way', () => {
+		const e = new EditorState();
+		// drag down-and-right: both increase → default diagonal.
+		dragLine(e, { x: 40, y: 20 }, { x: 120, y: 80 });
+		const sh = e.elements[0];
+		expect(sh?.type === 'shape' && sh.antidiagonal).toBe(false);
+		window.dispatchEvent(new Event('pointerup'));
+	});
+});
+
+describe('EditorState suppressNextClick (#2)', () => {
+	it('suppresses the click after a shape drag so it does not deselect', () => {
+		const e = new EditorState();
+		dragLine(e, { x: 40, y: 40 }, { x: 120, y: 120 });
+		expect(e.suppressNextClick).toBe(false); // not yet released
+		window.dispatchEvent(new Event('pointerup'));
+		flushSync();
+		expect(e.suppressNextClick).toBe(true);
+	});
+
+	it('suppresses the click after a link drag', () => {
+		const e = new EditorState();
+		e.setTool({ type: 'draw', kind: 'link' });
+		e.beginLinkDraw(fakePointerDown(), fakePage(), 0);
+		window.dispatchEvent(new Event('pointerup'));
+		flushSync();
+		expect(e.suppressNextClick).toBe(true);
+	});
+
+	it('suppresses the click after a freehand path drag', () => {
+		const e = new EditorState();
+		e.setTool({ type: 'draw', kind: 'path' });
+		e.beginFreehandDraw(fakePointerDown(), fakePage(), 0);
+		// Two distinct samples so the path survives (single taps are discarded).
+		window.dispatchEvent(new MouseEvent('pointermove', { clientX: 80, clientY: 80 }));
+		flushSync();
+		window.dispatchEvent(new Event('pointerup'));
+		flushSync();
+		expect(e.suppressNextClick).toBe(true);
+	});
+});
+
+describe('EditorState add page in blank mode (#3)', () => {
+	it('insertBlankPage seeds the implicit page then appends a new one', () => {
+		const e = new EditorState();
+		expect(e.pageOps.length).toBe(0);
+		expect(e.pages.length).toBe(1); // implicit single page
+		e.insertBlankPage(e.pages.length - 1);
+		flushSync();
+		expect(e.pageOps.length).toBe(2);
+		expect(e.pages.length).toBe(2);
+		expect(e.pageOps.every((op) => op.kind === 'blank')).toBe(true);
+	});
+
+	it('keeps existing page-0 elements when adding a page in blank mode', () => {
+		const e = new EditorState();
+		e.setTool({ type: 'draw', kind: 'text' });
+		e.placeAtClient(20, 20, fakePage(), 0);
+		flushSync();
+		e.insertBlankPage(e.pages.length - 1);
+		flushSync();
+		expect(e.elements.length).toBe(1);
+		expect(e.elementsForPage(0).length).toBe(1);
+	});
+});
+
+describe('EditorState export error reporting (#4)', () => {
+	it('surfaces the server error detail and status', async () => {
+		vi.mocked(exportPdf).mockRejectedValueOnce({
+			status: 422,
+			body: { message: 'This PDF is encrypted.' }
+		});
+		const e = new EditorState();
+		await e.export();
+		expect(e.errorMessage).toContain('422');
+		expect(e.errorMessage).toContain('This PDF is encrypted.');
+	});
+
+	it('falls back to a generic message when no detail is present', async () => {
+		vi.mocked(exportPdf).mockRejectedValueOnce({});
+		const e = new EditorState();
+		await e.export();
+		expect(e.errorMessage).toBe('Export failed. Please try again.');
+	});
+
+	it('routes a 429 to the upsell modal, not the error banner', async () => {
+		vi.mocked(exportPdf).mockRejectedValueOnce({ status: 429, body: { message: 'nope' } });
+		const e = new EditorState();
+		await e.export();
+		expect(e.errorMessage).toBeNull();
+		expect(e.upsell).not.toBeNull();
+	});
+});
+
+describe('EditorState fit-to-width (#6)', () => {
+	it('fitToWidth solves zoom so one page width fills the usable canvas', () => {
+		const e = new EditorState();
+		// usable = containerWidth - 64 (canvas padding); zoom = usable / (width * SCALE).
+		e.fitToWidth(595.28 * 0.8 + 64);
+		flushSync();
+		expect(e.zoom).toBeCloseTo(1, 5);
 	});
 });
 

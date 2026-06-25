@@ -338,19 +338,29 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 		case 'radio': {
 			const options = f.options && f.options.length > 0 ? f.options : ['Option 1'];
 			const size = Math.min(f.width, f.height);
-			// MVP single-widget radios: lay each option out stacked below the anchor.
+			// Each option is an independently placed widget: prefer its radioLayout
+			// position (top-left points → PDF Y), else fall back to a vertical stack
+			// below the anchor (#3).
 			form.addRadioGroup(f.name, {
 				...(f.required ? { required: true } : {}),
 				...(f.readOnly ? { readOnly: true } : {}),
 				...(f.tooltip ? { tooltip: f.tooltip } : {}),
+				...(f.border
+					? {
+							border: {
+								color: toColor(f.border.color),
+								...(f.border.width !== undefined ? { width: f.border.width } : {})
+							}
+						}
+					: {}),
+				...(f.background ? { background: toColor(f.background) } : {}),
 				...(f.value ? { selected: f.value } : {}),
-				options: options.map((value, i) => ({
-					value,
-					page,
-					x: f.x,
-					y: y - i * (size + 6),
-					size
-				}))
+				options: options.map((value, i) => {
+					const slot = f.radioLayout?.[i];
+					const ox = slot?.x ?? f.x;
+					const oy = slot ? topLeftToPdfY(slot.y, size, pageHeight) : y - i * (size + 6);
+					return { value, page, x: ox, y: oy, size };
+				})
 			});
 			break;
 		}

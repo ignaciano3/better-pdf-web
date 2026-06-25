@@ -3,7 +3,7 @@
 	import type { EditorState } from '../editor.svelte';
 	import { SCALE } from '../constants';
 
-	let { el, editor }: { el: EditElement; editor: EditorState } = $props();
+	let { el, editor }: { el: EditElement; editor: EditorState; preview?: boolean } = $props();
 	const path = $derived(el as PathElement);
 
 	// Points are absolute top-left-origin PDF points; render relative to the box.

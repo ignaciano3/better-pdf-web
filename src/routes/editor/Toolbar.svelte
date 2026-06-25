@@ -1,12 +1,19 @@
 <script lang="ts">
 	import type { EditorState } from './editor.svelte';
-	import type { DrawKind, FieldKind } from './constants';
 	import { NAMED_PAGE_SIZES } from './constants';
+	import ContentSection from './toolbar/ContentSection.svelte';
+	import FieldsSection from './toolbar/FieldsSection.svelte';
+	import ShapesSection from './toolbar/ShapesSection.svelte';
 
 	let { editor, onDrawSignature }: { editor: EditorState; onDrawSignature: () => void } = $props();
 
-	let fieldMenuOpen = $state(false);
 	let docMenuOpen = $state(false);
+
+	// Close the Document dropdown when the user presses anywhere outside it.
+	function onWindowPointerDown(event: PointerEvent) {
+		const target = event.target as HTMLElement;
+		if (docMenuOpen && !target.closest('[data-menu="doc"]')) docMenuOpen = false;
+	}
 
 	async function onMergeChange(event: Event) {
 		const input = event.currentTarget as HTMLInputElement;
@@ -23,21 +30,6 @@
 		docMenuOpen = false;
 	}
 
-	const fieldTools: { kind: FieldKind; label: string }[] = [
-		{ kind: 'text', label: 'Text field' },
-		{ kind: 'checkbox', label: 'Checkbox' },
-		{ kind: 'radio', label: 'Radio group' },
-		{ kind: 'dropdown', label: 'Dropdown' },
-		{ kind: 'combo', label: 'Combo box' },
-		{ kind: 'listbox', label: 'List box' },
-		{ kind: 'signature', label: 'Signature field' }
-	];
-
-	function pickField(kind: FieldKind) {
-		editor.setTool({ type: 'field', kind });
-		fieldMenuOpen = false;
-	}
-
 	async function onPdfChange(event: Event) {
 		const input = event.currentTarget as HTMLInputElement;
 		const file = input.files?.[0];
@@ -45,54 +37,19 @@
 		input.value = '';
 	}
 
-	async function onImageUpload(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		if (file) {
-			const pending = await editor.readRaster(file);
-			if (pending) {
-				editor.pendingImage = pending;
-				editor.setTool({ type: 'draw', kind: 'image' });
-			}
-		}
-		input.value = '';
-	}
-
-	async function onSignatureUpload(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		if (file) {
-			const pending = await editor.readRaster(file);
-			if (pending) {
-				editor.pendingSignature = pending;
-				editor.setTool({ type: 'draw', kind: 'signature' });
-			}
-		}
-		input.value = '';
-	}
-
-	const drawTools: { kind: DrawKind; label: string }[] = [
-		{ kind: 'text', label: 'Text' },
-		{ kind: 'line', label: 'Line' },
-		{ kind: 'rectangle', label: 'Rectangle' },
-		{ kind: 'ellipse', label: 'Ellipse' },
-		{ kind: 'path', label: 'Draw' },
-		{ kind: 'polygon', label: 'Polygon' },
-		{ kind: 'link', label: 'Link' }
-	];
-
-	function toolClass(active: boolean): string {
-		return active
-			? 'shrink-0 rounded bg-blue-600 px-2.5 py-1.5 text-sm font-medium text-white'
-			: 'shrink-0 rounded px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100';
-	}
-
 	const menuItem = 'block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100';
 </script>
 
-<header class="flex items-center gap-3 border-b border-gray-200 bg-white px-3 py-2">
-	<!-- Left: File (icons) -->
-	<div class="flex shrink-0 items-center gap-1">
+<svelte:window onpointerdown={onWindowPointerDown} />
+
+<!-- On narrow screens the header wraps so File + Document/Export share the top row
+     and the insert-tool sections stack below it, never overlapping (#mobile). On
+     `sm`+ it collapses back to one row: File | sections | Document/Export. -->
+<header
+	class="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-gray-200 bg-white px-3 py-2"
+>
+	<!-- Left: File (icons). Stacks New blank under Upload on narrow screens. -->
+	<div class="order-1 flex shrink-0 flex-col items-start gap-1 sm:flex-row sm:items-center">
 		<label
 			class="flex cursor-pointer items-center gap-1.5 rounded bg-gray-100 px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200"
 			title="Upload a PDF"
@@ -131,80 +88,21 @@
 		{/if}
 	</div>
 
-	<!-- Center: Insert tools. Scrolls internally on narrow screens so the right
-	     zone (Export) is never pushed off-screen. -->
-	<div class="flex min-w-0 flex-1 items-center gap-3">
-		<div class="flex items-center gap-1 overflow-x-auto rounded-lg border border-gray-200 p-1">
-			<button class={toolClass(editor.tool.type === 'select')} onclick={() => editor.resetTool()}>
-				Select
-			</button>
-			{#each drawTools as t (t.kind)}
-				<button
-					class={toolClass(editor.activeDrawKind === t.kind)}
-					onclick={() => editor.setTool({ type: 'draw', kind: t.kind })}
-				>
-					{t.label}
-				</button>
-			{/each}
-			<button class={toolClass(editor.activeDrawKind === 'signature')} onclick={onDrawSignature}>
-				Signature
-			</button>
-			<label class={toolClass(editor.activeDrawKind === 'image') + ' cursor-pointer'}>
-				Image
-				<input
-					type="file"
-					accept="image/png,image/jpeg,.png,.jpg,.jpeg"
-					class="hidden"
-					onchange={onImageUpload}
-				/>
-			</label>
-			<label
-				class="shrink-0 cursor-pointer rounded px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
-			>
-				Upload sig
-				<input
-					type="file"
-					accept="image/png,image/jpeg,.png,.jpg,.jpeg"
-					class="hidden"
-					onchange={onSignatureUpload}
-				/>
-			</label>
-		</div>
-
-		<!-- Form fields — a separate group from the drawing tools. -->
-		<div class="relative shrink-0">
-			<button
-				class={toolClass(editor.activeFieldKind !== null) + ' border border-gray-200'}
-				aria-haspopup="menu"
-				aria-expanded={fieldMenuOpen}
-				onclick={() => (fieldMenuOpen = !fieldMenuOpen)}
-			>
-				Field ▾
-			</button>
-			{#if fieldMenuOpen}
-				<div
-					class="absolute top-full left-0 z-30 mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
-					role="menu"
-				>
-					{#each fieldTools as f (f.kind)}
-						<button
-							class="{menuItem} {editor.activeFieldKind === f.kind
-								? 'font-semibold text-blue-600'
-								: ''}"
-							role="menuitem"
-							onclick={() => pickField(f.kind)}
-						>
-							{f.label}
-						</button>
-					{/each}
-				</div>
-			{/if}
-		</div>
+	<!-- Center: Insert tools. Wraps onto more rows when the viewport is too narrow
+	     to fit every section on one line (#3), so nothing is pushed off-screen. -->
+	<div
+		class="order-3 flex w-full min-w-0 flex-wrap items-center gap-x-4 gap-y-2 sm:order-2 sm:w-auto sm:flex-1"
+	>
+		<ContentSection {editor} {onDrawSignature} />
+		<FieldsSection {editor} />
+		<!-- Shapes kept last (#2). -->
+		<ShapesSection {editor} />
 	</div>
 
-	<!-- Right: document menu + export (pinned; never scrolls off) -->
-	<div class="flex shrink-0 items-center gap-2">
-		<div class="relative">
+	<!-- Right: document menu + export. On mobile it shares the top row with File
+	     (ml-auto pushes it to the edge); on sm+ it sits at the far right as before. -->
+	<div class="order-2 ml-auto flex shrink-0 items-center gap-2 sm:order-3 sm:ml-0">
+		<div class="relative" data-menu="doc">
 			<button
 				class="rounded px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
 				aria-haspopup="menu"

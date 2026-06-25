@@ -43,4 +43,25 @@ describe('FloatingToolbar', () => {
 		flushSync();
 		expect(editor.elements.length).toBe(0);
 	});
+
+	it('shows the link page target 1-based but stores it 0-based (#14)', async () => {
+		const user = userEvent.setup();
+		const editor = new EditorState();
+		editor.elements = [
+			{ type: 'link', id: 'ln', x: 10, y: 10, width: 80, height: 20, page: 0, goToPage: 0 }
+		];
+		editor.select('ln');
+		flushSync();
+		render(FloatingToolbar, { props: { editor } });
+
+		const input = screen.getByRole('spinbutton', { name: 'Go to page' }) as HTMLInputElement;
+		// goToPage 0 (first page) displays as "1".
+		expect(input.value).toBe('1');
+
+		// Entering "3" stores goToPage 2.
+		await user.clear(input);
+		await user.type(input, '3');
+		flushSync();
+		expect(editor.selectedLink?.goToPage).toBe(2);
+	});
 });

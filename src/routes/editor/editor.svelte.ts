@@ -71,6 +71,13 @@ export class EditorState {
 	elements = $state<EditElement[]>([]);
 	selectedId = $state<string | null>(null);
 	/**
+	 * Id of a text element just created that should grab keyboard focus so the
+	 * user can type immediately (its overlay focuses + selects-all on mount, then
+	 * clears this). Without it, a freshly-added text box stays unfocused and the
+	 * first keystrokes are dropped until the user clicks it (#8).
+	 */
+	autoFocusTextId = $state<string | null>(null);
+	/**
 	 * Original source-page renders, indexed by their **original** zero-based page
 	 * in the loaded PDF. Stays fixed after load; page operations reorder via
 	 * {@link pageOps} (which carries `sourceIndex`) rather than by mutating this.
@@ -149,6 +156,13 @@ export class EditorState {
 	fieldModalOpen = $state(false);
 
 	/**
+	 * Set true at the end of a drag-draw (shape/path/link) so the synthetic
+	 * `click` that fires right after pointerup doesn't deselect the element the
+	 * user just created. Read and cleared by the canvas click handler.
+	 */
+	suppressNextClick = false;
+
+	/**
 	 * Canvas zoom multiplier (1 = 100%). Clamped to [{@link ZOOM_MIN},
 	 * {@link ZOOM_MAX}]. Applied as a CSS transform on the page wrapper; pointer
 	 * math divides by {@link cssScale} so drawing/dragging land correctly.
@@ -167,6 +181,9 @@ export class EditorState {
 	docPropsModalOpen = $state(false);
 	/** True while the outline editor is open. */
 	outlineEditorOpen = $state(false);
+	/** Whether the Pages thumbnail sidebar is shown. Collapsible to free up room
+	 * for the page on small screens. */
+	showPages = $state(true);
 
 	exporting = $state(false);
 	loadingPdf = $state(false);
@@ -187,6 +204,12 @@ export class EditorState {
 
 	selected = $derived(this.elements.find((e) => e.id === this.selectedId) ?? null);
 	selectedText = $derived(this.selected?.type === 'text' ? this.selected : null);
+	selectedImage = $derived(this.selected?.type === 'image' ? this.selected : null);
+	selectedSignature = $derived(this.selected?.type === 'signature' ? this.selected : null);
+	/** An image or signature — both expose width/height for manual sizing. */
+	selectedRaster = $derived<ImageElement | SignatureElement | null>(
+		this.selected?.type === 'image' || this.selected?.type === 'signature' ? this.selected : null
+	);
 	selectedShape = $derived(this.selected?.type === 'shape' ? this.selected : null);
 	selectedField = $derived(this.selected?.type === 'field' ? this.selected : null);
 	selectedPath = $derived(this.selected?.type === 'path' ? this.selected : null);
@@ -316,6 +339,11 @@ export class EditorState {
 		// Match the dominant page size (first source page) so blanks fit in.
 		const first = this.pages[0] ?? { width: DEFAULT_PAGE[0], height: DEFAULT_PAGE[1] };
 		const blank: PageOp = { kind: 'blank', size: [first.width, first.height], rotation: 0 };
+		// Blank mode has no page ops yet — materialise the implicit first page so
+		// the new page is added alongside it (rather than replacing it).
+		if (this.pageOps.length === 0) {
+			this.pageOps = [{ kind: 'blank', size: [first.width, first.height], rotation: 0 }];
+		}
 		const at = afterIndex + 1;
 		const ops = this.pageOps.slice();
 		ops.splice(at, 0, blank);
@@ -329,15 +357,18 @@ export class EditorState {
 	// --- placement -----------------------------------------------------------
 
 	addTextAt(x: number, y: number, pageIndex: number) {
+		const id = this.nextId('t');
 		this.add({
 			type: 'text',
-			id: this.nextId('t'),
+			id,
 			text: 'New text',
 			x,
 			y,
 			size: 16,
 			page: pageIndex
 		});
+		// Focus the new box so the user can type right away (#8).
+		this.autoFocusTextId = id;
 	}
 
 	placeSignatureAt(x: number, y: number, pageIndex: number) {
@@ -403,6 +434,10 @@ export class EditorState {
 	/** Create a new field of `kind` at top-left PDF-point coords on a page. */
 	placeFieldAt(kind: FieldKind, x: number, y: number, pageIndex: number) {
 		const size = FIELD_DEFAULT_SIZE[kind];
+		const options =
+			kind === 'dropdown' || kind === 'combo' || kind === 'listbox' || kind === 'radio'
+				? ['Option 1', 'Option 2']
+				: undefined;
 		const el: FieldElement = {
 			type: 'field',
 			id: this.nextId('f'),
@@ -413,11 +448,74 @@ export class EditorState {
 			width: size.width,
 			height: size.height,
 			page: pageIndex,
-			...(kind === 'dropdown' || kind === 'combo' || kind === 'listbox' || kind === 'radio'
-				? { options: ['Option 1', 'Option 2'] }
+			...(options ? { options } : {}),
+			// Radios start with each button stacked below the anchor; the user can
+			// then drag any of them anywhere on the page (#3).
+			...(kind === 'radio'
+				? { radioLayout: radioStack(x, y, Math.min(size.width, size.height), options!.length) }
 				: {})
 		};
 		this.add(el);
+	}
+
+	/**
+	 * Ensure `field.radioLayout` exists and is index-aligned with `options`, filling
+	 * any missing slots from the default vertical stack. Returns the live array.
+	 */
+	ensureRadioLayout(field: FieldElement): { x: number; y: number }[] {
+		const size = Math.min(field.width, field.height);
+		const opts = field.options ?? [];
+		const cur = field.radioLayout ?? [];
+		const stack = radioStack(field.x, field.y, size, opts.length);
+		const next = opts.map((_, i) => cur[i] ?? stack[i]!);
+		field.radioLayout = next;
+		return next;
+	}
+
+	/** Append a new radio option, stacking its button below the current last one. */
+	addRadioOption(field: FieldElement) {
+		const i = field.options?.length ?? 0;
+		field.options = [...(field.options ?? []), `Option ${i + 1}`];
+		const size = Math.min(field.width, field.height);
+		const layout = this.ensureRadioLayout(field);
+		const last = layout[i - 1];
+		field.radioLayout = [
+			...layout,
+			last ? { x: last.x, y: last.y + size + 6 } : { x: field.x, y: field.y }
+		];
+	}
+
+	/** Set a raster element's width/height in PDF points (manual sizing), clamped
+	 * to a small minimum so it never collapses. */
+	setRasterSize(el: ImageElement | SignatureElement, width?: number, height?: number) {
+		if (width !== undefined && Number.isFinite(width)) el.width = Math.max(4, width);
+		if (height !== undefined && Number.isFinite(height)) el.height = Math.max(4, height);
+	}
+
+	/** Drag a single radio button (option `index`) to a new position on its page. */
+	startRadioDrag(event: PointerEvent, field: FieldElement, index: number) {
+		this.selectedId = field.id;
+		const layout = this.ensureRadioLayout(field);
+		const origin = layout[index] ?? { x: field.x, y: field.y };
+		const startX = event.clientX;
+		const startY = event.clientY;
+		let dragging = false;
+
+		const move = (e: PointerEvent) => {
+			if (!dragging && Math.hypot(e.clientX - startX, e.clientY - startY) < 4) return;
+			dragging = true;
+			const dx = (e.clientX - startX) / this.cssScale;
+			const dy = (e.clientY - startY) / this.cssScale;
+			field.radioLayout = (field.radioLayout ?? layout).map((p, i) =>
+				i === index ? { x: origin.x + dx, y: origin.y + dy } : p
+			);
+		};
+		const up = () => {
+			window.removeEventListener('pointermove', move);
+			window.removeEventListener('pointerup', up);
+		};
+		window.addEventListener('pointermove', move);
+		window.addEventListener('pointerup', up);
 	}
 
 	/** Handle a click on the bare page background at canvas px coords. Only an
@@ -520,6 +618,9 @@ export class EditorState {
 			live.y = Math.min(startY, curY);
 			live.width = Math.abs(curX - startX);
 			live.height = Math.abs(curY - startY);
+			// A line keeps its drag direction: anti-diagonal when X and Y move in
+			// opposite directions (top-right → bottom-left or bottom-left → top-right).
+			if (live.shape === 'line') live.antidiagonal = (curX - startX) * (curY - startY) < 0;
 		};
 		const up = () => {
 			window.removeEventListener('pointermove', move);
@@ -528,6 +629,7 @@ export class EditorState {
 			if (live.width < SHAPE_MIN_SIZE) live.width = SHAPE_MIN_SIZE * 4;
 			if (live.shape !== 'line' && live.height < SHAPE_MIN_SIZE) live.height = SHAPE_MIN_SIZE * 4;
 			// One-shot tool: return to select after drawing.
+			this.suppressNextClick = true;
 			this.resetTool();
 		};
 		window.addEventListener('pointermove', move);
@@ -587,6 +689,7 @@ export class EditorState {
 				this.elements = this.elements.filter((e) => e.id !== live.id);
 				this.selectedId = null;
 			}
+			this.suppressNextClick = true;
 			this.resetTool();
 		};
 		window.addEventListener('pointermove', move);
@@ -633,6 +736,7 @@ export class EditorState {
 			window.removeEventListener('pointerup', up);
 			if (live.width < SHAPE_MIN_SIZE) live.width = LINK_DEFAULT_SIZE.width;
 			if (live.height < SHAPE_MIN_SIZE) live.height = LINK_DEFAULT_SIZE.height;
+			this.suppressNextClick = true;
 			this.resetTool();
 		};
 		window.addEventListener('pointermove', move);
@@ -1080,7 +1184,7 @@ export class EditorState {
 			if (upsell) {
 				this.upsell = upsell;
 			} else {
-				this.errorMessage = e instanceof Error ? e.message : 'Export failed. Please try again.';
+				this.errorMessage = exportErrorMessage(e);
 			}
 		} finally {
 			this.exporting = false;
@@ -1106,6 +1210,30 @@ export class EditorState {
 		if (keywords.length > 0) out.keywords = keywords;
 		return Object.keys(out).length > 0 ? out : null;
 	}
+}
+
+/**
+ * Build a useful error message for a failed export. Remote-function errors
+ * arrive as an HttpError-like object: the server's message is on `.body.message`
+ * (e.g. a 422 "this PDF is encrypted"), with a numeric `.status`. Surface that
+ * instead of a generic retry prompt so the user knows what actually went wrong.
+ */
+function exportErrorMessage(e: unknown): string {
+	const err = e as { status?: number; body?: { message?: string }; message?: string };
+	const detail = err?.body?.message ?? err?.message;
+	if (detail && detail.trim().length > 0) {
+		return err?.status ? `Export failed (${err.status}): ${detail}` : `Export failed: ${detail}`;
+	}
+	return 'Export failed. Please try again.';
+}
+
+/**
+ * Default vertical stack of `count` radio-button positions (top-left PDF points),
+ * starting at `x`/`y` and stepping down by `size + 6`. Mirrors the export layout
+ * so a never-dragged radio looks the same in the editor and the output PDF.
+ */
+function radioStack(x: number, y: number, size: number, count: number): { x: number; y: number }[] {
+	return Array.from({ length: count }, (_, i) => ({ x, y: y + i * (size + 6) }));
 }
 
 /** Top-left bounding box (x/y = min corner) of a list of points. */

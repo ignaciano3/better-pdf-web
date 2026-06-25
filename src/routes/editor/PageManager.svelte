@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { EditorState } from './editor.svelte';
+	import { SCALE } from './constants';
+	import { overlayFor } from './overlays';
 
 	let { editor }: { editor: EditorState } = $props();
 
@@ -25,23 +27,35 @@
 	}
 </script>
 
-{#if editor.pageOps.length > 0}
+{#if editor.pages.length > 0}
 	<aside class="flex w-44 flex-col gap-3 overflow-y-auto border-r border-gray-200 bg-white p-3">
 		<div class="flex items-center justify-between">
 			<h2 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Pages</h2>
-			<button
-				type="button"
-				class="rounded px-1.5 py-0.5 text-xs text-blue-600 hover:bg-blue-50"
-				title="Insert blank page at end"
-				onclick={() => editor.insertBlankPage(editor.pageOps.length - 1)}
-			>
-				+ Blank
-			</button>
+			<div class="flex items-center gap-1">
+				<button
+					type="button"
+					class="rounded px-1.5 py-0.5 text-xs text-blue-600 hover:bg-blue-50"
+					title="Insert blank page at end"
+					onclick={() => editor.insertBlankPage(editor.pages.length - 1)}
+				>
+					+ Blank
+				</button>
+				<button
+					type="button"
+					class="rounded px-1.5 py-0.5 text-sm text-gray-500 hover:bg-gray-100"
+					title="Hide pages panel"
+					aria-label="Hide pages panel"
+					onclick={() => (editor.showPages = false)}
+				>
+					«
+				</button>
+			</div>
 		</div>
 
 		{#each editor.pages as page, i (i)}
 			{@const render = editor.pageRender(i)}
 			{@const rot = editor.pageRotation(i)}
+			{@const els = editor.elementsForPage(i)}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="group flex flex-col items-center gap-1 rounded border p-2 transition-colors {dragIndex ===
@@ -54,20 +68,34 @@
 				ondrop={() => onDrop(i)}
 			>
 				<div
-					class="flex items-center justify-center overflow-hidden bg-gray-100 shadow-sm"
+					class="relative flex items-center justify-center overflow-hidden bg-white shadow-sm"
 					style={thumbStyle(page.width, page.height)}
 				>
-					{#if render}
-						<img
-							src={render.dataUrl}
-							alt={`Page ${i + 1}`}
-							class="max-w-none select-none"
-							style="width: {rot % 180 === 0
-								? THUMB_W
-								: (THUMB_W / page.width) * page.height}px; transform: rotate({rot}deg);"
-							draggable="false"
-						/>
-					{:else}
+					<!-- Scaled, inert mirror of the page: the source raster plus every
+					     element overlay, so thumbnails reflect edits (text, shapes…) and
+					     never read "blank" once content is added (#7). -->
+					<div
+						class="pointer-events-none absolute top-0 left-0 origin-top-left"
+						inert
+						style="width: {page.width * SCALE}px; height: {page.height *
+							SCALE}px; transform: scale({THUMB_W / (page.width * SCALE)});"
+					>
+						{#if render}
+							<img
+								src={render.dataUrl}
+								alt={`Page ${i + 1}`}
+								class="absolute top-1/2 left-1/2 max-w-none select-none"
+								style="width: {render.width * SCALE}px; height: {render.height *
+									SCALE}px; transform: translate(-50%, -50%) rotate({rot}deg);"
+								draggable="false"
+							/>
+						{/if}
+						{#each els as el (el.id)}
+							{@const Overlay = overlayFor(el.type)}
+							<Overlay {el} {editor} preview />
+						{/each}
+					</div>
+					{#if !render && els.length === 0}
 						<span class="text-[10px] text-gray-400">blank</span>
 					{/if}
 				</div>

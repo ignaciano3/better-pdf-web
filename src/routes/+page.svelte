@@ -1,5 +1,26 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+
+	type HealthState =
+		| { status: 'idle' }
+		| { status: 'checking' }
+		| { status: 'ok'; db: string }
+		| { status: 'error'; message: string };
+
+	let health = $state<HealthState>({ status: 'idle' });
+
+	async function checkHealth() {
+		health = { status: 'checking' };
+		try {
+			const res = await fetch(resolve('/health'), { headers: { accept: 'application/json' } });
+			const body = (await res.json()) as { status?: string; db?: string };
+			health = res.ok
+				? { status: 'ok', db: body.db ?? 'reachable' }
+				: { status: 'error', message: body.db ?? `HTTP ${res.status}` };
+		} catch {
+			health = { status: 'error', message: 'unreachable' };
+		}
+	}
 </script>
 
 <main class="mx-auto flex max-w-3xl flex-col items-center gap-8 px-6 py-24 text-center">
@@ -22,5 +43,23 @@
 			Edit existing PDF
 		</a>
 	</div>
-	<a href={resolve('/health')} class="text-sm text-gray-400 hover:text-gray-600">health check</a>
+	<div class="flex flex-col items-center gap-2">
+		<button
+			type="button"
+			onclick={checkHealth}
+			disabled={health.status === 'checking'}
+			class="text-sm text-gray-400 hover:text-gray-600 disabled:opacity-50"
+		>
+			{health.status === 'checking' ? 'Checking…' : 'Health check'}
+		</button>
+		{#if health.status === 'ok'}
+			<p class="text-sm font-medium text-green-600" role="status">
+				✓ App OK — database {health.db}
+			</p>
+		{:else if health.status === 'error'}
+			<p class="text-sm font-medium text-red-600" role="status">
+				✗ App unhealthy — database {health.message}
+			</p>
+		{/if}
+	</div>
 </main>

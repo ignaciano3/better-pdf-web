@@ -3,7 +3,7 @@
 	import type { EditorState } from '../editor.svelte';
 	import { SCALE } from '../constants';
 
-	let { el, editor }: { el: EditElement; editor: EditorState } = $props();
+	let { el, editor }: { el: EditElement; editor: EditorState; preview?: boolean } = $props();
 	const shape = $derived(el as ShapeElement);
 
 	const w = $derived(Math.max(shape.width, 0) * SCALE);
@@ -32,7 +32,14 @@
 		preserveAspectRatio="none"
 	>
 		{#if shape.shape === 'line'}
-			<line x1="0" y1="0" x2={w} y2={h} stroke={strokeCss} stroke-width={sw} />
+			<line
+				x1={shape.antidiagonal ? w : 0}
+				y1="0"
+				x2={shape.antidiagonal ? 0 : w}
+				y2={h}
+				stroke={strokeCss}
+				stroke-width={sw}
+			/>
 		{:else if shape.shape === 'rectangle'}
 			<rect
 				x={sw / 2}

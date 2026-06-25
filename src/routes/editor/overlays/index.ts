@@ -13,6 +13,8 @@ import LinkOverlay from './LinkOverlay.svelte';
 export interface OverlayProps {
 	el: EditElement;
 	editor: EditorState;
+	/** Read-only render for the page thumbnail: no focus-grab, no editing. */
+	preview?: boolean;
 }
 
 /**

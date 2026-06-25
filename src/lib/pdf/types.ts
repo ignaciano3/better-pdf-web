@@ -248,6 +248,12 @@ export interface ShapeElement {
 	strokeWidth?: number;
 	/** Fill RGB components in 0..1. Omit for no fill (rectangle/ellipse only). */
 	fillColor?: { r: number; g: number; b: number };
+	/**
+	 * For `line` only: when true the line runs along the anti-diagonal of its
+	 * bounding box (visual top-right → bottom-left) instead of the default
+	 * top-left → bottom-right. Set from the drag direction at draw time.
+	 */
+	antidiagonal?: boolean;
 }
 
 /**
@@ -403,6 +409,13 @@ export interface FieldElement {
 	value?: string;
 	/** Options for dropdown / radio / listbox / combo. */
 	options?: string[];
+	/**
+	 * Radio only: per-option widget positions (top-left PDF points), index-aligned
+	 * with {@link options}. Lets each radio button be placed independently instead
+	 * of stacking below the anchor. When absent (or shorter than `options`) missing
+	 * entries fall back to a vertical stack starting at `x`/`y`.
+	 */
+	radioLayout?: { x: number; y: number }[];
 	/** Placeholder text (text fields only). */
 	placeholder?: string;
 	/** Max length (text fields only). */

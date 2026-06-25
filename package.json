@@ -13,6 +13,8 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"auth:generate": "npx auth@latest generate --output ./src/lib/server/db/schema.ts -y",
+		"db:start": "docker compose up -d db",
+		"db:stop": "docker compose stop db",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:push": "drizzle-kit push",

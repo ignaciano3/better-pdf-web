@@ -3,7 +3,10 @@
 	import { SCALE } from './constants';
 	import type { StandardFontName } from '$lib/pdf/types';
 
-	let { editor }: { editor: EditorState } = $props();
+	// `pageHeight` is the selected element's page height in unzoomed canvas px,
+	// used to bottom-anchor the bar above the element (so it never covers tall
+	// fields like radio groups, list boxes or signatures).
+	let { editor, pageHeight = 0 }: { editor: EditorState; pageHeight?: number } = $props();
 
 	const fonts: StandardFontName[] = [
 		'Helvetica',
@@ -32,10 +35,32 @@
 		};
 	}
 
-	// Anchor just above the selection's top-left, in canvas px.
+	// Top-left anchor point of the selection (unzoomed points). For a radio group
+	// that's the top-most/left-most button so the bar clears every option.
+	const anchor = $derived.by(() => {
+		const s = editor.selected;
+		if (!s) return null;
+		const f = editor.selectedField;
+		if (f?.field === 'radio' && f.radioLayout && f.radioLayout.length > 0) {
+			return {
+				x: Math.min(...f.radioLayout.map((p) => p.x)),
+				y: Math.min(...f.radioLayout.map((p) => p.y))
+			};
+		}
+		return { x: s.x, y: s.y };
+	});
+
+	// Sit the bar's BOTTOM a constant on-screen gap above the element's top, so it
+	// grows upward and never overlaps the element regardless of its height. The gap
+	// is divided by zoom because the parent applies CSS `zoom`.
+	const GAP = 10;
 	const pos = $derived(
-		editor.selected
-			? { left: editor.selected.x * SCALE, top: editor.selected.y * SCALE - 44 }
+		anchor
+			? {
+					left: anchor.x * SCALE,
+					// CSS `bottom` measured from the page's bottom edge.
+					bottom: pageHeight - anchor.y * SCALE + GAP / editor.zoom
+				}
 			: null
 	);
 
@@ -49,9 +74,12 @@
 </script>
 
 {#if editor.selected && pos}
+	<!-- Counter-scale by 1/zoom so the bar keeps a normal on-screen size even though
+	     the parent page wrapper is CSS-zoomed (otherwise its text balloons). -->
 	<div
 		class="absolute z-20 flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1 shadow-lg"
-		style="left: {pos.left}px; top: {Math.max(pos.top, 0)}px;"
+		style="left: {pos.left}px; bottom: {pos.bottom}px; transform: scale({1 /
+			editor.zoom}); transform-origin: bottom left;"
 	>
 		{#if editor.selectedText}
 			{@const t = editor.selectedText}
@@ -239,23 +267,62 @@
 					aria-label="Link URL"
 				/>
 			{:else}
+				<!-- Shown 1-based for humans; stored 0-based for the PDF (drawLink). -->
 				<input
 					type="number"
-					min="0"
-					placeholder="0-based page"
-					value={ln.goToPage ?? 0}
+					min="1"
+					placeholder="page"
+					value={(ln.goToPage ?? 0) + 1}
 					oninput={(e) =>
 						(ln.goToPage = Math.max(
 							0,
-							Math.floor(Number((e.currentTarget as HTMLInputElement).value))
+							Math.floor(Number((e.currentTarget as HTMLInputElement).value)) - 1
 						))}
 					class="w-24 rounded border px-1 py-0.5 text-sm"
-					aria-label="Go to page (0-based)"
+					aria-label="Go to page"
 				/>
 			{/if}
 		{/if}
 
+		{#if editor.selectedRaster}
+			{@const r = editor.selectedRaster}
+			<!-- Manual width/height so an image/signature can be sized precisely. -->
+			<label class="flex items-center gap-1 text-sm" title="Width (points)">
+				W
+				<input
+					type="number"
+					min="4"
+					value={Math.round(r.width)}
+					oninput={(e) =>
+						editor.setRasterSize(r, Number((e.currentTarget as HTMLInputElement).value), undefined)}
+					class="w-16 rounded border px-1 py-0.5 text-sm"
+					aria-label="Width"
+				/>
+			</label>
+			<label class="flex items-center gap-1 text-sm" title="Height (points)">
+				H
+				<input
+					type="number"
+					min="4"
+					value={Math.round(r.height)}
+					oninput={(e) =>
+						editor.setRasterSize(r, undefined, Number((e.currentTarget as HTMLInputElement).value))}
+					class="w-16 rounded border px-1 py-0.5 text-sm"
+					aria-label="Height"
+				/>
+			</label>
+		{/if}
+
 		{#if editor.selectedField}
+			{#if editor.selectedField.field === 'radio'}
+				<button
+					onclick={() => editor.addRadioOption(editor.selectedField!)}
+					class="rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+					title="Add another radio option"
+				>
+					+ Option
+				</button>
+			{/if}
 			<button
 				onclick={() => (editor.fieldModalOpen = true)}
 				class="rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"

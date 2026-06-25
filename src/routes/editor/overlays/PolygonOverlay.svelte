@@ -3,7 +3,7 @@
 	import type { EditorState } from '../editor.svelte';
 	import { SCALE } from '../constants';
 
-	let { el, editor }: { el: EditElement; editor: EditorState } = $props();
+	let { el, editor }: { el: EditElement; editor: EditorState; preview?: boolean } = $props();
 	const poly = $derived(el as PolygonElement);
 	const isDraft = $derived(editor.polygonDraftId === el.id);
 

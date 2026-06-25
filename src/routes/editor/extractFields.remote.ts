@@ -1,4 +1,4 @@
-import { query } from '$app/server';
+import { command } from '$app/server';
 import { PdfDocument } from '@ignaciano3/better-pdf';
 import type { FieldElement } from '$lib/pdf/types';
 import { mapFields, type FieldInfoLike } from './extract-fields';
@@ -17,8 +17,13 @@ export interface ExtractFieldsResult {
  * the page heights used for the coordinate flip. On any failure (corrupt /
  * encrypted / XFA) it returns empty results so the editor still opens for
  * stamping — no fields are surfaced.
+ *
+ * A `command` (POST), not a `query` (GET): the PDF bytes travel in the request
+ * body. As a query the devalue-encoded bytes would be packed into the URL,
+ * blowing the HTTP header-size limit for anything but tiny files — the cause of
+ * uploads silently failing to surface fields.
  */
-export const extractFields = query(
+export const extractFields = command(
 	'unchecked',
 	async (input: unknown): Promise<ExtractFieldsResult> => {
 		const bytes = (input as { bytes?: unknown } | null)?.bytes;
