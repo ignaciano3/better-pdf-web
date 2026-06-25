@@ -474,11 +474,13 @@ export class EditorState {
 
 	/** Append a new radio option, stacking its button below the current last one. */
 	addRadioOption(field: FieldElement) {
-		const i = field.options?.length ?? 0;
-		field.options = [...(field.options ?? []), `Option ${i + 1}`];
-		const size = Math.min(field.width, field.height);
+		// Materialise the layout for the CURRENT options first, then append the
+		// option and its slot together so the two arrays stay length-aligned.
 		const layout = this.ensureRadioLayout(field);
+		const i = field.options?.length ?? 0;
+		const size = Math.min(field.width, field.height);
 		const last = layout[i - 1];
+		field.options = [...(field.options ?? []), `Option ${i + 1}`];
 		field.radioLayout = [
 			...layout,
 			last ? { x: last.x, y: last.y + size + 6 } : { x: field.x, y: field.y }

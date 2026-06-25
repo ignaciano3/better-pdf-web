@@ -140,6 +140,54 @@ describe('EditorState field tools', () => {
 	});
 });
 
+describe('EditorState setRasterSize', () => {
+	it('sets width/height and clamps to a minimum of 4', () => {
+		const e = new EditorState();
+		e.rendered = [{ width: 300, height: 400, dataUrl: 'data:,' }];
+		e.pageOps = [{ kind: 'source', sourceIndex: 0, rotation: 0 }];
+		e.pendingImage = { image: new Uint8Array([1, 2, 3]), format: 'png', aspect: 1 };
+		e.setTool({ type: 'draw', kind: 'image' });
+		e.placeAtClient(20, 20, fakePage(), 0);
+		flushSync();
+		const img = e.selectedRaster!;
+
+		e.setRasterSize(img, 120, 80);
+		expect(img.width).toBe(120);
+		expect(img.height).toBe(80);
+
+		// Below-min and non-finite inputs are guarded.
+		e.setRasterSize(img, 1, 0);
+		expect(img.width).toBe(4);
+		expect(img.height).toBe(4);
+
+		e.setRasterSize(img, Number.NaN, undefined);
+		expect(img.width).toBe(4); // unchanged by NaN
+	});
+});
+
+describe('EditorState addRadioOption', () => {
+	it('appends an option and stacks its button below the last (#3)', () => {
+		const e = new EditorState();
+		e.setTool({ type: 'field', kind: 'radio' });
+		e.placeAtClient(10, 10, fakePage(), 0);
+		flushSync();
+		const f = e.selectedField!;
+		const before = f.options!.length;
+		const size = Math.min(f.width, f.height);
+
+		e.addRadioOption(f);
+		flushSync();
+
+		expect(f.options!.length).toBe(before + 1);
+		expect(f.radioLayout!.length).toBe(before + 1);
+		const last = f.radioLayout![before - 1]!;
+		const added = f.radioLayout![before]!;
+		// New button shares x and sits one row (size + 6) below the previous last.
+		expect(added.x).toBe(last.x);
+		expect(added.y).toBe(last.y + size + 6);
+	});
+});
+
 describe('EditorState duplicateSelected', () => {
 	it('clones the selected element with a new id and offset', () => {
 		const e = new EditorState();

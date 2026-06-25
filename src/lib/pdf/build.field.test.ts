@@ -175,4 +175,39 @@ describe('buildPdf field authoring (D3 rebuild)', () => {
 			])
 		);
 	});
+
+	it('authors a radio with border + background without dropping widgets (#1)', async () => {
+		// The reader API exposes no widget appearance (border/bg colors), so we
+		// can't assert the colors round-trip. This guards the build.ts radio case
+		// from regressing when the appearance props are present: it must still
+		// author both widgets rather than throwing or collapsing the group.
+		const state: EditState = {
+			pageSize: [400, 500],
+			elements: [
+				field({
+					field: 'radio',
+					name: 'pick',
+					width: 18,
+					height: 18,
+					options: ['a', 'b'],
+					radioLayout: [
+						{ x: 50, y: 50 },
+						{ x: 50, y: 80 }
+					],
+					border: { color: { r: 0, g: 0, b: 1 }, width: 2 },
+					background: { r: 0.9, g: 0.9, b: 0.9 }
+				})
+			]
+		};
+
+		const bytes = await buildPdf(state);
+		const doc = await PdfDocument.load(bytes);
+		const radio = doc
+			.getForm()
+			.getFields()
+			.find((f) => f.name === 'pick');
+		expect(radio?.type).toBe('radio');
+		expect(radio?.widgets).toHaveLength(2);
+		expect(radio?.states).toEqual(expect.arrayContaining(['a', 'b']));
+	});
 });
