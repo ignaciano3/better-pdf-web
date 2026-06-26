@@ -4,7 +4,7 @@
 type PdfJs = typeof import('pdfjs-dist');
 let pdfjsPromise: Promise<PdfJs> | undefined;
 
-async function loadPdfjs(): Promise<PdfJs> {
+export async function loadPdfjs(): Promise<PdfJs> {
 	if (!pdfjsPromise) {
 		pdfjsPromise = (async () => {
 			const pdfjs = await import('pdfjs-dist');
