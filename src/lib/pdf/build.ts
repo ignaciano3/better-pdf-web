@@ -1,5 +1,6 @@
 import { PdfDocument, PdfError, rgb } from '@ignaciano3/better-pdf';
 import type { Color, PdfFont } from '@ignaciano3/better-pdf/generate';
+import { StandardFonts } from '@ignaciano3/better-pdf';
 import type { FormBuilder } from '@ignaciano3/better-pdf/generate';
 import type {
 	DocumentMetadataInput,
@@ -128,6 +129,35 @@ function toColor(c: { r: number; g: number; b: number }): Color {
 }
 
 /**
+ * Stamp a single text watermark centered, rotated, and semi-transparent on
+ * every page. `pageWidths[i]`/`pageHeights[i]` are the content box of output
+ * page `i`. No-op when the text is empty/whitespace. The lib rotates
+ * counter-clockwise, so the clockwise editor angle is negated.
+ */
+function drawWatermark(
+	doc: PdfDocument,
+	pageWidths: number[],
+	pageHeights: number[],
+	wm: import('./types').Watermark
+): void {
+	const text = wm.text.trim();
+	if (text.length === 0) return;
+	const size = wm.size ?? 48;
+	const fontName = (wm.font ?? 'Helvetica-Bold') as StandardFonts;
+	const font = doc.getFont(fontName);
+	const color = wm.color ? toColor(wm.color) : rgb(0.5, 0.5, 0.5);
+	const opacity = wm.opacity ?? 0.3;
+	const rotate = -(wm.rotation ?? 45);
+	const textWidth = font.widthOfTextAtSize(text, size);
+	for (let i = 0; i < pageHeights.length; i++) {
+		const page = doc.getPage(i);
+		const x = ((pageWidths[i] as number) - textWidth) / 2;
+		const y = (pageHeights[i] as number) / 2;
+		page.drawText(text, { x, y, size, font, color, opacity, rotate });
+	}
+}
+
+/**
  * Embed each font asset once, returning a `Record<id, PdfFont>` for renderers.
  * A single asset that fails to embed (corrupt / unsupported font program) is
  * skipped — text referencing it falls back to its standard font — rather than
@@ -172,6 +202,7 @@ function dataUrlToBytes(value: string | undefined): Uint8Array | null {
 async function buildBlankRebuild(state: EditState): Promise<Uint8Array> {
 	const doc = await PdfDocument.create();
 	const pageHeights: number[] = [];
+	const pageWidths: number[] = [];
 
 	if (state.pageOps && state.pageOps.length > 0) {
 		for (const op of state.pageOps) {
@@ -181,14 +212,17 @@ async function buildBlankRebuild(state: EditState): Promise<Uint8Array> {
 			const page = doc.addPage([w, h]);
 			if (op.rotation) page.setRotation(normalizeRotation(op.rotation));
 			pageHeights.push(h);
+			pageWidths.push(w);
 		}
 	} else {
 		doc.addPage(state.pageSize);
 		pageHeights.push(state.pageSize[1]);
+		pageWidths.push(state.pageSize[0]);
 	}
 
 	const fonts = await embedFonts(doc, state.fonts);
 	await stampAndAuthor(doc, state.elements, pageHeights, fonts);
+	if (state.watermark) drawWatermark(doc, pageWidths, pageHeights, state.watermark);
 	applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
 	return doc.save();
 }
@@ -198,6 +232,7 @@ async function buildSourceRebuild(state: EditState, sources: Uint8Array[]): Prom
 	try {
 		const doc = await PdfDocument.create();
 		const pageHeights: number[] = [];
+		const pageWidths: number[] = [];
 
 		// One output page per pageOp (order / blank / rotation), or 1:1 with the
 		// pages of the primary source when there are no page ops.
@@ -229,17 +264,20 @@ async function buildSourceRebuild(state: EditState, sources: Uint8Array[]): Prom
 				if (op.rotation) page.setRotation(normalizeRotation(op.rotation));
 				// Field/stamp coords are authored against the un-rotated content box.
 				pageHeights.push(boxH);
+				pageWidths.push(boxW);
 			} else {
 				const rotated = normalizeRotation(op.rotation) % 180 !== 0;
 				const [w, h] = rotated ? [op.size[1], op.size[0]] : op.size;
 				const page = doc.addPage([w, h]);
 				if (op.rotation) page.setRotation(normalizeRotation(op.rotation));
 				pageHeights.push(op.size[1]);
+				pageWidths.push(op.size[0]);
 			}
 		}
 
 		const fonts = await embedFonts(doc, state.fonts);
 		await stampAndAuthor(doc, state.elements, pageHeights, fonts);
+		if (state.watermark) drawWatermark(doc, pageWidths, pageHeights, state.watermark);
 		applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
 		return await doc.save();
 	} catch (cause) {
