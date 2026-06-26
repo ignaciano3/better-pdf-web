@@ -13,7 +13,8 @@ import type {
 	PolygonElement,
 	ShapeElement,
 	SignatureElement,
-	TextElement
+	TextElement,
+	Watermark
 } from '$lib/pdf/types';
 import { renderSourcePdf, type RenderedPage, PdfRenderError } from '$lib/pdf/render';
 import { exportPdf } from './export.remote';
@@ -179,6 +180,10 @@ export class EditorState {
 	outline = $state<OutlineItem[]>([]);
 	/** When true, fields are flattened (baked) on export. */
 	flatten = $state(false);
+	/** Optional text watermark stamped on every page at export. */
+	watermark = $state<Watermark | null>(null);
+	/** True while the watermark editor modal is open. */
+	watermarkModalOpen = $state(false);
 	/** True while the document-properties modal is open. */
 	docPropsModalOpen = $state(false);
 	/** True while the outline editor is open. */
@@ -1252,7 +1257,10 @@ export class EditorState {
 				...(fonts.length > 0 ? { fonts: $state.snapshot(fonts) as EmbeddedFontAsset[] } : {}),
 				...(metadata ? { metadata } : {}),
 				...(outline.length > 0 ? { outline } : {}),
-				...(this.flatten ? { flatten: true } : {})
+				...(this.flatten ? { flatten: true } : {}),
+				...(this.watermark && this.watermark.text.trim().length > 0
+					? { watermark: $state.snapshot(this.watermark) as Watermark }
+					: {})
 			};
 			const bytes = await exportPdf({ state, fingerprint: getFingerprint() });
 			downloadPdf(bytes);
