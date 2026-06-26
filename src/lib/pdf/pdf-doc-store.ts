@@ -33,7 +33,7 @@ export class PdfDocStore {
 		this.#docs.delete(docIndex);
 		if (!p) return;
 		try {
-			(await p).destroy();
+			(await p).loadingTask.destroy();
 		} catch {
 			// A document that failed to open has nothing to free.
 		}
@@ -45,7 +45,7 @@ export class PdfDocStore {
 		this.#docs.clear();
 		for (const p of all) {
 			try {
-				(await p).destroy();
+				(await p).loadingTask.destroy();
 			} catch {
 				// ignore per-doc teardown failures
 			}

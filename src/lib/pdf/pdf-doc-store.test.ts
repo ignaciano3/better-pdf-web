@@ -7,9 +7,11 @@ let openCount = 0;
 function makeProxy(id: number) {
 	return {
 		id,
-		destroy: vi.fn(async () => {
-			destroyed.push(id);
-		})
+		loadingTask: {
+			destroy: vi.fn(async () => {
+				destroyed.push(id);
+			})
+		}
 	};
 }
 
@@ -50,7 +52,7 @@ describe('PdfDocStore', () => {
 		const store = new PdfDocStore();
 		const first = await store.get(0, new Uint8Array([1]));
 		await store.destroy(0);
-		expect(destroyed).toContain((first as { id: number }).id);
+		expect(destroyed).toContain((first as unknown as { id: number }).id);
 		await store.get(0, new Uint8Array([1]));
 		expect(openCount).toBe(2);
 	});
