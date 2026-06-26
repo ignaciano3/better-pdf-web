@@ -43,13 +43,6 @@
 	<section class="mx-auto max-w-6xl px-6 pt-20 pb-18">
 		<div class="grid grid-cols-1 items-center gap-14 md:grid-cols-2">
 			<div class="motion-safe:animate-[fadeUp_0.7s_ease_both]">
-				<div
-					class="inline-flex items-center gap-2 rounded-full border border-blue-600/20 bg-blue-50 px-3 py-1.5 font-mono text-xs font-medium tracking-[0.08em] text-blue-600"
-				>
-					<span class="h-1.5 w-1.5 rounded-full bg-blue-600"></span>
-					RUNS 100% IN YOUR BROWSER
-				</div>
-
 				<h1
 					class="font-display mt-5 text-[clamp(2.375rem,5.2vw,3.875rem)] leading-[1.03] font-bold tracking-tight"
 				>
@@ -79,7 +72,7 @@
 				</div>
 
 				<p class="mt-4.5 font-mono text-xs text-slate-400">
-					No sign-up required · files are never stored on our servers
+					No sign-up required · no watermarks · files are never stored on our servers
 				</p>
 			</div>
 
@@ -251,7 +244,7 @@
 			</span>
 			<span class="text-[15px] text-slate-700">
 				<span class="font-semibold text-slate-900">Private by design</span> — your files are never stored
-				on our servers, only used to generate your PDF.
+				on our servers, only used to generate your PDF, and we never add watermarks.
 			</span>
 		</div>
 	</section>
