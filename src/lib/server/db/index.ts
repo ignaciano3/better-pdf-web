@@ -20,7 +20,18 @@ export function getDb(): PostgresJsDatabase<typeof schema> {
 	if (!_db) {
 		const url = env['DATABASE_URL'];
 		if (!url) throw new Error('DATABASE_URL is not set');
-		_db = drizzle(postgres(url), { schema });
+		// Netlify Functions are serverless: each invocation is a short-lived
+		// container, so we keep one connection per instance and let it idle out
+		// quickly instead of holding a pool. Point DATABASE_URL at Neon's
+		// *pooled* endpoint (PgBouncer, transaction mode); that pooler rejects
+		// prepared statements, hence `prepare: false`.
+		const client = postgres(url, {
+			max: 1,
+			idle_timeout: 20,
+			connect_timeout: 10,
+			prepare: false
+		});
+		_db = drizzle(client, { schema });
 	}
 	return _db;
 }
