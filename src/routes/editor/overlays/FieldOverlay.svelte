@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { EditElement, FieldElement } from '$lib/pdf/types';
+	import type { CheckStyle, EditElement, FieldElement } from '$lib/pdf/types';
 	import type { EditorState } from '../editor.svelte';
 	import { SCALE } from '../constants';
 
@@ -22,8 +22,25 @@
 			s += `border:${field.border.width ?? 1}px solid ${rgbCss(field.border.color)};`;
 		if (field.background) s += `background-color:${rgbCss(field.background)};`;
 		if (field.textColor) s += `color:${rgbCss(field.textColor)};`;
+		// Align + font size apply to fields that render value text. fontSize is in
+		// PDF points; scale to canvas px like the rest of the overlay geometry.
+		if (field.align) s += `text-align:${field.align};`;
+		if (field.fontSize !== undefined) s += `font-size:${field.fontSize * SCALE}px;`;
 		return s;
 	});
+
+	// Preview the lib's checkStyle mark shape (drawn when the box/radio is on).
+	// Native inputs can't render these, so we show the matching glyph ourselves.
+	const CHECK_GLYPH: Record<CheckStyle, string> = {
+		check: '✓',
+		cross: '✗',
+		circle: '●',
+		square: '■',
+		diamond: '◆',
+		star: '★'
+	};
+	const checkGlyph = $derived(CHECK_GLYPH[field.checkStyle ?? 'check']);
+	const radioGlyph = $derived(CHECK_GLYPH[field.checkStyle ?? 'circle']);
 
 	// Radio buttons: each option is an independently placed widget (#3). Position
 	// from radioLayout, falling back to a vertical stack below the anchor.
@@ -67,10 +84,14 @@
 			onpointerdown={(e) => editor.startRadioDrag(e, field, i)}
 		>
 			<span
-				class="block rounded-full border border-gray-400"
+				class="flex items-center justify-center rounded-full border border-gray-400 leading-none"
 				style="width: {radioSize * SCALE}px; height: {radioSize * SCALE}px; {fieldStyle ||
-					'background:rgba(255,255,255,0.9);'} border-radius:9999px;"
-			></span>
+					'background:rgba(255,255,255,0.9);'} border-radius:9999px; font-size: {radioSize *
+					SCALE *
+					0.7}px;"
+			>
+				{field.value === opt ? radioGlyph : ''}
+			</span>
 			<span class="pointer-events-none ml-1 text-xs whitespace-nowrap text-gray-700">{opt}</span>
 		</div>
 	{/each}
@@ -111,17 +132,23 @@
 				/>
 			{/if}
 		{:else if field.field === 'checkbox'}
-			<input
-				type="checkbox"
-				class="h-full w-full cursor-pointer"
-				style={fieldStyle}
+			<!-- Custom cell so the checkStyle mark shape is visible (native checkboxes
+			     always draw a tick). Glyph sized to ~80% of the box height. -->
+			<button
+				type="button"
+				class="flex h-full w-full items-center justify-center border border-gray-300 bg-white/90 leading-none {field.readOnly
+					? 'cursor-default'
+					: 'cursor-pointer'}"
+				style="{fieldStyle} font-size: {h * 0.8}px;"
 				disabled={field.readOnly}
-				checked={!!field.value}
-				onchange={(e) => {
-					field.value = (e.currentTarget as HTMLInputElement).checked ? 'Yes' : '';
+				aria-pressed={!!field.value}
+				onclick={() => {
+					field.value = field.value ? '' : 'Yes';
 					editor.select(el.id);
 				}}
-			/>
+			>
+				{field.value ? checkGlyph : ''}
+			</button>
 		{:else if field.field === 'dropdown' || field.field === 'combo'}
 			<select
 				class="h-full w-full rounded border border-gray-300 bg-white/90 px-1 text-xs"

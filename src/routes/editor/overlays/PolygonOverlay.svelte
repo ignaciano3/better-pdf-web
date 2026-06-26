@@ -24,6 +24,11 @@
 	);
 	const sw = $derived((poly.strokeWidth ?? 1) * SCALE);
 	const op = $derived(poly.opacity ?? 1);
+	// Dash lengths/phase are PDF points; scale to canvas px like strokeWidth.
+	const dashArr = $derived(
+		poly.dash && poly.dash.length > 0 ? poly.dash.map((d) => d * SCALE).join(' ') : undefined
+	);
+	const dashOff = $derived(poly.dashPhase !== undefined ? poly.dashPhase * SCALE : undefined);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -50,6 +55,8 @@
 				stroke-width={sw}
 				fill={fillCss}
 				opacity={op}
+				stroke-dasharray={dashArr}
+				stroke-dashoffset={dashOff}
 			/>
 		{:else}
 			<polyline

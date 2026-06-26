@@ -26,6 +26,11 @@
 	);
 	const sw = $derived((path.strokeWidth ?? 1) * SCALE);
 	const op = $derived(path.opacity ?? 1);
+	// Dash lengths/phase are PDF points; scale to canvas px like strokeWidth.
+	const dashArr = $derived(
+		path.dash && path.dash.length > 0 ? path.dash.map((d) => d * SCALE).join(' ') : undefined
+	);
+	const dashOff = $derived(path.dashPhase !== undefined ? path.dashPhase * SCALE : undefined);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -45,6 +50,8 @@
 			stroke-width={sw}
 			fill={fillCss}
 			opacity={op}
+			stroke-dasharray={dashArr}
+			stroke-dashoffset={dashOff}
 			stroke-linejoin="round"
 			stroke-linecap="round"
 		/>

@@ -18,6 +18,13 @@
 			: 'none'
 	);
 	const sw = $derived((shape.strokeWidth ?? 1) * SCALE);
+	// Dash lengths/phase are PDF points; scale to canvas px like strokeWidth.
+	const dashArr = $derived(
+		shape.dash && shape.dash.length > 0 ? shape.dash.map((d) => d * SCALE).join(' ') : undefined
+	);
+	const dashOff = $derived(
+		shape.dashPhase !== undefined ? shape.dashPhase * SCALE : undefined
+	);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -39,6 +46,8 @@
 				y2={h}
 				stroke={strokeCss}
 				stroke-width={sw}
+				stroke-dasharray={dashArr}
+				stroke-dashoffset={dashOff}
 			/>
 		{:else if shape.shape === 'rectangle'}
 			<rect
@@ -49,6 +58,8 @@
 				stroke={strokeCss}
 				stroke-width={sw}
 				fill={fillCss}
+				stroke-dasharray={dashArr}
+				stroke-dashoffset={dashOff}
 			/>
 		{:else}
 			<ellipse
@@ -59,6 +70,8 @@
 				stroke={strokeCss}
 				stroke-width={sw}
 				fill={fillCss}
+				stroke-dasharray={dashArr}
+				stroke-dashoffset={dashOff}
 			/>
 		{/if}
 	</svg>
