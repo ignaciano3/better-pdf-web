@@ -62,25 +62,24 @@ check is the type.
 
 ---
 
-## Feature B — Watermark (text + image, single centered, rotated, all pages)
+## Feature B — Watermark (text only, single centered, rotated, all pages)
 
-Stamp a single watermark — a text string (e.g. "DRAFT") or an uploaded image —
-centered and rotated on **every** output page, with adjustable opacity.
+Stamp a single **text** watermark (e.g. "DRAFT") centered and rotated on
+**every** output page, with adjustable opacity.
+
+> **v1 is text-only.** The lib's `drawImage` / `DrawImageOptions` exposes only
+> `{ x, y, width?, height? }` — no `opacity` and no `rotate` — so an image
+> watermark could neither be faded nor rotated. Only `drawText` supports both.
+> Image watermark is deferred until the lib adds image opacity/rotate (recorded
+> as a better-pdf feature request).
 
 ### Model (`src/lib/pdf/types.ts`)
 ```ts
 export interface Watermark {
-  kind: 'text' | 'image';
-  // text watermark
-  text?: string;
+  text: string;
   font?: StandardFontName;     // default Helvetica-Bold
   size?: number;               // pt, default 48
   color?: { r: number; g: number; b: number }; // default mid-gray
-  // image watermark
-  image?: Uint8Array;
-  format?: 'png' | 'jpg';
-  imageWidth?: number;         // pt; default ~50% of page width
-  // shared
   opacity?: number;            // 0..1, default 0.3
   rotation?: number;           // degrees, default 45
 }
@@ -89,43 +88,45 @@ Added to `EditState.watermark?: Watermark`. **v1 applies to all pages** — no
 per-page range yet (noted as a future extension).
 
 ### Build (`src/lib/pdf/build.ts`)
-- New `drawWatermark(doc, pageHeights, wm)` called once after `stampAndAuthor`,
-  iterating every output page.
-- **Text:** measure the string at `size` with the chosen standard font (lib font
-  measurement API — exact call pinned during planning), center on the page, draw
-  with `page.drawText(text, { x, y, size, font, color, opacity, rotate })`.
-- **Image:** `embedPng`/`embedJpg` **once** (outside the page loop), scale to
-  `imageWidth` (default ~50% page width, preserving aspect), center, draw with
-  `page.drawImage(img, { x, y, width, height, opacity })` on each page.
+- New `drawWatermark(doc, pageWidths, pageHeights, wm)` called once after
+  `stampAndAuthor`, iterating every output page.
+- Measure the string at `size` with the chosen standard font via
+  `doc.getFont(name).widthOfTextAtSize(text, size)`, center on the page
+  (`x = (pageWidth - textWidth) / 2`, `y = pageHeight / 2`), draw with
+  `page.drawText(text, { x, y, size, font, color, opacity, rotate })`.
 - Drawn **on top** of page content with low opacity: source pages are embedded
   as full-page content (`drawPage`), so a "behind" layer would be hidden.
+- Note: `pageWidths` must be threaded alongside the existing `pageHeights`
+  (today `stampAndAuthor` only tracks heights for the Y-flip).
 
 ### Validator (`src/routes/editor/export-validate.ts`)
-Validate `watermark` when present: `kind` ∈ {text,image}; `text` length cap
-(reuse `MAX_TEXT_LEN`); `font` ∈ standard-font set; `image` bytes ≤
-`MAX_IMAGE_BYTES`, `format` ∈ {png,jpg}; `opacity`/`rotation`/`size`/`imageWidth`
-finite and in range. Reject unknown shapes (security boundary).
+Validate `watermark` when present: `text` is a non-empty string within
+`MAX_TEXT_LEN`; `font` ∈ standard-font set (when present); `color` is a valid
+RGB triple (when present); `opacity` ∈ [0,1]; `rotation`/`size` finite (when
+present). Reject unknown shapes (security boundary).
 
 ### Editor + UI
 - `EditorState.watermark = $state<Watermark | null>(null)` and
   `watermarkModalOpen = $state(false)` (`editor.svelte.ts`); include
-  `...(this.watermark ? { watermark: ... } : {})` in the exported `state`.
+  `...(this.watermark ? { watermark: $state.snapshot(this.watermark) } : {})`
+  in the exported `state`.
 - A **Watermark** tool button in the content toolbar
-  (`toolbar/ContentSection.svelte`) opens a new `WatermarkModal.svelte`:
-  Text/Image switch; text fields (string, font, size, color); image upload +
-  scale; shared opacity slider and rotation input; a clear/remove action.
+  (`toolbar/ContentSection.svelte`) opens a new `WatermarkModal.svelte`: text
+  string, font, size, color, opacity slider, rotation input, and an
+  enable/remove action (sets `watermark` to a default or `null`).
 - A non-interactive `overlays/WatermarkOverlay.svelte` renders the watermark
-  centered + rotated + semi-transparent on every page in the canvas, so the user
-  sees it before export (mirrors the build output).
+  text centered + rotated + semi-transparent on every page in the canvas, so the
+  user sees it before export (mirrors the build output).
 
 ### Edge cases
-- No watermark configured ⇒ `watermark` omitted from `state`, build unchanged.
-- Image fails to embed (corrupt) ⇒ skip drawing on all pages (consistent with
-  the existing per-element image fallback), rest of export unaffected.
+- No watermark configured (`watermark` null) ⇒ omitted from `state`, build
+  unchanged.
+- Empty/whitespace `text` ⇒ treated as no watermark (omitted from `state`).
 
 ---
 
 ## Out of scope (future)
+- **Image watermark** — blocked on the lib gaining `drawImage` opacity/rotate.
 - Per-page / page-range watermark targeting.
 - Tiled / repeated watermark layout.
 - Free-position (draggable) watermark.
@@ -136,7 +137,8 @@ finite and in range. Reject unknown shapes (security boundary).
 - **Flatten:** unit-test `flattenAllFields` round-trips (build interactive →
   flatten → re-load → assert no AcroForm fields); `buildPdf` no-ops flatten when
   no fields. Validator accepts boolean, rejects non-boolean.
-- **Watermark:** `buildPdf` draws on every page (assert via content/page count
-  smoke); validator accepts a valid watermark, rejects oversized text / image /
-  bad enums. Component test that `WatermarkModal` edits state and the toggle in
-  `DocumentPropertiesModal` flips `flatten`.
+- **Watermark:** `buildPdf` with a watermark produces a larger/changed content
+  stream on every page (smoke); validator accepts a valid watermark, rejects
+  oversized/empty text and bad font/color/opacity. Component test that
+  `WatermarkModal` edits state and the toggle in `DocumentPropertiesModal` flips
+  `flatten`.
