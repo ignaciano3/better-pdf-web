@@ -30,14 +30,19 @@ async function addTextElement(page: Page) {
 	const blankPage = page.locator('div.shadow-lg').first();
 	await expect(blankPage).toBeVisible();
 	await blankPage.click({ position: { x: 40, y: 40 } });
-	await expect(page.getByText('New text')).toBeVisible();
+	// Assert on the live editable box, not `getByText('New text')`: the Pages
+	// thumbnail renders an inert preview copy of the same text, so a bare text
+	// match resolves to two elements (strict-mode violation).
+	await expect(page.locator('[contenteditable="plaintext-only"]')).toHaveText('New text');
 }
 
 test('third anonymous export hits the cap and shows the upsell modal', async ({ page }) => {
 	await gotoEditorWithFingerprint(page, `e2e-rate-${randomUUID()}`);
 	await addTextElement(page);
 
-	const exportButton = page.getByRole('button', { name: 'Export PDF' });
+	// Two "Export PDF" buttons exist once the canvas is shown (toolbar + floating
+	// action button #13); use the toolbar one (first in DOM).
+	const exportButton = page.getByRole('button', { name: 'Export PDF' }).first();
 	const dialog = page.getByRole('dialog');
 
 	// Exports 1 and 2: allowed → a download fires, no modal.

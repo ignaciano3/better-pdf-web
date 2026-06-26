@@ -25,7 +25,10 @@ async function addTextElement(page: Page) {
 	await expect(blankPage).toBeVisible();
 	// Click near a corner so the click lands on the bare page, not an overlay.
 	await blankPage.click({ position: { x: 40, y: 40 } });
-	await expect(page.getByText('New text')).toBeVisible();
+	// Assert on the live editable box, not `getByText('New text')`: the Pages
+	// thumbnail renders an inert preview copy of the same text, so a bare text
+	// match resolves to two elements (strict-mode violation).
+	await expect(page.locator('[contenteditable="plaintext-only"]')).toHaveText('New text');
 }
 
 test('upload-less core flow: edit a blank page and export a PDF', async ({ page }) => {
@@ -34,7 +37,9 @@ test('upload-less core flow: edit a blank page and export a PDF', async ({ page 
 
 	// Export triggers an <a download> with a Blob; capture the download event.
 	const downloadPromise = page.waitForEvent('download');
-	await page.getByRole('button', { name: 'Export PDF' }).click();
+	// Two "Export PDF" buttons exist once the canvas is shown (toolbar + floating
+	// action button #13); click the toolbar one (first in DOM).
+	await page.getByRole('button', { name: 'Export PDF' }).first().click();
 	const download = await downloadPromise;
 
 	expect(download.suggestedFilename()).toBe('document.pdf');
