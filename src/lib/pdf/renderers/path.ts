@@ -9,7 +9,7 @@ import type { ElementRenderer } from './types';
  * appends a `Z` segment.
  */
 export const renderPath: ElementRenderer<PathElement> = ({ page, pageHeight }, element) => {
-	const { points, closed, strokeColor, fillColor, strokeWidth, opacity } = element;
+	const { points, closed, strokeColor, fillColor, strokeWidth, opacity, dash, dashPhase } = element;
 	if (!points || points.length === 0) return;
 
 	const d =
@@ -20,6 +20,8 @@ export const renderPath: ElementRenderer<PathElement> = ({ page, pageHeight }, e
 		stroke: strokeColor ? rgb(strokeColor.r, strokeColor.g, strokeColor.b) : rgb(0, 0, 0),
 		strokeWidth: strokeWidth ?? 1,
 		...(fillColor ? { fill: rgb(fillColor.r, fillColor.g, fillColor.b) } : {}),
-		...(opacity !== undefined ? { opacity } : {})
+		...(opacity !== undefined ? { opacity } : {}),
+		...(dash && dash.length > 0 ? { dash } : {}),
+		...(dashPhase !== undefined ? { dashPhase } : {})
 	});
 };

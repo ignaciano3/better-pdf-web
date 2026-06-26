@@ -9,7 +9,7 @@ import type { ElementRenderer } from './types';
  * nothing. `closed` defaults to true (an unset value lets the lib default).
  */
 export const renderPolygon: ElementRenderer<PolygonElement> = ({ page, pageHeight }, element) => {
-	const { points, closed, strokeColor, fillColor, strokeWidth, opacity } = element;
+	const { points, closed, strokeColor, fillColor, strokeWidth, opacity, dash, dashPhase } = element;
 	if (!points || points.length < 2) return;
 
 	const pts = points.map((p) => ({ x: p.x, y: pageHeight - p.y }));
@@ -19,6 +19,8 @@ export const renderPolygon: ElementRenderer<PolygonElement> = ({ page, pageHeigh
 		strokeWidth: strokeWidth ?? 1,
 		...(fillColor ? { fill: rgb(fillColor.r, fillColor.g, fillColor.b) } : {}),
 		...(opacity !== undefined ? { opacity } : {}),
+		...(dash && dash.length > 0 ? { dash } : {}),
+		...(dashPhase !== undefined ? { dashPhase } : {}),
 		...(closed !== undefined ? { closed } : {})
 	});
 };

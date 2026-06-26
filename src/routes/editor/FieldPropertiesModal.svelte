@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { EditorState } from './editor.svelte';
-	import type { FieldElement } from '$lib/pdf/types';
+	import type { CheckStyle, FieldElement } from '$lib/pdf/types';
 
 	let { editor }: { editor: EditorState } = $props();
 
@@ -36,6 +36,14 @@
 					field.field === 'combo' ||
 					field.field === 'listbox'
 			: false
+	);
+
+	// Alignment + font size apply to fields that render value text.
+	const hasValueText = $derived(hasTextColor);
+
+	// Mark style applies to checkbox and radio fields.
+	const hasCheckStyle = $derived(
+		field ? field.field === 'checkbox' || field.field === 'radio' : false
 	);
 
 	const hasOptions = $derived(
@@ -256,6 +264,62 @@
 				</div>
 			{/if}
 
+			{#if hasValueText}
+				<div class="mt-3 flex items-center gap-4">
+					<label class="flex items-center gap-2 text-sm">
+						Align
+						<select
+							class="rounded border border-gray-300 px-2 py-1 text-sm"
+							value={field.align ?? 'left'}
+							onchange={(e) => {
+								const v = (e.currentTarget as HTMLSelectElement).value;
+								if (v === 'left') delete field.align;
+								else field.align = v as 'left' | 'center' | 'right';
+							}}
+						>
+							<option value="left">Left</option>
+							<option value="center">Center</option>
+							<option value="right">Right</option>
+						</select>
+					</label>
+					<label class="flex items-center gap-2 text-sm">
+						Font size
+						<input
+							type="number"
+							min="1"
+							class="w-20 rounded border border-gray-300 px-1 py-0.5 text-sm"
+							value={field.fontSize ?? ''}
+							placeholder="12"
+							oninput={(e) => {
+								const v = (e.currentTarget as HTMLInputElement).value;
+								if (v === '') delete field.fontSize;
+								else field.fontSize = Number(v);
+							}}
+						/>
+					</label>
+				</div>
+			{/if}
+
+			{#if hasCheckStyle}
+				<label class="mt-3 mb-1 block text-sm font-medium text-gray-700" for="field-checkstyle">
+					Mark style
+				</label>
+				<select
+					id="field-checkstyle"
+					class="rounded border border-gray-300 px-2 py-1 text-sm"
+					value={field.checkStyle ?? (field.field === 'radio' ? 'circle' : 'check')}
+					onchange={(e) =>
+						(field.checkStyle = (e.currentTarget as HTMLSelectElement).value as CheckStyle)}
+				>
+					<option value="check">Check</option>
+					<option value="cross">Cross</option>
+					<option value="circle">Circle</option>
+					<option value="square">Square</option>
+					<option value="diamond">Diamond</option>
+					<option value="star">Star</option>
+				</select>
+			{/if}
+
 			{#if field.field === 'text'}
 				<label class="mt-3 mb-1 block text-sm font-medium text-gray-700" for="field-placeholder">
 					Placeholder
@@ -282,7 +346,32 @@
 						/>
 					</label>
 					<label class="flex items-center gap-1.5 text-sm">
-						<input type="checkbox" bind:checked={field.multiline} /> Multiline
+						<input
+							type="checkbox"
+							checked={field.multiline ?? false}
+							onchange={(e) => {
+								field.multiline = (e.currentTarget as HTMLInputElement).checked;
+								// Comb and multiline are mutually exclusive.
+								if (field.multiline) delete field.comb;
+							}}
+						/> Multiline
+					</label>
+					<label
+						class="flex items-center gap-1.5 text-sm {field.maxLength === undefined ||
+						field.multiline
+							? 'text-gray-400'
+							: ''}"
+						title="Splits the line into one cell per character. Needs a max length and can't be multiline."
+					>
+						<input
+							type="checkbox"
+							checked={field.comb ?? false}
+							disabled={field.maxLength === undefined || field.multiline}
+							onchange={(e) => {
+								if ((e.currentTarget as HTMLInputElement).checked) field.comb = true;
+								else delete field.comb;
+							}}
+						/> Comb
 					</label>
 				</div>
 				<label class="mt-3 mb-1 block text-sm font-medium text-gray-700" for="field-default">

@@ -25,6 +25,10 @@ export const renderRaster: ElementRenderer<SignatureElement | ImageElement> = as
 		x: element.x,
 		y: pageHeight - element.y - element.height,
 		width: element.width,
-		height: element.height
+		height: element.height,
+		...(element.opacity !== undefined ? { opacity: element.opacity } : {}),
+		...(element.rotate !== undefined ? { rotate: element.rotate } : {}),
+		...(element.xSkew !== undefined ? { xSkew: element.xSkew } : {}),
+		...(element.ySkew !== undefined ? { ySkew: element.ySkew } : {})
 	});
 };

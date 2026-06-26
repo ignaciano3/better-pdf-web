@@ -155,6 +155,17 @@
 				class="swatch h-6 w-6 cursor-pointer rounded border"
 				aria-label="Stroke color"
 			/>
+			<label class="flex items-center gap-1 text-sm" title="Dashed stroke">
+				<input
+					type="checkbox"
+					checked={Boolean(sh.dash && sh.dash.length > 0)}
+					onchange={(e) => {
+						if ((e.currentTarget as HTMLInputElement).checked) sh.dash = [4, 2];
+						else delete sh.dash;
+					}}
+				/>
+				Dash
+			</label>
 			{#if sh.shape !== 'line'}
 				<label class="flex items-center gap-1 text-sm">
 					<input
@@ -201,6 +212,17 @@
 				class="w-14 rounded border px-1 py-0.5 text-sm"
 				aria-label="Stroke width"
 			/>
+			<label class="flex items-center gap-1 text-sm" title="Dashed stroke">
+				<input
+					type="checkbox"
+					checked={Boolean(v.dash && v.dash.length > 0)}
+					onchange={(e) => {
+						if ((e.currentTarget as HTMLInputElement).checked) v.dash = [4, 2];
+						else delete v.dash;
+					}}
+				/>
+				Dash
+			</label>
 			<label class="flex items-center gap-1 text-sm">
 				<input
 					type="checkbox"
@@ -317,6 +339,30 @@
 						editor.setRasterSize(r, undefined, Number((e.currentTarget as HTMLInputElement).value))}
 					class="w-16 rounded border px-1 py-0.5 text-sm"
 					aria-label="Height"
+				/>
+			</label>
+			<label class="flex items-center gap-1 text-sm" title="Opacity">
+				α
+				<input
+					type="range"
+					min="0"
+					max="1"
+					step="0.05"
+					value={r.opacity ?? 1}
+					oninput={(e) => (r.opacity = Number((e.currentTarget as HTMLInputElement).value))}
+					class="w-16"
+					aria-label="Opacity"
+				/>
+			</label>
+			<label class="flex items-center gap-1 text-sm" title="Rotation (degrees, counter-clockwise)">
+				∠
+				<input
+					type="number"
+					step="1"
+					value={r.rotate ?? 0}
+					oninput={(e) => (r.rotate = Number((e.currentTarget as HTMLInputElement).value))}
+					class="w-16 rounded border px-1 py-0.5 text-sm"
+					aria-label="Rotation"
 				/>
 			</label>
 		{/if}

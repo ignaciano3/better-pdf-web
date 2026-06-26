@@ -403,14 +403,20 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 				height: f.height,
 				...(f.value ? { value: f.value } : {}),
 				...(f.maxLength !== undefined ? { maxLength: f.maxLength } : {}),
-				...(f.multiline ? { multiline: true } : {})
+				...(f.multiline ? { multiline: true } : {}),
+				// `comb` requires `maxLength` and is mutually exclusive with
+				// `multiline` (lib throws otherwise) — only pass it when valid.
+				...(f.comb && f.maxLength !== undefined && !f.multiline ? { comb: true } : {}),
+				...(f.align ? { align: f.align } : {}),
+				...(f.fontSize !== undefined ? { fontSize: f.fontSize } : {})
 			});
 			break;
 		case 'checkbox':
 			form.addCheckBox(f.name, {
 				...base,
 				size: Math.min(f.width, f.height),
-				...(f.value ? { checked: true } : {})
+				...(f.value ? { checked: true } : {}),
+				...(f.checkStyle ? { checkStyle: f.checkStyle } : {})
 			});
 			break;
 		case 'radio': {
@@ -433,6 +439,7 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 					: {}),
 				...(f.background ? { background: toColor(f.background) } : {}),
 				...(f.value ? { selected: f.value } : {}),
+				...(f.checkStyle ? { checkStyle: f.checkStyle } : {}),
 				options: options.map((value, i) => {
 					const slot = f.radioLayout?.[i];
 					const ox = slot?.x ?? f.x;
@@ -452,7 +459,9 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 				height: f.height,
 				options: f.options ?? [],
 				...(f.field === 'combo' ? { editable: true } : {}),
-				...(f.value ? { selected: f.value } : {})
+				...(f.value ? { selected: f.value } : {}),
+				...(f.align ? { align: f.align } : {}),
+				...(f.fontSize !== undefined ? { fontSize: f.fontSize } : {})
 			});
 			break;
 		case 'listbox':
@@ -461,7 +470,9 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 				width: f.width,
 				height: f.height,
 				options: f.options ?? [],
-				...(f.value ? { selected: f.value } : {})
+				...(f.value ? { selected: f.value } : {}),
+				...(f.align ? { align: f.align } : {}),
+				...(f.fontSize !== undefined ? { fontSize: f.fontSize } : {})
 			});
 			break;
 		case 'signature':

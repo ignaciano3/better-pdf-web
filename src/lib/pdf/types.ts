@@ -194,6 +194,14 @@ export interface SignatureElement {
 	image: Uint8Array;
 	/** Encoding of `image`, so the builder picks `embedPng` vs `embedJpg`. */
 	format: 'png' | 'jpg';
+	/** Opacity 0..1. Defaults to 1. Maps to the lib's `drawImage` opacity. */
+	opacity?: number;
+	/** Counter-clockwise rotation in degrees about the placement point. Defaults to 0. */
+	rotate?: number;
+	/** Horizontal skew in degrees. Defaults to 0. Maps to `drawImage` xSkew. */
+	xSkew?: number;
+	/** Vertical skew in degrees. Defaults to 0. Maps to `drawImage` ySkew. */
+	ySkew?: number;
 }
 
 /**
@@ -223,6 +231,14 @@ export interface ImageElement {
 	image: Uint8Array;
 	/** Encoding of `image`, so the builder picks `embedPng` vs `embedJpg`. */
 	format: 'png' | 'jpg';
+	/** Opacity 0..1. Defaults to 1. Maps to the lib's `drawImage` opacity. */
+	opacity?: number;
+	/** Counter-clockwise rotation in degrees about the placement point. Defaults to 0. */
+	rotate?: number;
+	/** Horizontal skew in degrees. Defaults to 0. Maps to `drawImage` xSkew. */
+	xSkew?: number;
+	/** Vertical skew in degrees. Defaults to 0. Maps to `drawImage` ySkew. */
+	ySkew?: number;
 }
 
 /** The kinds of vector shape the editor can draw. */
@@ -257,6 +273,13 @@ export interface ShapeElement {
 	strokeColor?: { r: number; g: number; b: number };
 	/** Stroke width in PDF points. Defaults to 1. */
 	strokeWidth?: number;
+	/**
+	 * Dash pattern: alternating on/off segment lengths in PDF points. Omit (or
+	 * empty) for a solid stroke. Maps to the lib's `dash` stroke option.
+	 */
+	dash?: number[];
+	/** Offset into the dash pattern, in points. Maps to the lib's `dashPhase`. */
+	dashPhase?: number;
 	/** Fill RGB components in 0..1. Omit for no fill (rectangle/ellipse only). */
 	fillColor?: { r: number; g: number; b: number };
 	/**
@@ -291,6 +314,13 @@ export interface PathElement {
 	strokeColor?: { r: number; g: number; b: number };
 	/** Stroke width in PDF points. Defaults to 1. */
 	strokeWidth?: number;
+	/**
+	 * Dash pattern: alternating on/off segment lengths in PDF points. Omit (or
+	 * empty) for a solid stroke. Maps to the lib's `dash` stroke option.
+	 */
+	dash?: number[];
+	/** Offset into the dash pattern, in points. Maps to the lib's `dashPhase`. */
+	dashPhase?: number;
 	/** Fill RGB components in 0..1. Omit for no fill. */
 	fillColor?: { r: number; g: number; b: number };
 	/** Opacity 0..1. Defaults to 1. */
@@ -318,6 +348,13 @@ export interface PolygonElement {
 	strokeColor?: { r: number; g: number; b: number };
 	/** Stroke width in PDF points. Defaults to 1. */
 	strokeWidth?: number;
+	/**
+	 * Dash pattern: alternating on/off segment lengths in PDF points. Omit (or
+	 * empty) for a solid stroke. Maps to the lib's `dash` stroke option.
+	 */
+	dash?: number[];
+	/** Offset into the dash pattern, in points. Maps to the lib's `dashPhase`. */
+	dashPhase?: number;
 	/** Fill RGB components in 0..1. Omit for no fill. */
 	fillColor?: { r: number; g: number; b: number };
 	/** Opacity 0..1. Defaults to 1. */
@@ -400,6 +437,15 @@ export type FieldKind =
 	| 'listbox'
 	| 'combo';
 
+/** Horizontal alignment of a field's value text. Maps to the lib's `FieldAlign`. */
+export type FieldAlign = 'left' | 'center' | 'right';
+
+/**
+ * The mark drawn when a checkbox or radio button is selected. Mirrors the lib's
+ * `CheckStyle`. Defaults to `check` for checkboxes and `circle` for radios.
+ */
+export type CheckStyle = 'check' | 'cross' | 'circle' | 'square' | 'diamond' | 'star';
+
 /**
  * An interactive AcroForm field, either detected on upload (D1) or authored in
  * the editor (D2). Detected and authored fields are the same shape and behave
@@ -460,6 +506,27 @@ export interface FieldElement {
 	maxLength?: number;
 	/** Multiline flag (text fields only). */
 	multiline?: boolean;
+	/**
+	 * Comb flag (text fields only): split a single line into `maxLength` equal
+	 * cells, one character per cell (e.g. SSN/date boxes). Requires `maxLength`
+	 * and is incompatible with `multiline`. Maps to the lib's `comb` option.
+	 */
+	comb?: boolean;
+	/**
+	 * Horizontal alignment of the value text. Meaningful for fields that render
+	 * text: text, dropdown, combo, listbox. Maps to the lib's `align` option.
+	 */
+	align?: FieldAlign;
+	/**
+	 * Font size in points for the field's value. Defaults to the lib's 12.
+	 * Meaningful for text, dropdown, combo, listbox.
+	 */
+	fontSize?: number;
+	/**
+	 * Mark style for checkbox/radio fields. Maps to the lib's `checkStyle`.
+	 * Defaults to `check` (checkbox) / `circle` (radio) when unset.
+	 */
+	checkStyle?: CheckStyle;
 }
 
 /** Discriminated union of everything the editor can stamp onto a page. */

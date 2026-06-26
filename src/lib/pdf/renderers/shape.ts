@@ -9,9 +9,15 @@ import type { ElementRenderer } from './types';
  * diagonal of its bounding box (visual top-left → bottom-right).
  */
 export const renderShape: ElementRenderer<ShapeElement> = ({ page, pageHeight }, element) => {
-	const { x, y, width, height, strokeColor, fillColor, strokeWidth } = element;
+	const { x, y, width, height, strokeColor, fillColor, strokeWidth, dash, dashPhase } = element;
 	const stroke = strokeColor ? rgb(strokeColor.r, strokeColor.g, strokeColor.b) : rgb(0, 0, 0);
 	const lineWidth = strokeWidth ?? 1;
+	// Shared dash options — a non-empty `dash` makes the stroke dashed; omitted
+	// for a solid stroke so the lib keeps its default.
+	const dashOpts = {
+		...(dash && dash.length > 0 ? { dash } : {}),
+		...(dashPhase !== undefined ? { dashPhase } : {})
+	};
 	// Bottom edge of the box after the top-left → bottom-left Y flip.
 	const bottom = pageHeight - y - height;
 	const top = pageHeight - y;
@@ -24,7 +30,8 @@ export const renderShape: ElementRenderer<ShapeElement> = ({ page, pageHeight },
 				start: element.antidiagonal ? { x: x + width, y: top } : { x, y: top },
 				end: element.antidiagonal ? { x, y: bottom } : { x: x + width, y: bottom },
 				stroke,
-				strokeWidth: lineWidth
+				strokeWidth: lineWidth,
+				...dashOpts
 			});
 			break;
 		case 'rectangle':
@@ -35,6 +42,7 @@ export const renderShape: ElementRenderer<ShapeElement> = ({ page, pageHeight },
 				height,
 				stroke,
 				strokeWidth: lineWidth,
+				...dashOpts,
 				...(fillColor ? { fill: rgb(fillColor.r, fillColor.g, fillColor.b) } : {})
 			});
 			break;
@@ -46,6 +54,7 @@ export const renderShape: ElementRenderer<ShapeElement> = ({ page, pageHeight },
 				radiusY: height / 2,
 				stroke,
 				strokeWidth: lineWidth,
+				...dashOpts,
 				...(fillColor ? { fill: rgb(fillColor.r, fillColor.g, fillColor.b) } : {})
 			});
 			break;
