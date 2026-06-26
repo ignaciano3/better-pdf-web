@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { LemonSqueezyWebhook, SubscriptionUpsert } from './types';
+import { env } from '$env/dynamic/private';
+import type { Cadence } from './types';
 
 /** Event names we act on. Anything else (orders, etc.) is ignored. */
 const SUBSCRIPTION_EVENTS = new Set([
@@ -76,6 +78,57 @@ export function mapEventToRow(event: LemonSqueezyWebhook): SubscriptionUpsert | 
 		};
 	}
 	return null;
+}
+
+const LS_API = 'https://api.lemonsqueezy.com/v1';
+
+function variantIdFor(cadence: Cadence): string {
+	const id =
+		cadence === 'annual'
+			? env['LEMONSQUEEZY_VARIANT_PRO_ANNUAL']
+			: env['LEMONSQUEEZY_VARIANT_PRO_MONTHLY'];
+	if (!id) throw new Error(`Missing LS variant id for cadence "${cadence}"`);
+	return id;
+}
+
+/**
+ * Create a Lemon Squeezy hosted checkout for the given user + cadence and
+ * return its URL. The user's id is embedded as custom data so the webhook can
+ * attribute the resulting subscription back to them.
+ */
+export async function createCheckout(args: {
+	userId: string;
+	email: string;
+	cadence: Cadence;
+}): Promise<{ url: string }> {
+	const apiKey = env['LEMONSQUEEZY_API_KEY'];
+	const storeId = env['LEMONSQUEEZY_STORE_ID'];
+	if (!apiKey || !storeId) throw new Error('Lemon Squeezy is not configured');
+
+	const payload = buildCheckoutPayload({
+		storeId,
+		variantId: variantIdFor(args.cadence),
+		userId: args.userId,
+		email: args.email
+	});
+
+	const res = await fetch(`${LS_API}/checkouts`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/vnd.api+json',
+			'Content-Type': 'application/vnd.api+json',
+			Authorization: `Bearer ${apiKey}`
+		},
+		body: JSON.stringify(payload)
+	});
+
+	if (!res.ok) {
+		const detail = await res.text().catch(() => '');
+		throw new Error(`Lemon Squeezy checkout failed: ${res.status} ${detail}`);
+	}
+
+	const json = (await res.json()) as { data: { attributes: { url: string } } };
+	return { url: json.data.attributes.url };
 }
 
 /**

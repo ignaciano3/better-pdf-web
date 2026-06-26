@@ -117,3 +117,55 @@ describe('buildCheckoutPayload', () => {
 		expect(payload.data.relationships.variant.data.id).toBe('999');
 	});
 });
+
+import { vi, beforeEach, afterEach } from 'vitest';
+
+// $env/dynamic/private is virtual; provide a stub for tests.
+vi.mock('$env/dynamic/private', () => ({
+	env: {
+		LEMONSQUEEZY_API_KEY: 'key_test',
+		LEMONSQUEEZY_STORE_ID: '42',
+		LEMONSQUEEZY_VARIANT_PRO_MONTHLY: '100',
+		LEMONSQUEEZY_VARIANT_PRO_ANNUAL: '200'
+	}
+}));
+
+describe('createCheckout', () => {
+	beforeEach(() => {
+		vi.restoreAllMocks();
+	});
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it('posts to the LS API and returns the checkout url', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: true,
+			json: async () => ({ data: { attributes: { url: 'https://co.lemonsqueezy.com/abc' } } })
+		});
+		vi.stubGlobal('fetch', fetchMock);
+
+		const { createCheckout } = await import('./lemonsqueezy');
+		const result = await createCheckout({ userId: 'user_1', email: 'a@b.com', cadence: 'annual' });
+
+		expect(result).toEqual({ url: 'https://co.lemonsqueezy.com/abc' });
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(url).toBe('https://api.lemonsqueezy.com/v1/checkouts');
+		expect(init.method).toBe('POST');
+		expect(init.headers.Authorization).toBe('Bearer key_test');
+		const body = JSON.parse(init.body);
+		// annual cadence selects variant 200
+		expect(body.data.relationships.variant.data.id).toBe('200');
+	});
+
+	it('throws when the LS API responds non-ok', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue({ ok: false, status: 422, text: async () => 'bad' })
+		);
+		const { createCheckout } = await import('./lemonsqueezy');
+		await expect(
+			createCheckout({ userId: 'u', email: 'a@b.com', cadence: 'monthly' })
+		).rejects.toThrow(/Lemon Squeezy checkout failed: 422/);
+	});
+});
