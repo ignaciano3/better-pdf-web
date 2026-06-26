@@ -1,0 +1,1 @@
+ALTER TABLE "subscription" ADD COLUMN "manage_url" text;

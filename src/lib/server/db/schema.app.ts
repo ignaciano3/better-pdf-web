@@ -33,10 +33,8 @@ export const usageEvent = pgTable(
 
 /**
  * Per-user subscription record. One row per user; absence of a row means the
- * user is on the free plan. This is the #12 stub: there is no billing
- * integration yet, so rows are never written by the app and `plan` defaults to
- * 'free'. `providerId` / `currentPeriodEnd` are placeholders for a future
- * Stripe (or similar) integration.
+ * user is on the free plan. Rows are written by the Lemon Squeezy webhook
+ * handler (`/api/billing/webhook`). `providerId` holds the LS subscription id.
  *
  * `userId` is the primary key — at most one subscription per user.
  */
@@ -45,5 +43,8 @@ export const subscription = pgTable('subscription', {
 	plan: text('plan').notNull().default('free'),
 	status: text('status').notNull().default('active'),
 	providerId: text('provider_id'),
-	currentPeriodEnd: timestamp('current_period_end')
+	currentPeriodEnd: timestamp('current_period_end'),
+	// Lemon Squeezy customer-portal URL for self-serve cancel / card update.
+	// Null until a billing webhook populates it.
+	manageUrl: text('manage_url')
 });
