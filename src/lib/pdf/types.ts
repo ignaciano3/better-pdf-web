@@ -357,7 +357,8 @@ export interface EmbeddedFontAsset {
  * `dropdown` and `combo` both author via `addDropdown`; `combo` is an editable
  * (combo) dropdown while `dropdown` is a plain selection list. They are kept
  * distinct in the model so the UI can offer both; the export maps both through
- * `addDropdown` (a plain dropdown is a non-editable combo).
+ * `addDropdown`, passing `editable: true` only for `combo` so the user can type
+ * a custom value (a plain dropdown is a non-editable combo).
  */
 export type FieldKind =
 	| 'text'
@@ -402,6 +403,12 @@ export interface FieldElement {
 	border?: { color: { r: number; g: number; b: number }; width?: number };
 	/** Widget background fill color (RGB 0..1). */
 	background?: { r: number; g: number; b: number };
+	/**
+	 * Color of the field's value text (RGB 0..1). Defaults to black. Meaningful
+	 * for fields that render text: text, dropdown, combo, listbox. Maps to the
+	 * lib's `textColor` field option at export.
+	 */
+	textColor?: { r: number; g: number; b: number };
 	/**
 	 * Current fill value. For checkbox it is the on-state value when checked (or
 	 * '' when unchecked); for signature it is a PNG data URL of the drawn image.

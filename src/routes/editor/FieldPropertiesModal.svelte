@@ -28,6 +28,16 @@
 		return null;
 	});
 
+	// Text color is meaningful only for fields that render value text.
+	const hasTextColor = $derived(
+		field
+			? field.field === 'text' ||
+					field.field === 'dropdown' ||
+					field.field === 'combo' ||
+					field.field === 'listbox'
+			: false
+	);
+
 	const hasOptions = $derived(
 		field
 			? field.field === 'dropdown' ||
@@ -216,6 +226,35 @@
 					/>
 				{/if}
 			</div>
+
+			{#if hasTextColor}
+				<div class="mt-3 flex items-center gap-4">
+					<label class="flex items-center gap-1.5 text-sm">
+						Text color
+						<input
+							type="checkbox"
+							checked={!!field.textColor}
+							onchange={(e) => {
+								if ((e.currentTarget as HTMLInputElement).checked) {
+									field.textColor = { r: 0, g: 0, b: 0 };
+								} else {
+									delete field.textColor;
+								}
+							}}
+						/>
+					</label>
+					{#if field.textColor}
+						<input
+							type="color"
+							value={toHex(field.textColor)}
+							oninput={(e) =>
+								(field.textColor = fromHex((e.currentTarget as HTMLInputElement).value))}
+							class="h-6 w-6 cursor-pointer rounded border"
+							aria-label="Text color"
+						/>
+					{/if}
+				</div>
+			{/if}
 
 			{#if field.field === 'text'}
 				<label class="mt-3 mb-1 block text-sm font-medium text-gray-700" for="field-placeholder">

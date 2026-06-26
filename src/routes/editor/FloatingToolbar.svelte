@@ -322,6 +322,17 @@
 		{/if}
 
 		{#if editor.selectedField}
+			{@const fld = editor.selectedField}
+			{#if fld.field === 'text' || fld.field === 'dropdown' || fld.field === 'combo' || fld.field === 'listbox'}
+				<input
+					type="color"
+					value={toHex(fld.textColor)}
+					oninput={(e) => (fld.textColor = fromHex((e.currentTarget as HTMLInputElement).value))}
+					class="swatch h-6 w-6 cursor-pointer rounded border"
+					aria-label="Text color"
+					title="Text color"
+				/>
+			{/if}
 			{#if editor.selectedField.field === 'radio'}
 				<button
 					onclick={() => editor.addRadioOption(editor.selectedField!)}

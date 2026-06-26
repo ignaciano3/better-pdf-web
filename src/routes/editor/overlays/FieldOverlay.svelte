@@ -21,6 +21,7 @@
 		if (field.border)
 			s += `border:${field.border.width ?? 1}px solid ${rgbCss(field.border.color)};`;
 		if (field.background) s += `background-color:${rgbCss(field.background)};`;
+		if (field.textColor) s += `color:${rgbCss(field.textColor)};`;
 		return s;
 	});
 

@@ -314,7 +314,8 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 					}
 				}
 			: {}),
-		...(f.background ? { background: toColor(f.background) } : {})
+		...(f.background ? { background: toColor(f.background) } : {}),
+		...(f.textColor ? { textColor: toColor(f.textColor) } : {})
 	};
 
 	switch (f.field) {
@@ -366,12 +367,14 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 		}
 		case 'dropdown':
 		case 'combo':
-			// Both author via addDropdown; a plain dropdown is a non-editable combo.
+			// Both author via addDropdown; `editable` (combo box Edit flag) is set
+			// only for `combo` so the user can type a value outside `options`.
 			form.addDropdown(f.name, {
 				...base,
 				width: f.width,
 				height: f.height,
 				options: f.options ?? [],
+				...(f.field === 'combo' ? { editable: true } : {}),
 				...(f.value ? { selected: f.value } : {})
 			});
 			break;
