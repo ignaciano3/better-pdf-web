@@ -39,6 +39,12 @@ const MAX_OUTLINE_TITLE_LEN = 2_000;
 
 const FIELD_KINDS = ['text', 'checkbox', 'radio', 'dropdown', 'signature', 'listbox', 'combo'];
 
+const STANDARD_FONTS = [
+	'Helvetica', 'Helvetica-Bold', 'Helvetica-Oblique', 'Helvetica-BoldOblique',
+	'Courier', 'Courier-Bold', 'Courier-Oblique', 'Courier-BoldOblique',
+	'Times-Roman', 'Times-Bold', 'Times-Italic', 'Times-BoldItalic'
+];
+
 function isFiniteNumber(n: unknown): n is number {
 	return typeof n === 'number' && Number.isFinite(n);
 }
@@ -184,6 +190,35 @@ function validateMetadata(meta: unknown): void {
 	}
 }
 
+/** Validate the optional text watermark: capped string + bounded numerics. */
+function validateWatermark(wm: unknown): void {
+	if (!wm || typeof wm !== 'object') error(422, 'Invalid watermark');
+	const w = wm as {
+		text?: unknown; font?: unknown; size?: unknown;
+		color?: unknown; opacity?: unknown; rotation?: unknown;
+	};
+	if (typeof w.text !== 'string') error(422, 'Invalid watermark text');
+	if ((w.text as string).length > MAX_TEXT_LEN) error(422, 'Watermark text too large');
+	if (w.font !== undefined && !STANDARD_FONTS.includes(w.font as string)) {
+		error(422, 'Invalid watermark font');
+	}
+	if (w.size !== undefined && !isFiniteNumber(w.size)) error(422, 'Invalid watermark size');
+	if (w.rotation !== undefined && !isFiniteNumber(w.rotation)) {
+		error(422, 'Invalid watermark rotation');
+	}
+	if (w.opacity !== undefined) {
+		if (!isFiniteNumber(w.opacity) || w.opacity < 0 || w.opacity > 1) {
+			error(422, 'Invalid watermark opacity');
+		}
+	}
+	if (w.color !== undefined) {
+		const c = w.color as { r?: unknown; g?: unknown; b?: unknown };
+		if (!c || typeof c !== 'object' || !isFiniteNumber(c.r) || !isFiniteNumber(c.g) || !isFiniteNumber(c.b)) {
+			error(422, 'Invalid watermark color');
+		}
+	}
+}
+
 /**
  * Validate an outline tree: bounded total item count + depth, string titles, and
  * page indices that are finite non-negative integers (and, when the output page
@@ -323,6 +358,8 @@ export function validateExportInput(input: unknown): ExportInput {
 	if (state.flatten !== undefined && typeof state.flatten !== 'boolean') {
 		error(422, 'Invalid flatten flag');
 	}
+
+	if (state.watermark !== undefined) validateWatermark(state.watermark);
 
 	return { state: state as EditState, fingerprint };
 }

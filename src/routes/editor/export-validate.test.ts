@@ -376,4 +376,29 @@ describe('validateExportInput', () => {
 		const input = { state: { pageSize: [595, 842], elements: [], flatten: 'yes' }, fingerprint: 'fp' };
 		expect(() => validateExportInput(input)).toThrow();
 	});
+
+	// --- watermark validation tests ---
+
+	const wmInput = (wm: unknown) => ({
+		state: { pageSize: [595, 842], elements: [], watermark: wm },
+		fingerprint: 'fp'
+	});
+
+	it('accepts a valid watermark', () => {
+		expect(() =>
+			validateExportInput(wmInput({ text: 'DRAFT', size: 48, opacity: 0.3, rotation: 45 }))
+		).not.toThrow();
+	});
+
+	it('rejects a watermark with non-string text', () => {
+		expect(() => validateExportInput(wmInput({ text: 123 }))).toThrow();
+	});
+
+	it('rejects a watermark with out-of-range opacity', () => {
+		expect(() => validateExportInput(wmInput({ text: 'X', opacity: 5 }))).toThrow();
+	});
+
+	it('rejects a watermark with an unknown font', () => {
+		expect(() => validateExportInput(wmInput({ text: 'X', font: 'Comic Sans' }))).toThrow();
+	});
 });
