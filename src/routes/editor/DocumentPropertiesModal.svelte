@@ -72,6 +72,10 @@
 						bind:value={keywordsDraft}
 					/>
 				</label>
+				<label class="mt-1 flex items-center gap-2 text-sm">
+					<input type="checkbox" bind:checked={editor.flatten} />
+					<span class="text-gray-700">Flatten fields on export (print-ready, non-editable)</span>
+				</label>
 			</div>
 
 			<div class="mt-5 flex justify-end gap-2">

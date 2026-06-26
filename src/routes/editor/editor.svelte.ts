@@ -177,6 +177,8 @@ export class EditorState {
 	metadata = $state<DocumentMetadataInput>({});
 	/** Document outline (bookmarks) applied on export when non-empty. */
 	outline = $state<OutlineItem[]>([]);
+	/** When true, fields are flattened (baked) on export. */
+	flatten = $state(false);
 	/** True while the document-properties modal is open. */
 	docPropsModalOpen = $state(false);
 	/** True while the outline editor is open. */
@@ -1249,7 +1251,8 @@ export class EditorState {
 				...(this.pageOps.length > 0 ? { pageOps: $state.snapshot(this.pageOps) as PageOp[] } : {}),
 				...(fonts.length > 0 ? { fonts: $state.snapshot(fonts) as EmbeddedFontAsset[] } : {}),
 				...(metadata ? { metadata } : {}),
-				...(outline.length > 0 ? { outline } : {})
+				...(outline.length > 0 ? { outline } : {}),
+				...(this.flatten ? { flatten: true } : {})
 			};
 			const bytes = await exportPdf({ state, fingerprint: getFingerprint() });
 			downloadPdf(bytes);
