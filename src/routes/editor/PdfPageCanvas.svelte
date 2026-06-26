@@ -54,16 +54,28 @@
 
 			const scale = SCALE * targetZoom * dpr();
 			const viewport = page.getViewport({ scale });
-			canvas.width = Math.ceil(viewport.width);
-			canvas.height = Math.ceil(viewport.height);
 
-			const task = page.render({ canvas, viewport });
+			// Render into a DETACHED canvas, not the visible one. Resizing a large
+			// visible canvas clears it and (GPU-backed) flashes opaque black until
+			// the first paint lands; rendering off-screen lets the visible canvas
+			// keep showing the previous bitmap (CSS-scaled) until we blit the
+			// finished frame in one step — a seamless swap, like a native viewer.
+			const offscreen = document.createElement('canvas');
+			offscreen.width = Math.ceil(viewport.width);
+			offscreen.height = Math.ceil(viewport.height);
+
+			const task = page.render({ canvas: offscreen, viewport });
 			currentTask = task;
 			await task.promise;
 			if (mine !== seq) return;
+
+			// Swap: size the visible canvas to the new frame and blit it in.
+			canvas.width = offscreen.width;
+			canvas.height = offscreen.height;
+			canvas.getContext('2d')?.drawImage(offscreen, 0, 0);
 			sharp = true;
 		} catch {
-			// Cancelled or failed: keep the PNG placeholder visible.
+			// Cancelled or failed: keep the previous bitmap / PNG placeholder.
 		} finally {
 			page?.cleanup();
 			if (mine === seq) currentTask = null;

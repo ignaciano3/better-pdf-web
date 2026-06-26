@@ -41,6 +41,10 @@ class IO {
 }
 vi.stubGlobal('IntersectionObserver', IO as never);
 
+// jsdom has no canvas 2d context: stub getContext so the offscreen→visible blit
+// (drawImage) runs without the "not implemented" warning and output stays clean.
+HTMLCanvasElement.prototype.getContext = vi.fn(() => ({ drawImage: vi.fn() })) as never;
+
 const renderInfo: RenderedPage = { width: 100, height: 100, dataUrl: 'data:image/png;base64,AAAA' };
 
 function makeEditor() {
