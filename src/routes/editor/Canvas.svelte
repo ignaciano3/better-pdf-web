@@ -2,6 +2,7 @@
 	import type { EditorState } from './editor.svelte';
 	import { SCALE } from './constants';
 	import { overlayFor } from './overlays';
+	import WatermarkOverlay from './overlays/WatermarkOverlay.svelte';
 	import FloatingToolbar from './FloatingToolbar.svelte';
 
 	let { editor }: { editor: EditorState } = $props();
@@ -125,6 +126,13 @@
 					{@const Overlay = overlayFor(el.type)}
 					<Overlay {el} {editor} />
 				{/each}
+				{#if editor.watermark}
+					<WatermarkOverlay
+						watermark={editor.watermark}
+						pageWidth={page.width * SCALE}
+						pageHeight={page.height * SCALE}
+					/>
+				{/if}
 				<!-- The selected element's options panel lives inside its page so it
 				     tracks the element through zoom and scroll, instead of drifting
 				     (#2). Only the page holding the selection renders it. -->
