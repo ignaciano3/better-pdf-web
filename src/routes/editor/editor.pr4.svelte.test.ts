@@ -86,6 +86,31 @@ describe('EditorState page size override', () => {
 			expect(op.kind === 'source' && op.size).toEqual([595.28, 841.89]);
 		}
 	});
+
+	it('pageContentBox returns the source render size by default', async () => {
+		const e = new EditorState();
+		await e.loadPdf(pdfFile());
+		flushSync();
+		expect(e.pageContentBox(0)).toEqual({ width: 612, height: 792 });
+	});
+
+	it('pageContentBox follows the size override so the preview matches export', async () => {
+		const e = new EditorState();
+		await e.loadPdf(pdfFile());
+		flushSync();
+		e.setPageSize(0, [300, 900]);
+		// The background image must fill the override box, not stay at 612x792.
+		expect(e.pageContentBox(0)).toEqual({ width: 300, height: 900 });
+	});
+
+	it('pageContentBox is the un-rotated box even when the page is rotated', async () => {
+		const e = new EditorState();
+		await e.loadPdf(pdfFile());
+		flushSync();
+		e.setPageSize(0, [300, 900]);
+		e.rotatePage(0); // 90°: pages[] swaps to 900x300, but the content box stays 300x900.
+		expect(e.pageContentBox(0)).toEqual({ width: 300, height: 900 });
+	});
 });
 
 describe('EditorState merge / appendPdf', () => {

@@ -73,6 +73,7 @@
 		{#each editor.pages as page, i (i)}
 			{@const render = editor.pageRender(i)}
 			{@const rot = editor.pageRotation(i)}
+			{@const box = editor.pageContentBox(i)}
 			{@const els = editor.elementsForPage(i)}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
@@ -99,11 +100,13 @@
 							SCALE}px; transform: scale({THUMB_W / (page.width * SCALE)});"
 					>
 						{#if render}
+							<!-- Fill the content box (override or source size), matching the
+							     main canvas and the export. -->
 							<img
 								src={render.dataUrl}
 								alt={`Page ${i + 1}`}
 								class="absolute top-1/2 left-1/2 max-w-none select-none"
-								style="width: {render.width * SCALE}px; height: {render.height *
+								style="width: {box.width * SCALE}px; height: {box.height *
 									SCALE}px; transform: translate(-50%, -50%) rotate({rot}deg);"
 								draggable="false"
 							/>

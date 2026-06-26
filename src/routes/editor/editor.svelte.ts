@@ -289,6 +289,28 @@ export class EditorState {
 		return this.pageOps[pageIndex]?.rotation ?? 0;
 	}
 
+	/**
+	 * The un-rotated content box (PDF points) the page's background fills — the
+	 * size override when set, else the source render size, else the default. The
+	 * preview must scale the source image to this box so it matches the export,
+	 * which draws the embedded page stretched to fill it ({@link buildSourceRebuild}).
+	 * Unlike {@link pages}, this is never width/height-swapped for rotation, because
+	 * the source content is drawn into the box *before* the page rotation applies.
+	 */
+	pageContentBox(pageIndex: number): { width: number; height: number } {
+		const op = this.pageOps[pageIndex];
+		if (!op) return { width: DEFAULT_PAGE[0], height: DEFAULT_PAGE[1] };
+		if (op.kind === 'source') {
+			if (op.size) return { width: op.size[0], height: op.size[1] };
+			const render = this.renderedByDoc[op.docIndex ?? 0]?.[op.sourceIndex];
+			return {
+				width: render?.width ?? DEFAULT_PAGE[0],
+				height: render?.height ?? DEFAULT_PAGE[1]
+			};
+		}
+		return { width: op.size[0], height: op.size[1] };
+	}
+
 	// --- page operations -----------------------------------------------------
 
 	/**

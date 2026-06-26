@@ -113,12 +113,16 @@
 				{#if editor.pageRender(pageIndex)}
 					{@const render = editor.pageRender(pageIndex)}
 					{@const rot = editor.pageRotation(pageIndex)}
+					{@const box = editor.pageContentBox(pageIndex)}
+					<!-- Scale the source image to the (un-rotated) content box, not its
+					     intrinsic size, so a page-size override matches the export, which
+					     stretches the embedded page to fill the same box. -->
 					<img
 						src={render?.dataUrl}
 						alt={`Page ${pageIndex + 1}`}
 						class="pointer-events-none absolute top-1/2 left-1/2 max-w-none select-none"
-						style="width: {(render?.width ?? page.width) * SCALE}px; height: {(render?.height ??
-							page.height) * SCALE}px; transform: translate(-50%, -50%) rotate({rot}deg);"
+						style="width: {box.width * SCALE}px; height: {box.height *
+							SCALE}px; transform: translate(-50%, -50%) rotate({rot}deg);"
 						draggable="false"
 					/>
 				{/if}
