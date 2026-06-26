@@ -23,6 +23,7 @@
 			: 'none'
 	);
 	const sw = $derived((poly.strokeWidth ?? 1) * SCALE);
+	const op = $derived(poly.opacity ?? 1);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -43,13 +44,20 @@
 		preserveAspectRatio="none"
 	>
 		{#if poly.closed && !isDraft}
-			<polygon points={pointsAttr} stroke={strokeCss} stroke-width={sw} fill={fillCss} />
+			<polygon
+				points={pointsAttr}
+				stroke={strokeCss}
+				stroke-width={sw}
+				fill={fillCss}
+				opacity={op}
+			/>
 		{:else}
 			<polyline
 				points={pointsAttr}
 				stroke={strokeCss}
 				stroke-width={sw}
 				fill="none"
+				opacity={op}
 				stroke-dasharray={isDraft ? '4 3' : undefined}
 			/>
 		{/if}

@@ -215,6 +215,17 @@ export class EditorState {
 	selectedPath = $derived(this.selected?.type === 'path' ? this.selected : null);
 	selectedPolygon = $derived(this.selected?.type === 'polygon' ? this.selected : null);
 	selectedLink = $derived(this.selected?.type === 'link' ? this.selected : null);
+	/** Links with neither a non-empty URL nor a page target. They author nothing
+	 * at export (the renderer skips them), so warn the user instead of silently
+	 * dropping them (#3). */
+	invalidLinks = $derived(
+		this.elements.filter(
+			(e) =>
+				e.type === 'link' &&
+				!(typeof e.url === 'string' && e.url.length > 0) &&
+				typeof e.goToPage !== 'number'
+		)
+	);
 	/** A path or polygon — both share the same stroke/fill/opacity controls. */
 	selectedVector = $derived<PathElement | PolygonElement | null>(
 		this.selected?.type === 'path' || this.selected?.type === 'polygon' ? this.selected : null
@@ -334,11 +345,14 @@ export class EditorState {
 		op.rotation = (op.rotation + 90) % 360;
 	}
 
-	/** Insert a blank page after `afterIndex` (−1 inserts at the front). */
-	insertBlankPage(afterIndex: number) {
+	/** Insert a blank page after `afterIndex` (−1 inserts at the front). With no
+	 * `size`, matches the first page's dimensions; pass an explicit [w, h] in PDF
+	 * points to set a specific page size (#5). */
+	insertBlankPage(afterIndex: number, size?: [number, number]) {
 		// Match the dominant page size (first source page) so blanks fit in.
 		const first = this.pages[0] ?? { width: DEFAULT_PAGE[0], height: DEFAULT_PAGE[1] };
-		const blank: PageOp = { kind: 'blank', size: [first.width, first.height], rotation: 0 };
+		const dims: [number, number] = size ?? [first.width, first.height];
+		const blank: PageOp = { kind: 'blank', size: dims, rotation: 0 };
 		// Blank mode has no page ops yet — materialise the implicit first page so
 		// the new page is added alongside it (rather than replacing it).
 		if (this.pageOps.length === 0) {
@@ -520,12 +534,42 @@ export class EditorState {
 		window.addEventListener('pointerup', up);
 	}
 
+	/** Clamp a top-left PDF point to its page bounds so nothing is placed or drawn
+	 * off the paper (#1). Unknown page size passes through with a >=0 floor. */
+	clampToPage(x: number, y: number, pageIndex: number): { x: number; y: number } {
+		const page = this.pages[pageIndex];
+		if (!page) return { x: Math.max(0, x), y: Math.max(0, y) };
+		return {
+			x: Math.min(Math.max(0, x), page.width),
+			y: Math.min(Math.max(0, y), page.height)
+		};
+	}
+
+	/** Clamp a box's top-left so the whole `w`×`h` box stays within its page (#1). */
+	clampBox(
+		x: number,
+		y: number,
+		w: number,
+		h: number,
+		pageIndex: number
+	): { x: number; y: number } {
+		const page = this.pages[pageIndex];
+		if (!page) return { x: Math.max(0, x), y: Math.max(0, y) };
+		return {
+			x: Math.min(Math.max(0, x), Math.max(0, page.width - w)),
+			y: Math.min(Math.max(0, y), Math.max(0, page.height - h))
+		};
+	}
+
 	/** Handle a click on the bare page background at canvas px coords. Only an
 	 * active draw or field tool creates; shape kinds are drawn by drag, not click. */
 	placeAtClient(clientX: number, clientY: number, pageEl: HTMLElement, pageIndex: number) {
 		const rect = pageEl.getBoundingClientRect();
-		const x = (clientX - rect.left) / this.cssScale;
-		const y = (clientY - rect.top) / this.cssScale;
+		const { x, y } = this.clampToPage(
+			(clientX - rect.left) / this.cssScale,
+			(clientY - rect.top) / this.cssScale,
+			pageIndex
+		);
 
 		if (this.tool.type === 'field') {
 			this.placeFieldAt(this.tool.kind, x, y, pageIndex);
@@ -593,8 +637,11 @@ export class EditorState {
 		event.preventDefault();
 		pageEl.setPointerCapture(event.pointerId);
 		const rect = pageEl.getBoundingClientRect();
-		const startX = (event.clientX - rect.left) / this.cssScale;
-		const startY = (event.clientY - rect.top) / this.cssScale;
+		const { x: startX, y: startY } = this.clampToPage(
+			(event.clientX - rect.left) / this.cssScale,
+			(event.clientY - rect.top) / this.cssScale,
+			pageIndex
+		);
 
 		const stroke = $state.snapshot(this.shapeStroke);
 		const el: ShapeElement = {
@@ -614,8 +661,11 @@ export class EditorState {
 		const live = this.elements[this.elements.length - 1] as ShapeElement;
 
 		const move = (e: PointerEvent) => {
-			const curX = (e.clientX - rect.left) / this.cssScale;
-			const curY = (e.clientY - rect.top) / this.cssScale;
+			const { x: curX, y: curY } = this.clampToPage(
+				(e.clientX - rect.left) / this.cssScale,
+				(e.clientY - rect.top) / this.cssScale,
+				pageIndex
+			);
 			live.x = Math.min(startX, curX);
 			live.y = Math.min(startY, curY);
 			live.width = Math.abs(curX - startX);
@@ -652,10 +702,12 @@ export class EditorState {
 		event.preventDefault();
 		pageEl.setPointerCapture(event.pointerId);
 		const rect = pageEl.getBoundingClientRect();
-		const at = (e: PointerEvent) => ({
-			x: (e.clientX - rect.left) / this.cssScale,
-			y: (e.clientY - rect.top) / this.cssScale
-		});
+		const at = (e: PointerEvent) =>
+			this.clampToPage(
+				(e.clientX - rect.left) / this.cssScale,
+				(e.clientY - rect.top) / this.cssScale,
+				pageIndex
+			);
 		const start = at(event);
 		const stroke = $state.snapshot(this.shapeStroke);
 		const el: PathElement = {
@@ -709,8 +761,11 @@ export class EditorState {
 		event.preventDefault();
 		pageEl.setPointerCapture(event.pointerId);
 		const rect = pageEl.getBoundingClientRect();
-		const startX = (event.clientX - rect.left) / this.cssScale;
-		const startY = (event.clientY - rect.top) / this.cssScale;
+		const { x: startX, y: startY } = this.clampToPage(
+			(event.clientX - rect.left) / this.cssScale,
+			(event.clientY - rect.top) / this.cssScale,
+			pageIndex
+		);
 		const el: LinkElement = {
 			type: 'link',
 			id: this.nextId('ln'),
@@ -726,8 +781,11 @@ export class EditorState {
 		const live = this.elements[this.elements.length - 1] as LinkElement;
 
 		const move = (e: PointerEvent) => {
-			const curX = (e.clientX - rect.left) / this.cssScale;
-			const curY = (e.clientY - rect.top) / this.cssScale;
+			const { x: curX, y: curY } = this.clampToPage(
+				(e.clientX - rect.left) / this.cssScale,
+				(e.clientY - rect.top) / this.cssScale,
+				pageIndex
+			);
 			live.x = Math.min(startX, curX);
 			live.y = Math.min(startY, curY);
 			live.width = Math.abs(curX - startX);
@@ -817,6 +875,15 @@ export class EditorState {
 		// translates with the bounding box (x/y) rather than only the box moving.
 		const hasPoints = el.type === 'path' || el.type === 'polygon';
 		const originPoints = hasPoints ? el.points.map((p) => ({ x: p.x, y: p.y })) : null;
+		// Extent used to keep the whole element on the page (#1). Points carry their
+		// own bounding box; boxed elements use width/height.
+		const ext = originPoints
+			? {
+					width: Math.max(...originPoints.map((p) => p.x)) - originX,
+					height: Math.max(...originPoints.map((p) => p.y)) - originY
+				}
+			: { width: 'width' in el ? el.width : 0, height: 'height' in el ? el.height : 0 };
+		const pageIndex = el.page ?? 0;
 		let dragging = false;
 
 		const move = (e: PointerEvent) => {
@@ -825,10 +892,15 @@ export class EditorState {
 			dragging = true;
 			const dx = (e.clientX - startX) / this.cssScale;
 			const dy = (e.clientY - startY) / this.cssScale;
-			el.x = originX + dx;
-			el.y = originY + dy;
+			// Clamp the target box on-page, then derive the actual delta so element
+			// box and (for paths/polygons) points translate together.
+			const c = this.clampBox(originX + dx, originY + dy, ext.width, ext.height, pageIndex);
+			const adx = c.x - originX;
+			const ady = c.y - originY;
+			el.x = c.x;
+			el.y = c.y;
 			if (originPoints && (el.type === 'path' || el.type === 'polygon')) {
-				el.points = originPoints.map((p) => ({ x: p.x + dx, y: p.y + dy }));
+				el.points = originPoints.map((p) => ({ x: p.x + adx, y: p.y + ady }));
 			}
 		};
 		const up = () => {

@@ -86,6 +86,13 @@
 		>
 			Click on the page to place your {editor.pendingImage ? 'image' : 'signature'}
 		</div>
+	{:else if editor.tool.type === 'draw' && editor.tool.kind === 'polygon'}
+		<!-- Polygon is multi-click and non-obvious; spell out the gesture (#4). -->
+		<div
+			class="pointer-events-none sticky top-0 z-30 mx-auto w-fit rounded-full bg-blue-600 px-4 py-1.5 text-sm font-medium text-white shadow-lg"
+		>
+			Click to add points • double-click or Enter to close • Esc to cancel
+		</div>
 	{/if}
 	<!-- CSS `zoom` (not `transform: scale`) so the scaled pages keep a real
 	     layout box: overflow scrollbars and mx-auto centering both stay correct,

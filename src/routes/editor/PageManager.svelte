@@ -1,9 +1,16 @@
 <script lang="ts">
 	import type { EditorState } from './editor.svelte';
-	import { SCALE } from './constants';
+	import { SCALE, PAGE_SIZES } from './constants';
 	import { overlayFor } from './overlays';
 
 	let { editor }: { editor: EditorState } = $props();
+
+	// Size used for newly inserted blank pages (#5). Index into PAGE_SIZES;
+	// 0 = "Match document" (clone the first page).
+	let newPageSizeIndex = $state(0);
+	function insertBlank(afterIndex: number) {
+		editor.insertBlankPage(afterIndex, PAGE_SIZES[newPageSizeIndex]?.size ?? undefined);
+	}
 
 	// Drag-to-reorder state. `dragIndex` is the page being dragged.
 	let dragIndex = $state<number | null>(null);
@@ -36,7 +43,7 @@
 					type="button"
 					class="rounded px-1.5 py-0.5 text-xs text-blue-600 hover:bg-blue-50"
 					title="Insert blank page at end"
-					onclick={() => editor.insertBlankPage(editor.pages.length - 1)}
+					onclick={() => insertBlank(editor.pages.length - 1)}
 				>
 					+ Blank
 				</button>
@@ -51,6 +58,17 @@
 				</button>
 			</div>
 		</div>
+
+		<!-- Size for newly inserted blank pages (#5). -->
+		<select
+			class="w-full rounded border border-gray-200 px-1 py-0.5 text-xs text-gray-600"
+			title="Size for new blank pages"
+			bind:value={newPageSizeIndex}
+		>
+			{#each PAGE_SIZES as ps, i (i)}
+				<option value={i}>{ps.label}</option>
+			{/each}
+		</select>
 
 		{#each editor.pages as page, i (i)}
 			{@const render = editor.pageRender(i)}
@@ -127,7 +145,7 @@
 						type="button"
 						class="rounded px-1 py-0.5 text-[11px] text-gray-600 hover:bg-gray-100"
 						title="Insert blank after"
-						onclick={() => editor.insertBlankPage(i)}>＋</button
+						onclick={() => insertBlank(i)}>＋</button
 					>
 					<button
 						type="button"

@@ -140,6 +140,43 @@ describe('EditorState field tools', () => {
 	});
 });
 
+describe('EditorState page-bounds clamp (#1)', () => {
+	function twoPageEditor() {
+		const e = new EditorState();
+		// A blank page with an explicit size gives pages[0] = 300×400 directly.
+		e.pageOps = [{ kind: 'blank', size: [300, 400], rotation: 0 }];
+		return e;
+	}
+
+	it('clampToPage keeps a point within [0, w]×[0, h]', () => {
+		const e = twoPageEditor();
+		expect(e.clampToPage(-50, -10, 0)).toEqual({ x: 0, y: 0 });
+		expect(e.clampToPage(999, 999, 0)).toEqual({ x: 300, y: 400 });
+		expect(e.clampToPage(120, 80, 0)).toEqual({ x: 120, y: 80 });
+	});
+
+	it('clampBox keeps the whole box on the page', () => {
+		const e = twoPageEditor();
+		// A 100×50 box pushed past the bottom-right snaps so its far edge sits on
+		// the page edge: x ≤ 300-100, y ≤ 400-50.
+		expect(e.clampBox(999, 999, 100, 50, 0)).toEqual({ x: 200, y: 350 });
+		expect(e.clampBox(-5, -5, 100, 50, 0)).toEqual({ x: 0, y: 0 });
+	});
+
+	it('placeAtClient clamps an off-page field onto the paper', () => {
+		const e = twoPageEditor();
+		e.setTool({ type: 'field', kind: 'text' });
+		// fakePage maps client→page at cssScale; push way past the bottom-right.
+		e.placeAtClient(99999, 99999, fakePage(), 0);
+		flushSync();
+		const f = e.selectedField!;
+		expect(f.x).toBeLessThanOrEqual(300);
+		expect(f.y).toBeLessThanOrEqual(400);
+		expect(f.x).toBeGreaterThanOrEqual(0);
+		expect(f.y).toBeGreaterThanOrEqual(0);
+	});
+});
+
 describe('EditorState setRasterSize', () => {
 	it('sets width/height and clamps to a minimum of 4', () => {
 		const e = new EditorState();
@@ -322,11 +359,7 @@ describe('EditorState vector tools', () => {
 	});
 });
 
-function dragLine(
-	e: EditorState,
-	from: { x: number; y: number },
-	to: { x: number; y: number }
-) {
+function dragLine(e: EditorState, from: { x: number; y: number }, to: { x: number; y: number }) {
 	e.setTool({ type: 'draw', kind: 'line' });
 	const down = {
 		clientX: from.x,

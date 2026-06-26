@@ -8,19 +8,23 @@
 
 	const w = $derived(Math.max(link.width, 0) * SCALE);
 	const h = $derived(Math.max(link.height, 0) * SCALE);
+	const hasTarget = $derived(
+		typeof link.goToPage === 'number' || (typeof link.url === 'string' && link.url.length > 0)
+	);
 	const label = $derived(
 		typeof link.goToPage === 'number'
 			? `→ page ${link.goToPage + 1}`
 			: link.url
 				? link.url
-				: '(no target)'
+				: '⚠ no target — won’t export'
 	);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="absolute cursor-move overflow-hidden rounded-sm border border-dashed border-blue-500 bg-blue-400/15 {editor.selectedId ===
-	el.id
+	class="absolute cursor-move overflow-hidden rounded-sm border border-dashed {hasTarget
+		? 'border-blue-500 bg-blue-400/15'
+		: 'border-amber-500 bg-amber-400/20'} {editor.selectedId === el.id
 		? 'ring-2 ring-blue-400'
 		: ''}"
 	style="left: {link.x * SCALE}px; top: {link.y * SCALE}px; width: {w}px; height: {h}px;"
@@ -28,7 +32,9 @@
 	title={label}
 >
 	<span
-		class="pointer-events-none absolute inset-0 truncate p-0.5 text-[10px] leading-tight text-blue-700"
+		class="pointer-events-none absolute inset-0 truncate p-0.5 text-[10px] leading-tight {hasTarget
+			? 'text-blue-700'
+			: 'text-amber-700'}"
 	>
 		{label}
 	</span>

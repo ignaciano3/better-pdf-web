@@ -25,6 +25,7 @@
 			: 'none'
 	);
 	const sw = $derived((path.strokeWidth ?? 1) * SCALE);
+	const op = $derived(path.opacity ?? 1);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -43,6 +44,7 @@
 			stroke={strokeCss}
 			stroke-width={sw}
 			fill={fillCss}
+			opacity={op}
 			stroke-linejoin="round"
 			stroke-linecap="round"
 		/>

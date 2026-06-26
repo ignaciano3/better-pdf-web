@@ -1,5 +1,17 @@
+import { PageSizes } from '@ignaciano3/better-pdf/generate';
+
 /** Default page size (A4) in PDF points, used in blank mode. */
-export const DEFAULT_PAGE: [number, number] = [595.28, 841.89];
+export const DEFAULT_PAGE: [number, number] = [...PageSizes.A4];
+
+/** Named blank-page sizes the user can insert (#5), sourced from the better-pdf
+ * `PageSizes` table. `null` size keeps the "clone the first page" behaviour. */
+export const PAGE_SIZES: { label: string; size: [number, number] | null }[] = [
+	{ label: 'Match document', size: null },
+	...Object.entries(PageSizes).map(([label, dims]) => ({
+		label,
+		size: [...dims] as [number, number]
+	}))
+];
 
 /** CSS px rendered per PDF point. Element coords are stored in points and
  * positioned at `coord * SCALE` px; the builder flips Y at export. */

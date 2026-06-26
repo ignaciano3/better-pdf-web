@@ -110,6 +110,16 @@
 			<div class="relative flex min-h-0 min-w-0 flex-1">
 				<Canvas {editor} />
 				<ZoomControls {editor} />
+				<!-- Warn about links that would be silently dropped at export (#3). -->
+				{#if editor.invalidLinks.length > 0}
+					<div
+						class="absolute right-6 bottom-20 z-20 max-w-xs rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 shadow-lg ring-1 ring-amber-300"
+					>
+						⚠ {editor.invalidLinks.length}
+						{editor.invalidLinks.length === 1 ? 'link has' : 'links have'} no target and won’t be exported.
+						Set a URL or page in each link’s toolbar.
+					</div>
+				{/if}
 				<!-- Floating export, pinned bottom-right over the canvas (#13). -->
 				<button
 					onclick={() => editor.export()}
