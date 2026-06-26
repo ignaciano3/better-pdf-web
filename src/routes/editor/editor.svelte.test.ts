@@ -5,6 +5,21 @@ import { flushSync } from 'svelte';
 // graph. The model layer never calls it in these tests, so mock it out.
 vi.mock('./export.remote', () => ({ exportPdf: vi.fn() }));
 vi.mock('./extractFields.remote', () => ({ extractFields: vi.fn() }));
+vi.mock('$lib/pdf/pdf-doc-store', () => {
+	const getDoc = vi.fn(async () => ({ destroy: vi.fn() }));
+	const destroyAll = vi.fn(async () => {});
+	class MockPdfDocStore {
+		get = getDoc;
+		destroy = vi.fn(async () => {});
+		destroyAll = destroyAll;
+	}
+	return {
+		PdfDocStore: MockPdfDocStore,
+		// expose the spies for assertions
+		__getDoc: getDoc,
+		__destroyAll: destroyAll
+	};
+});
 
 import { EditorState } from './editor.svelte';
 import { exportPdf } from './export.remote';
@@ -510,5 +525,40 @@ describe('EditorState custom fonts', () => {
 		expect(Object.values(e.embeddedFonts)[0]?.name).toBe('My Font.ttf');
 		e.clearCustomFont(t);
 		expect(t.fontId).toBeUndefined();
+	});
+});
+
+import * as docStoreMod from '$lib/pdf/pdf-doc-store';
+
+describe('EditorState pdf-doc-store wiring', () => {
+	it('getPdfDoc rejects when the source bytes are missing', async () => {
+		const editor = new EditorState();
+		await expect(editor.getPdfDoc(0)).rejects.toThrow();
+	});
+
+	it('getPdfDoc asks the store for the doc using the source bytes', async () => {
+		const editor = new EditorState();
+		const bytes = new Uint8Array([1, 2, 3]);
+		editor.sources = [bytes];
+		await editor.getPdfDoc(0);
+		const getDoc = (docStoreMod as unknown as { __getDoc: ReturnType<typeof vi.fn> }).__getDoc;
+		expect(getDoc).toHaveBeenCalledWith(0, bytes);
+	});
+
+	it('dispose destroys all cached documents', () => {
+		const editor = new EditorState();
+		editor.dispose();
+		const destroyAll = (docStoreMod as unknown as { __destroyAll: ReturnType<typeof vi.fn> })
+			.__destroyAll;
+		expect(destroyAll).toHaveBeenCalled();
+	});
+
+	it('clearSource destroys all cached documents', () => {
+		const editor = new EditorState();
+		const destroyAll = (docStoreMod as unknown as { __destroyAll: ReturnType<typeof vi.fn> })
+			.__destroyAll;
+		destroyAll.mockClear();
+		editor.clearSource();
+		expect(destroyAll).toHaveBeenCalled();
 	});
 });

@@ -17,6 +17,8 @@ import type {
 	Watermark
 } from '$lib/pdf/types';
 import { renderSourcePdf, type RenderedPage, PdfRenderError } from '$lib/pdf/render';
+import { PdfDocStore } from '$lib/pdf/pdf-doc-store';
+import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { exportPdf } from './export.remote';
 import { extractFields } from './extractFields.remote';
 import {
@@ -201,6 +203,10 @@ export class EditorState {
 	#nextId = 0;
 	/** Object URLs for raster previews, cached per element id. Not reactive. */
 	#rasterUrls: Record<string, string> = {};
+	/** Live pdf.js documents per source index, for re-rasterising on zoom. Not
+	 * reactive — components await {@link getPdfDoc}; the PNG placeholder covers
+	 * the gap before the sharp canvas paints. */
+	#docStore = new PdfDocStore();
 
 	/**
 	 * Custom fonts uploaded in this session, keyed by asset id. A Record (not a
@@ -999,6 +1005,9 @@ export class EditorState {
 
 		this.loadingPdf = true;
 		try {
+			// A re-upload replaces source 0; drop any previously cached document so
+			// the old proxy is freed and the new bytes are reopened on next render.
+			void this.#docStore.destroyAll();
 			const bytes = new Uint8Array(await file.arrayBuffer());
 			// pdf.js detaches the buffer it renders, so keep a copy for export.
 			const exportCopy = bytes.slice();
@@ -1034,6 +1043,7 @@ export class EditorState {
 	}
 
 	clearSource() {
+		void this.#docStore.destroyAll();
 		this.sources = [];
 		this.renderedByDoc = [];
 		this.pageOps = [];
@@ -1097,6 +1107,22 @@ export class EditorState {
 		} finally {
 			this.loadingPdf = false;
 		}
+	}
+
+	/**
+	 * The live pdf.js document for source `docIndex`, opened lazily from its
+	 * stored bytes and cached. Used by {@link PdfPageCanvas} to re-rasterise on
+	 * zoom. Rejects when no bytes exist for that index (e.g. blank mode).
+	 */
+	getPdfDoc(docIndex: number): Promise<PDFDocumentProxy> {
+		const bytes = this.sources[docIndex];
+		if (!bytes) return Promise.reject(new Error(`No source bytes for doc ${docIndex}`));
+		return this.#docStore.get(docIndex, bytes);
+	}
+
+	/** Destroy every cached pdf.js document. Call on editor teardown. */
+	dispose() {
+		void this.#docStore.destroyAll();
 	}
 
 	// --- zoom ----------------------------------------------------------------
