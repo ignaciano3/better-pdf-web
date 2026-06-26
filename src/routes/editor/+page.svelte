@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import { page } from '$app/state';
 	import SignaturePad from '$lib/components/SignaturePad.svelte';
 	import { EditorState } from './editor.svelte';
@@ -13,6 +14,9 @@
 	import UpsellModal from './UpsellModal.svelte';
 
 	const editor = new EditorState();
+	// Free pdf.js worker memory (cached source documents) when leaving the editor.
+	onDestroy(() => editor.dispose());
+
 	let showSignaturePad = $state(false);
 	const signedIn = $derived(Boolean(page.data['user']));
 
