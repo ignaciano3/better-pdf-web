@@ -78,6 +78,11 @@ export interface EditState {
 	 * the document has no fields.
 	 */
 	flatten?: boolean;
+	/**
+	 * Optional text watermark stamped on every output page at export. Omitted
+	 * when unset or when its text is empty.
+	 */
+	watermark?: Watermark;
 }
 
 /**
@@ -355,6 +360,26 @@ export interface EmbeddedFontAsset {
 	name: string;
 	/** Raw font-program bytes (the .ttf/.otf file contents). */
 	bytes: Uint8Array;
+}
+
+/**
+ * A single text watermark stamped centered, rotated, and semi-transparent on
+ * every output page at export. v1 is text-only — the lib's `drawImage` has no
+ * opacity/rotation, so image watermarks are deferred.
+ */
+export interface Watermark {
+	/** The watermark text (e.g. "DRAFT"). Empty/whitespace ⇒ no watermark. */
+	text: string;
+	/** Standard font. Defaults to Helvetica-Bold. */
+	font?: StandardFontName;
+	/** Font size in points. Defaults to 48. */
+	size?: number;
+	/** RGB components in 0..1. Defaults to mid-gray. */
+	color?: { r: number; g: number; b: number };
+	/** Opacity 0..1. Defaults to 0.3. */
+	opacity?: number;
+	/** Clockwise display rotation in degrees. Defaults to 45. */
+	rotation?: number;
 }
 
 /**
