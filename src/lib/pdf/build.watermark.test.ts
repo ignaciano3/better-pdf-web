@@ -23,4 +23,18 @@ describe('buildPdf watermark', () => {
 		const empty = await buildPdf({ pageSize: A4, elements: [], watermark: { text: '   ' } });
 		expect(empty.byteLength).toBe(base.byteLength);
 	});
+
+	it('draws a centered watermark at any rotation (rotation-invariant)', async () => {
+		// On a square page the centering anchor must be computable and the
+		// watermark present for any angle; 0° and 90° both produce a valid,
+		// larger-than-baseline PDF. (Exact coordinates would require brittle
+		// content-stream parsing, so this is a presence/validity smoke check.)
+		const SQ: [number, number] = [400, 400];
+		const baseline = await buildPdf({ pageSize: SQ, elements: [] });
+		for (const rotation of [0, 90]) {
+			const out = await buildPdf({ pageSize: SQ, elements: [], watermark: { text: 'DRAFT', rotation } });
+			expect(isPdf(out)).toBe(true);
+			expect(out.byteLength).toBeGreaterThan(baseline.byteLength);
+		}
+	});
 });

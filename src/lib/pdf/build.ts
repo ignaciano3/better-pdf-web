@@ -131,8 +131,19 @@ function toColor(c: { r: number; g: number; b: number }): Color {
 /**
  * Stamp a single text watermark centered, rotated, and semi-transparent on
  * every page. `pageWidths[i]`/`pageHeights[i]` are the content box of output
- * page `i`. No-op when the text is empty/whitespace. The lib rotates
- * counter-clockwise, so the clockwise editor angle is negated.
+ * page `i`. No-op when the text is empty/whitespace.
+ *
+ * `drawText` places text with its baseline-left at `(x, y)` and rotates the
+ * glyphs about that anchor; its `rotate` is counter-clockwise (origin
+ * bottom-left), so the clockwise editor angle is negated. To put the glyph
+ * box's *centre* at the page centre for any rotation (matching the CSS preview
+ * in `WatermarkOverlay.svelte`, which rotates the centred text about the page
+ * centre), we offset the anchor by the centre→anchor vector transformed by the
+ * SAME rotation the lib applies (`R(-θ)`, where θ is the editor angle):
+ *   u = (textWidth/2, capH/2)  // centre relative to baseline-left, PDF y-up
+ *   R(-θ)·u = ( u_x·cosθ + u_y·sinθ , −u_x·sinθ + u_y·cosθ )
+ *   anchor = pageCentre − R(-θ)·u
+ * (capH ≈ 0.7·size approximates the cap height so the box centres vertically.)
  */
 function drawWatermark(
 	doc: PdfDocument,
@@ -146,13 +157,21 @@ function drawWatermark(
 	const fontName = (wm.font ?? 'Helvetica-Bold') as StandardFonts;
 	const font = doc.getFont(fontName);
 	const color = wm.color ? toColor(wm.color) : rgb(0.5, 0.5, 0.5);
+	const angle = wm.rotation ?? 45;
+	const rotate = -angle; // drawText rotate is CCW; editor angle is CW
 	const opacity = wm.opacity ?? 0.3;
-	const rotate = -(wm.rotation ?? 45);
 	const textWidth = font.widthOfTextAtSize(text, size);
+	const capH = 0.7 * size;
+	const theta = (angle * Math.PI) / 180;
+	const cos = Math.cos(theta);
+	const sin = Math.sin(theta);
+	// Centre→anchor offset, rotated by the lib's applied rotation R(-θ).
+	const dx = (textWidth / 2) * cos + (capH / 2) * sin;
+	const dy = -(textWidth / 2) * sin + (capH / 2) * cos;
 	for (let i = 0; i < pageHeights.length; i++) {
 		const page = doc.getPage(i);
-		const x = ((pageWidths[i] as number) - textWidth) / 2;
-		const y = (pageHeights[i] as number) / 2;
+		const x = (pageWidths[i] as number) / 2 - dx;
+		const y = (pageHeights[i] as number) / 2 - dy;
 		page.drawText(text, { x, y, size, font, color, opacity, rotate });
 	}
 }
