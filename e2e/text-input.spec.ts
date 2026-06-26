@@ -17,7 +17,10 @@ test('typing text is not reversed', async ({ page }) => {
 	await expect(blankPage).toBeVisible();
 	await blankPage.click({ position: { x: 60, y: 60 } });
 
-	const editable = page.locator('[contenteditable]').first();
+	// Target the live editable box specifically: the Pages thumbnail renders an
+	// inert preview copy with `contenteditable="false"` that precedes it in the
+	// DOM, so a bare `[contenteditable]` would match the wrong (inert) element.
+	const editable = page.locator('[contenteditable="plaintext-only"]').first();
 	await editable.click();
 	await page.keyboard.press('ControlOrMeta+A');
 	await page.keyboard.press('Delete');
