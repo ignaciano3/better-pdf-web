@@ -146,6 +146,16 @@
 					>
 						Outline / bookmarks…
 					</button>
+					<button
+						class={menuItem}
+						role="menuitem"
+						onclick={() => {
+							editor.watermarkModalOpen = true;
+							docMenuOpen = false;
+						}}
+					>
+						Watermark…
+					</button>
 					{#if editor.pageOps.length > 0}
 						<div class="my-1 border-t border-gray-100"></div>
 						<p class="px-3 py-1 text-xs font-medium tracking-wide text-gray-400 uppercase">

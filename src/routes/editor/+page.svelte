@@ -9,6 +9,7 @@
 	import FieldPropertiesModal from './FieldPropertiesModal.svelte';
 	import DocumentPropertiesModal from './DocumentPropertiesModal.svelte';
 	import OutlineEditor from './OutlineEditor.svelte';
+	import WatermarkModal from './WatermarkModal.svelte';
 	import UpsellModal from './UpsellModal.svelte';
 
 	const editor = new EditorState();
@@ -139,5 +140,6 @@
 	<FieldPropertiesModal {editor} />
 	<DocumentPropertiesModal {editor} />
 	<OutlineEditor {editor} />
+	<WatermarkModal {editor} />
 	<UpsellModal {editor} {signedIn} />
 </div>
