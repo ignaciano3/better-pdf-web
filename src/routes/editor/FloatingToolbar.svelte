@@ -50,16 +50,22 @@
 		return { x: s.x, y: s.y };
 	});
 
-	// Sit the bar's BOTTOM a constant on-screen gap above the element's top, so it
-	// grows upward and never overlaps the element regardless of its height. The gap
-	// is divided by zoom because the parent applies CSS `zoom`.
+	// Non-radio fields draw a drag-chrome strip 12px above their top edge
+	// (FieldOverlay `-top-3`); clear it so the bar doesn't sit on the strip.
+	const CHROME = $derived(
+		editor.selectedField && editor.selectedField.field !== 'radio' ? 12 : 0
+	);
+
+	// Sit the bar's BOTTOM a constant on-screen gap above the element's top (plus
+	// any chrome), so it grows upward and never overlaps the element regardless of
+	// its height. The gap is divided by zoom because the parent applies CSS `zoom`.
 	const GAP = 10;
 	const pos = $derived(
 		anchor
 			? {
 					left: anchor.x * SCALE,
 					// CSS `bottom` measured from the page's bottom edge.
-					bottom: pageHeight - anchor.y * SCALE + GAP / editor.zoom
+					bottom: pageHeight - anchor.y * SCALE + CHROME + GAP / editor.zoom
 				}
 			: null
 	);
