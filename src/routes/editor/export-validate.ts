@@ -320,5 +320,9 @@ export function validateExportInput(input: unknown): ExportInput {
 		}
 	}
 
+	if (state.flatten !== undefined && typeof state.flatten !== 'boolean') {
+		error(422, 'Invalid flatten flag');
+	}
+
 	return { state: state as EditState, fingerprint };
 }

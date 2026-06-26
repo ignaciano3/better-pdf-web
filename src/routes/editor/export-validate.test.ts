@@ -366,4 +366,14 @@ describe('validateExportInput', () => {
 		};
 		expect(() => validateExportInput(input)).toThrow();
 	});
+
+	it('accepts a boolean flatten flag', () => {
+		const input = { state: { pageSize: [595, 842], elements: [], flatten: true }, fingerprint: 'fp' };
+		expect(() => validateExportInput(input)).not.toThrow();
+	});
+
+	it('rejects a non-boolean flatten flag', () => {
+		const input = { state: { pageSize: [595, 842], elements: [], flatten: 'yes' }, fingerprint: 'fp' };
+		expect(() => validateExportInput(input)).toThrow();
+	});
 });
