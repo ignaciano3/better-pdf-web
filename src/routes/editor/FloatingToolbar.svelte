@@ -83,7 +83,7 @@
 	<!-- Counter-scale by 1/zoom so the bar keeps a normal on-screen size even though
 	     the parent page wrapper is CSS-zoomed (otherwise its text balloons). -->
 	<div
-		class="absolute z-20 flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1 shadow-lg"
+		class="absolute z-20 flex w-max items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1 whitespace-nowrap shadow-lg"
 		style="left: {pos.left}px; bottom: {pos.bottom}px; transform: scale({1 /
 			editor.zoom}); transform-origin: bottom left;"
 	>
