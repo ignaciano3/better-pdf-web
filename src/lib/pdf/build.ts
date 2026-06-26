@@ -26,6 +26,19 @@ export class PdfBuildError extends Error {
 }
 
 /**
+ * Flatten every AcroForm field in `bytes` into static page content. Authored
+ * fields are built with `FormBuilder` (no flatten method), so flattening is a
+ * post-process pass: load the built bytes, flatten via the loaded `PdfForm`,
+ * and re-save. The output has no interactive AcroForm.
+ */
+async function flattenAllFields(bytes: Uint8Array): Promise<Uint8Array> {
+	const doc = await PdfDocument.load(bytes);
+	const form = doc.getForm();
+	form.flatten();
+	return await doc.save();
+}
+
+/**
  * Finalize editor state into PDF bytes using better-pdf.
  *
  * The export is always a **rebuild** (design decision D3): a fresh document is
@@ -47,10 +60,17 @@ export class PdfBuildError extends Error {
 export async function buildPdf(state: EditState): Promise<Uint8Array> {
 	const sources = resolveSources(state);
 	const hasSource = sources.some((s) => s && s.byteLength > 0);
-	if (!hasSource) {
-		return buildBlankRebuild(state);
+	const bytes = hasSource
+		? await buildSourceRebuild(state, sources)
+		: await buildBlankRebuild(state);
+
+	// Flatten is a second pass over the built (interactive) bytes. Skip when no
+	// fields exist — flattening nothing just costs a load/save round-trip.
+	const hasFields = state.elements.some((e) => e.type === 'field');
+	if (state.flatten && hasFields) {
+		return flattenAllFields(bytes);
 	}
-	return buildSourceRebuild(state, sources);
+	return bytes;
 }
 
 /**

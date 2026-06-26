@@ -72,6 +72,12 @@ export interface EditState {
 	 * referenced by no text element are harmlessly unused.
 	 */
 	fonts?: EmbeddedFontAsset[];
+	/**
+	 * When true, every authored AcroForm field is flattened (baked into page
+	 * content) on export, producing a print-ready, non-editable PDF. No-op when
+	 * the document has no fields.
+	 */
+	flatten?: boolean;
 }
 
 /**
