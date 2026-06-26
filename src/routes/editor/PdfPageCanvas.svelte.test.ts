@@ -70,7 +70,14 @@ describe('PdfPageCanvas', () => {
 		const editor = makeEditor();
 		editor.zoom = 1;
 		render(PdfPageCanvas, {
-			props: { editor, docIndex: 0, sourceIndex: 0, render: renderInfo, rotation: 0, box: { width: 100, height: 100 } }
+			props: {
+				editor,
+				docIndex: 0,
+				sourceIndex: 0,
+				render: renderInfo,
+				rotation: 0,
+				box: { width: 100, height: 100 }
+			}
 		});
 		flushSync();
 		await vi.advanceTimersByTimeAsync(200); // past the debounce
@@ -82,7 +89,14 @@ describe('PdfPageCanvas', () => {
 		const editor = makeEditor();
 		editor.zoom = 1;
 		render(PdfPageCanvas, {
-			props: { editor, docIndex: 0, sourceIndex: 0, render: renderInfo, rotation: 0, box: { width: 100, height: 100 } }
+			props: {
+				editor,
+				docIndex: 0,
+				sourceIndex: 0,
+				render: renderInfo,
+				rotation: 0,
+				box: { width: 100, height: 100 }
+			}
 		});
 		flushSync();
 		await vi.advanceTimersByTimeAsync(200);
@@ -100,7 +114,14 @@ describe('PdfPageCanvas', () => {
 	it('renders the PNG placeholder img', () => {
 		const editor = makeEditor();
 		const { container } = render(PdfPageCanvas, {
-			props: { editor, docIndex: 0, sourceIndex: 0, render: renderInfo, rotation: 0, box: { width: 100, height: 100 } }
+			props: {
+				editor,
+				docIndex: 0,
+				sourceIndex: 0,
+				render: renderInfo,
+				rotation: 0,
+				box: { width: 100, height: 100 }
+			}
 		});
 		const img = container.querySelector('img');
 		expect(img?.getAttribute('src')).toBe(renderInfo.dataUrl);

@@ -65,7 +65,6 @@
 		} catch {
 			// Cancelled or failed: keep the PNG placeholder visible.
 		} finally {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-call
 			page?.cleanup();
 			if (mine === seq) currentTask = null;
 		}

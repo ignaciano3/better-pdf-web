@@ -3,7 +3,10 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
 async function gotoEditor(page: Page) {
-	await page.addInitScript((fp) => localStorage.setItem('bpw:fingerprint', fp), `e2e-zoom-${randomUUID()}`);
+	await page.addInitScript(
+		(fp) => localStorage.setItem('bpw:fingerprint', fp),
+		`e2e-zoom-${randomUUID()}`
+	);
 	await page.goto('/editor');
 	await expect(page.getByRole('button', { name: 'Export PDF' })).toBeVisible();
 }
