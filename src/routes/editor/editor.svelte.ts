@@ -1049,15 +1049,23 @@ export class EditorState {
 			const docIndex = this.renderedByDoc.length;
 			this.renderedByDoc = [...this.renderedByDoc, result];
 			this.sources = [...this.sources, exportCopy];
-			// If the editor was blank (no source pages), drop the implicit blank page
-			// by starting page ops fresh; otherwise append after the existing pages.
+			// Size of the implicit blank page 0, captured before pageOps changes.
+			const first = this.pages[0] ?? { width: DEFAULT_PAGE[0], height: DEFAULT_PAGE[1] };
 			const appended: PageOp[] = result.map((_, i) => ({
 				kind: 'source',
 				sourceIndex: i,
 				rotation: 0,
 				docIndex
 			}));
-			this.pageOps = [...this.pageOps, ...appended];
+			// Blank editor: the visible page 0 is implicit (no page op). If the user
+			// placed content on it, materialize it as a real blank op so that content
+			// keeps its own page instead of aliasing the incoming doc's page 0. With
+			// no content, drop the implicit blank so the merge has no leading blank.
+			const base =
+				this.pageOps.length === 0 && this.elements.length > 0
+					? ([{ kind: 'blank', size: [first.width, first.height], rotation: 0 }] as PageOp[])
+					: this.pageOps;
+			this.pageOps = [...base, ...appended];
 			this.selectedId = null;
 		} catch (e) {
 			this.errorMessage =

@@ -116,6 +116,27 @@ describe('EditorState merge / appendPdf', () => {
 		expect(e.pageOps.length).toBe(2);
 		expect(e.sources.length).toBe(1);
 	});
+
+	it('keeps placed content on its own blank page when merging into a blank editor', async () => {
+		const e = new EditorState();
+		// Place a field on the implicit blank page 0.
+		e.placeFieldAt('text', 50, 50, 0);
+		flushSync();
+		const fieldId = e.elements[0]?.id;
+		expect(fieldId).toBeTruthy();
+
+		await e.appendPdf(pdfFile('incoming.pdf'));
+		flushSync();
+
+		// The implicit blank page is materialized and kept first; the 2 incoming
+		// pages follow → 3 output pages.
+		expect(e.pageOps.length).toBe(3);
+		expect(e.pageOps[0]?.kind).toBe('blank');
+		expect(e.pageOps[1]?.kind === 'source' && e.pageOps[1]?.docIndex).toBe(0);
+		// The field still lives on page 0 (the blank), not the incoming PDF.
+		const field = e.elements.find((el) => el.id === fieldId);
+		expect(field?.page ?? 0).toBe(0);
+	});
 });
 
 describe('EditorState metadata + outline', () => {

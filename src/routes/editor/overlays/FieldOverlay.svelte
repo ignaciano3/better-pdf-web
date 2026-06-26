@@ -80,7 +80,7 @@
 				? 'ring-2 ring-blue-400'
 				: 'ring-1 ring-blue-300/60'}"
 			style="left: {p.x * SCALE}px; top: {p.y * SCALE}px; height: {radioSize * SCALE}px;"
-			title={field.tooltip ?? field.name}
+			title="{field.tooltip ?? field.name}: {opt}"
 			onpointerdown={(e) => editor.startRadioDrag(e, field, i)}
 		>
 			<span
@@ -92,7 +92,10 @@
 			>
 				{field.value === opt ? radioGlyph : ''}
 			</span>
-			<span class="pointer-events-none ml-1 text-xs whitespace-nowrap text-gray-700">{opt}</span>
+			{#if selected}
+				<span
+					class="pointer-events-none ml-1 text-xs whitespace-nowrap text-gray-400 italic">{opt}</span>
+			{/if}
 		</div>
 	{/each}
 {:else}

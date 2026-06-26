@@ -105,14 +105,8 @@
 		if (j < 0 || j >= opts.length) return;
 		[opts[i], opts[j]] = [opts[j] as string, opts[i] as string];
 		f.options = opts;
-		// Positions belong to the slot, not the value: swap them alongside.
-		if (f.field === 'radio' && f.radioLayout) {
-			const layout = [...f.radioLayout];
-			if (layout[i] && layout[j]) {
-				[layout[i], layout[j]] = [layout[j], layout[i]];
-				f.radioLayout = layout;
-			}
-		}
+		// Slots stay put; only the values reorder, so the moved option's button
+		// (and label) visibly hops to the other slot's position.
 	}
 	function setOption(f: FieldElement, i: number, value: string) {
 		const opts = [...(f.options ?? [])];
