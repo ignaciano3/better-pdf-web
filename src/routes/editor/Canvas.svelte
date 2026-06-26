@@ -4,6 +4,7 @@
 	import { overlayFor } from './overlays';
 	import WatermarkOverlay from './overlays/WatermarkOverlay.svelte';
 	import FloatingToolbar from './FloatingToolbar.svelte';
+	import PdfPageCanvas from './PdfPageCanvas.svelte';
 
 	let { editor }: { editor: EditorState } = $props();
 
@@ -114,17 +115,20 @@
 					{@const render = editor.pageRender(pageIndex)}
 					{@const rot = editor.pageRotation(pageIndex)}
 					{@const box = editor.pageContentBox(pageIndex)}
-					<!-- Scale the source image to the (un-rotated) content box, not its
-					     intrinsic size, so a page-size override matches the export, which
-					     stretches the embedded page to fill the same box. -->
-					<img
-						src={render?.dataUrl}
-						alt={`Page ${pageIndex + 1}`}
-						class="pointer-events-none absolute top-1/2 left-1/2 max-w-none select-none"
-						style="width: {box.width * SCALE}px; height: {box.height *
-							SCALE}px; transform: translate(-50%, -50%) rotate({rot}deg);"
-						draggable="false"
-					/>
+					{@const op = editor.pageOps[pageIndex]}
+					<!-- Source pages re-rasterise on zoom for native-viewer sharpness;
+					     the PNG render is the placeholder. The display box matches the
+					     content box (and the export), unaffected by zoom. -->
+					{#if op && op.kind === 'source' && render}
+						<PdfPageCanvas
+							{editor}
+							docIndex={op.docIndex ?? 0}
+							sourceIndex={op.sourceIndex}
+							{render}
+							rotation={rot}
+							{box}
+						/>
+					{/if}
 				{/if}
 				{#each editor.elementsForPage(pageIndex) as el (el.id)}
 					{@const Overlay = overlayFor(el.type)}
