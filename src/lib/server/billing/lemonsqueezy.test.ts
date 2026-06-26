@@ -149,7 +149,8 @@ describe('createCheckout', () => {
 		const result = await createCheckout({ userId: 'user_1', email: 'a@b.com', cadence: 'annual' });
 
 		expect(result).toEqual({ url: 'https://co.lemonsqueezy.com/abc' });
-		const [url, init] = fetchMock.mock.calls[0];
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		const [url, init] = fetchMock.mock.calls[0]!;
 		expect(url).toBe('https://api.lemonsqueezy.com/v1/checkouts');
 		expect(init.method).toBe('POST');
 		expect(init.headers.Authorization).toBe('Bearer key_test');
