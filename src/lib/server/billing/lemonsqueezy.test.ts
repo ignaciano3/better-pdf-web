@@ -46,6 +46,12 @@ describe('verifyWebhookSignature', () => {
 	it('rejects a wrong-length signature without throwing', () => {
 		expect(verifyWebhookSignature('{}', 'abc', SECRET)).toBe(false);
 	});
+
+	it('rejects when the secret is empty (fail closed on misconfig)', () => {
+		const body = '{"hello":"world"}';
+		const sigWithEmptyKey = createHmac('sha256', '').update(body).digest('hex');
+		expect(verifyWebhookSignature(body, sigWithEmptyKey, '')).toBe(false);
+	});
 });
 
 describe('mapEventToRow', () => {

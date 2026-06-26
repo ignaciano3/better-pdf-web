@@ -33,6 +33,7 @@ export function verifyWebhookSignature(
 	signature: string | null,
 	secret: string
 ): boolean {
+	if (!secret) return false;
 	if (!signature) return false;
 	const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
 	const a = Buffer.from(expected, 'utf8');
