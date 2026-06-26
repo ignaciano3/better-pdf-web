@@ -38,9 +38,10 @@ export interface RenderedPage {
  */
 function renderOversample(): number {
 	const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-	// 2× headroom over the device ratio keeps it sharp a bit past the fit zoom;
-	// clamp to [2, 4] to bound the largest raster.
-	return Math.min(4, Math.max(2, Math.round(dpr * 2)));
+	// The PNG is now only the placeholder/thumbnail; PdfPageCanvas owns on-screen
+	// sharpness by re-rasterising on zoom. Keep just enough resolution to look
+	// crisp at fit/normal zoom, clamped to [1.5, 2] to keep data-URLs small.
+	return Math.min(2, Math.max(1.5, dpr));
 }
 
 /** Thrown when an uploaded PDF cannot be parsed or rendered. */
