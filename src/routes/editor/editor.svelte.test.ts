@@ -547,9 +547,10 @@ describe('EditorState pdf-doc-store wiring', () => {
 
 	it('dispose destroys all cached documents', () => {
 		const editor = new EditorState();
-		editor.dispose();
 		const destroyAll = (docStoreMod as unknown as { __destroyAll: ReturnType<typeof vi.fn> })
 			.__destroyAll;
+		destroyAll.mockClear();
+		editor.dispose();
 		expect(destroyAll).toHaveBeenCalled();
 	});
 
