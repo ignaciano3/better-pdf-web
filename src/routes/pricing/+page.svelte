@@ -13,6 +13,27 @@
 
 	const proPrice = $derived(annual ? proAnnual / 12 : proMonthly);
 	const proSuffix = $derived(annual ? '/mo billed yearly' : '/mo');
+
+	let upgrading = $state(false);
+
+	async function startCheckout() {
+		if (upgrading) return;
+		upgrading = true;
+		try {
+			const res = await fetch('/api/billing/checkout', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ cadence: annual ? 'annual' : 'monthly' })
+			});
+			if (!res.ok) throw new Error(`Checkout failed (${res.status})`);
+			const { url } = (await res.json()) as { url: string };
+			window.location.href = url;
+		} catch (e) {
+			upgrading = false;
+			alert('Could not start checkout. Please try again.');
+			console.error(e);
+		}
+	}
 </script>
 
 <main class="mx-auto max-w-5xl px-6 py-16">
@@ -83,10 +104,11 @@
 			{#if data.user}
 				<button
 					type="button"
-					disabled
-					class="mt-6 cursor-not-allowed rounded-lg bg-blue-600 px-4 py-2 text-center text-sm font-semibold text-white opacity-60"
+					onclick={startCheckout}
+					disabled={upgrading}
+					class="mt-6 rounded-lg bg-blue-600 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
 				>
-					Billing coming soon
+					{upgrading ? 'Starting checkout…' : 'Upgrade to Pro'}
 				</button>
 			{:else}
 				<a
@@ -119,7 +141,14 @@
 		</div>
 	</div>
 
-	<p class="mt-8 text-center text-xs text-gray-400">
-		Prices in USD. Billing integration is on the way — for now everything runs on the free tier.
+	{#if data.manageUrl}
+		<p class="mt-8 text-center text-sm">
+			<a href={data.manageUrl} class="font-medium text-blue-600 hover:underline">
+				Manage billing
+			</a>
+		</p>
+	{/if}
+	<p class="mt-2 text-center text-xs text-gray-400">
+		Prices in USD. Billing is handled securely by Lemon Squeezy.
 	</p>
 </main>
