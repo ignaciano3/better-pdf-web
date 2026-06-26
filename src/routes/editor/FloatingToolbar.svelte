@@ -52,9 +52,7 @@
 
 	// Non-radio fields draw a drag-chrome strip 12px above their top edge
 	// (FieldOverlay `-top-3`); clear it so the bar doesn't sit on the strip.
-	const CHROME = $derived(
-		editor.selectedField && editor.selectedField.field !== 'radio' ? 12 : 0
-	);
+	const CHROME = $derived(editor.selectedField && editor.selectedField.field !== 'radio' ? 12 : 0);
 
 	// Sit the bar's BOTTOM a constant on-screen gap above the element's top (plus
 	// any chrome), so it grows upward and never overlaps the element regardless of
@@ -111,7 +109,7 @@
 				type="color"
 				value={toHex(t.color)}
 				oninput={(e) => (t.color = fromHex((e.currentTarget as HTMLInputElement).value))}
-				class="h-6 w-6 cursor-pointer rounded border"
+				class="swatch h-6 w-6 cursor-pointer rounded border"
 				aria-label="Text color"
 			/>
 			{#if t.fontId}
@@ -150,7 +148,7 @@
 				type="color"
 				value={toHex(sh.strokeColor)}
 				oninput={(e) => (sh.strokeColor = fromHex((e.currentTarget as HTMLInputElement).value))}
-				class="h-6 w-6 cursor-pointer rounded border"
+				class="swatch h-6 w-6 cursor-pointer rounded border"
 				aria-label="Stroke color"
 			/>
 			{#if sh.shape !== 'line'}
@@ -173,7 +171,7 @@
 						type="color"
 						value={toHex(sh.fillColor)}
 						oninput={(e) => (sh.fillColor = fromHex((e.currentTarget as HTMLInputElement).value))}
-						class="h-6 w-6 cursor-pointer rounded border"
+						class="swatch h-6 w-6 cursor-pointer rounded border"
 						aria-label="Fill color"
 					/>
 				{/if}
@@ -186,7 +184,7 @@
 				type="color"
 				value={toHex(v.strokeColor)}
 				oninput={(e) => (v.strokeColor = fromHex((e.currentTarget as HTMLInputElement).value))}
-				class="h-6 w-6 cursor-pointer rounded border"
+				class="swatch h-6 w-6 cursor-pointer rounded border"
 				aria-label="Stroke color"
 			/>
 			<input
@@ -218,7 +216,7 @@
 					type="color"
 					value={toHex(v.fillColor)}
 					oninput={(e) => (v.fillColor = fromHex((e.currentTarget as HTMLInputElement).value))}
-					class="h-6 w-6 cursor-pointer rounded border"
+					class="swatch h-6 w-6 cursor-pointer rounded border"
 					aria-label="Fill color"
 				/>
 			{/if}
@@ -353,3 +351,29 @@
 		</button>
 	</div>
 {/if}
+
+<style>
+	/* Native colour inputs carry a bordered swatch and a UA minimum size that
+	   Firefox doesn't shrink to the w-6/h-6 box, so under the bar's counter-scale
+	   the picker balloons. Strip the native chrome so the box is exactly its set
+	   size cross-browser. */
+	.swatch {
+		appearance: none;
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		padding: 0;
+		min-width: 0;
+		min-height: 0;
+	}
+	.swatch::-webkit-color-swatch-wrapper {
+		padding: 0;
+	}
+	.swatch::-webkit-color-swatch {
+		border: none;
+		border-radius: 0.25rem;
+	}
+	.swatch::-moz-color-swatch {
+		border: none;
+		border-radius: 0.25rem;
+	}
+</style>
