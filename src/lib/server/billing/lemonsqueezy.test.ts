@@ -72,6 +72,15 @@ describe('mapEventToRow', () => {
 		expect(row?.currentPeriodEnd).toEqual(new Date('2026-07-15T00:00:00.000Z'));
 	});
 
+	it('falls back to renews_at when a cancelled event has null ends_at (no fail-open)', () => {
+		const row = mapEventToRow(
+			event('cancelled', { ends: null, renews: '2026-09-01T00:00:00.000Z' })
+		);
+		expect(row?.status).toBe('active');
+		expect(row?.currentPeriodEnd).toEqual(new Date('2026-09-01T00:00:00.000Z'));
+		expect(row?.currentPeriodEnd).not.toBeNull();
+	});
+
 	it('marks expired/unpaid/paused as inactive', () => {
 		expect(mapEventToRow(event('expired'))?.status).toBe('inactive');
 		expect(mapEventToRow(event('unpaid'))?.status).toBe('inactive');
