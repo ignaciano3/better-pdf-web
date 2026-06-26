@@ -9,6 +9,8 @@
 	// The editor manages its own full-height, full-bleed layout; every other route
 	// gets the standard padded, scrollable main.
 	const isEditor = $derived(page.url.pathname.startsWith('/editor'));
+	// The landing page is full-bleed (its own section padding); other routes get padded main.
+	const isHome = $derived(page.url.pathname === '/');
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
@@ -20,6 +22,10 @@
 		<div class="flex min-h-0 flex-1 flex-col">
 			{@render children()}
 		</div>
+	{:else if isHome}
+		<main class="flex-1 overflow-auto">
+			{@render children()}
+		</main>
 	{:else}
 		<main class="flex-1 overflow-auto px-6 py-6">
 			{@render children()}
