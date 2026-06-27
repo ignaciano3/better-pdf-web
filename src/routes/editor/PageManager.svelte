@@ -26,6 +26,11 @@
 		dragIndex = null;
 	}
 
+	// Page-control buttons (move/rotate/insert/delete). Icon-only, so each needs a
+	// descriptive aria-label; a visible focus ring keeps them keyboard-navigable.
+	const opBtn =
+		'rounded px-1.5 py-1 text-[11px] transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none disabled:opacity-30';
+
 	// Thumbnail dimensions, scaled to fit a small fixed width.
 	const THUMB_W = 96;
 	function thumbStyle(width: number, height: number): string {
@@ -41,15 +46,16 @@
 			<div class="flex items-center gap-1">
 				<button
 					type="button"
-					class="rounded px-1.5 py-0.5 text-xs text-blue-600 hover:bg-blue-50"
+					class="rounded px-1.5 py-0.5 text-xs text-blue-600 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none"
 					title="Insert blank page at end"
+					aria-label="Insert blank page at end"
 					onclick={() => insertBlank(editor.pages.length - 1)}
 				>
 					+ Blank
 				</button>
 				<button
 					type="button"
-					class="rounded px-1.5 py-0.5 text-sm text-slate-500 hover:bg-slate-100"
+					class="rounded px-1.5 py-0.5 text-sm text-slate-500 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none"
 					title="Hide pages panel"
 					aria-label="Hide pages panel"
 					onclick={() => (editor.showPages = false)}
@@ -61,8 +67,9 @@
 
 		<!-- Size for newly inserted blank pages (#5). -->
 		<select
-			class="w-full rounded border border-slate-200 px-1 py-0.5 text-xs text-slate-600"
+			class="w-full rounded border border-slate-200 px-1 py-0.5 text-xs text-slate-600 focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none"
 			title="Size for new blank pages"
+			aria-label="Size for new blank pages"
 			bind:value={newPageSizeIndex}
 		>
 			{#each PAGE_SIZES as ps, i (i)}
@@ -126,34 +133,39 @@
 				<div class="flex flex-wrap items-center justify-center gap-0.5">
 					<button
 						type="button"
-						class="rounded px-1 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+						class="{opBtn} text-slate-600"
 						title="Move up"
+						aria-label="Move page {i + 1} up"
 						disabled={i === 0}
 						onclick={() => editor.movePageUp(i)}>↑</button
 					>
 					<button
 						type="button"
-						class="rounded px-1 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+						class="{opBtn} text-slate-600"
 						title="Move down"
+						aria-label="Move page {i + 1} down"
 						disabled={i === editor.pages.length - 1}
 						onclick={() => editor.movePageDown(i)}>↓</button
 					>
 					<button
 						type="button"
-						class="rounded px-1 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
+						class="{opBtn} text-slate-600"
 						title="Rotate 90°"
+						aria-label="Rotate page {i + 1} 90 degrees"
 						onclick={() => editor.rotatePage(i)}>⟳</button
 					>
 					<button
 						type="button"
-						class="rounded px-1 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
+						class="{opBtn} text-slate-600"
 						title="Insert blank after"
+						aria-label="Insert blank page after page {i + 1}"
 						onclick={() => insertBlank(i)}>＋</button
 					>
 					<button
 						type="button"
-						class="rounded px-1 py-0.5 text-[11px] text-red-500 hover:bg-red-50 disabled:opacity-30"
+						class="{opBtn} text-red-500 hover:bg-red-50"
 						title="Delete page"
+						aria-label="Delete page {i + 1}"
 						disabled={editor.pages.length <= 1}
 						onclick={() => editor.deletePage(i)}>🗑</button
 					>

@@ -1,0 +1,39 @@
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/svelte';
+
+vi.mock('./export.remote', () => ({ exportPdf: vi.fn() }));
+vi.mock('./extractFields.remote', () => ({ extractFields: vi.fn() }));
+vi.mock('$lib/pdf/pdf-doc-store', () => {
+	class MockPdfDocStore {
+		get = vi.fn(async () => ({ destroy: vi.fn() }));
+		destroy = vi.fn(async () => {});
+		destroyAll = vi.fn(async () => {});
+	}
+	return { PdfDocStore: MockPdfDocStore };
+});
+
+import PageManager from './PageManager.svelte';
+import { EditorState } from './editor.svelte';
+
+describe('PageManager accessibility', () => {
+	it('gives every page control a descriptive accessible name (not just an icon)', () => {
+		const editor = new EditorState(); // one default blank page
+		render(PageManager, { props: { editor } });
+
+		// Icon-only controls expose intent + which page to screen readers.
+		expect(screen.getByRole('button', { name: 'Move page 1 up' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Move page 1 down' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Rotate page 1 90 degrees' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Insert blank page after page 1' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Delete page 1' })).toBeTruthy();
+		// The new-page size select has an accessible label, not just a title.
+		expect(screen.getByRole('combobox', { name: 'Size for new blank pages' })).toBeTruthy();
+	});
+
+	it('disables move-up and delete for a single page', () => {
+		const editor = new EditorState();
+		render(PageManager, { props: { editor } });
+		expect(screen.getByRole('button', { name: 'Move page 1 up' })).toBeDisabled();
+		expect(screen.getByRole('button', { name: 'Delete page 1' })).toBeDisabled();
+	});
+});
