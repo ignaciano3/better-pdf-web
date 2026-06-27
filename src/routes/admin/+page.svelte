@@ -37,6 +37,26 @@
 		</span>
 	</div>
 
+	<!-- Usage summary: global export activity across all actors (incl. anonymous) -->
+	<div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+		<div class="rounded-lg border border-gray-200 px-4 py-3">
+			<div class="text-2xl font-semibold text-gray-900">{data.usage.exports24h}</div>
+			<div class="text-xs text-gray-500">Exports · last 24h</div>
+		</div>
+		<div class="rounded-lg border border-gray-200 px-4 py-3">
+			<div class="text-2xl font-semibold text-gray-900">{data.usage.exportsAllTime}</div>
+			<div class="text-xs text-gray-500">Exports · all time</div>
+		</div>
+		<div class="rounded-lg border border-gray-200 px-4 py-3">
+			<div class="text-2xl font-semibold text-gray-900">{data.usage.anon24h}</div>
+			<div class="text-xs text-gray-500">Anonymous · last 24h</div>
+		</div>
+		<div class="rounded-lg border border-gray-200 px-4 py-3">
+			<div class="text-2xl font-semibold text-gray-900">{data.usage.anonAllTime}</div>
+			<div class="text-xs text-gray-500">Anonymous · all time</div>
+		</div>
+	</div>
+
 	{#if form?.message}
 		<p
 			class="mb-4 rounded-md border px-3 py-2 text-sm {form.success

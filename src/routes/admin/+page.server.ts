@@ -33,6 +33,18 @@ async function exportCounts(since?: Date): Promise<Record<string, number>> {
 	return out;
 }
 
+/**
+ * Global export count across all actors — including anonymous (ipHash-only)
+ * exports that never appear in the per-user table — within an optional window.
+ */
+async function exportTotal(since?: Date): Promise<number> {
+	const where = since
+		? and(eq(usageEvent.action, EXPORT_ACTION), gte(usageEvent.createdAt, since))
+		: eq(usageEvent.action, EXPORT_ACTION);
+	const rows = await getDb().select({ total: count() }).from(usageEvent).where(where);
+	return rows[0]?.total ?? 0;
+}
+
 export const load: PageServerLoad = async ({ locals }) => {
 	await requireRoot(locals);
 	const db = getDb();
@@ -51,10 +63,18 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.leftJoin(subscription, eq(subscription.userId, user.id))
 		.orderBy(desc(user.createdAt));
 
-	const [allTime, last24h] = await Promise.all([
+	const since24h = new Date(Date.now() - DAY_MS);
+	const [allTime, last24h, exportsAllTime, exports24h] = await Promise.all([
 		exportCounts(),
-		exportCounts(new Date(Date.now() - DAY_MS))
+		exportCounts(since24h),
+		exportTotal(),
+		exportTotal(since24h)
 	]);
+
+	// Anonymous exports (ipHash-only) = global total minus the sum of per-user
+	// counts, so the admin can see traffic that isn't attributed to any account.
+	const attributed24h = Object.values(last24h).reduce((a, b) => a + b, 0);
+	const attributedAll = Object.values(allTime).reduce((a, b) => a + b, 0);
 
 	const users = rows.map((r) => ({
 		id: r.id,
@@ -75,7 +95,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 		else totals.free++;
 	}
 
-	return { users, totals };
+	const usage = {
+		exports24h,
+		exportsAllTime,
+		anon24h: Math.max(0, exports24h - attributed24h),
+		anonAllTime: Math.max(0, exportsAllTime - attributedAll)
+	};
+
+	return { users, totals, usage };
 };
 
 export const actions: Actions = {
