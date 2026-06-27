@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { EditElement, PolygonElement } from '$lib/pdf/types';
-	import type { EditorState } from '../editor.svelte';
+	import type { PolygonElement } from '$lib/pdf/types';
+	import type { OverlayProps } from './types';
 	import { SCALE } from '../constants';
 
-	let { el, editor }: { el: EditElement; editor: EditorState; preview?: boolean } = $props();
+	let { el, editor }: OverlayProps = $props();
 	const poly = $derived(el as PolygonElement);
 	const isDraft = $derived(editor.polygonDraftId === el.id);
 

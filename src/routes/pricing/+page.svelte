@@ -143,6 +143,8 @@
 
 	{#if data.manageUrl}
 		<p class="mt-8 text-center text-sm">
+			<!-- external Lemon Squeezy billing portal URL; resolve() applies only to internal routes -->
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 			<a href={data.manageUrl} class="font-medium text-blue-600 hover:underline">
 				Manage billing
 			</a>

@@ -12,6 +12,8 @@ export default defineConfig(
 	includeIgnoreFile(gitignorePath),
 	// Vendored reference implementation — not linted as project code.
 	{ ignores: ['pdf-forms/'] },
+	// Bundled agent skill scripts — third-party tooling, not project code.
+	{ ignores: ['.claude/'] },
 	js.configs.recommended,
 	ts.configs.recommended,
 	svelte.configs.recommended,

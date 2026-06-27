@@ -1,6 +1,6 @@
 import type { Component } from 'svelte';
 import type { EditElement } from '$lib/pdf/types';
-import type { EditorState } from '../editor.svelte';
+import type { OverlayProps } from './types';
 import TextOverlay from './TextOverlay.svelte';
 import RasterOverlay from './RasterOverlay.svelte';
 import ShapeOverlay from './ShapeOverlay.svelte';
@@ -9,13 +9,7 @@ import PathOverlay from './PathOverlay.svelte';
 import PolygonOverlay from './PolygonOverlay.svelte';
 import LinkOverlay from './LinkOverlay.svelte';
 
-/** Props every overlay component receives. */
-export interface OverlayProps {
-	el: EditElement;
-	editor: EditorState;
-	/** Read-only render for the page thumbnail: no focus-grab, no editing. */
-	preview?: boolean;
-}
+export type { OverlayProps };
 
 /**
  * Registry mapping each element `type` to the component that renders its

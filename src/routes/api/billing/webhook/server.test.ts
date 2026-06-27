@@ -20,7 +20,7 @@ function makeEvent(rawBody: string, signature: string | null) {
 			headers: signature ? { 'X-Signature': signature } : {},
 			body: rawBody
 		})
-	} as any;
+	} as unknown as Parameters<typeof POST>[0];
 }
 
 describe('POST /api/billing/webhook', () => {

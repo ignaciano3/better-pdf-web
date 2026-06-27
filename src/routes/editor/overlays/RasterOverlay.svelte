@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { EditElement, ImageElement, SignatureElement } from '$lib/pdf/types';
-	import type { EditorState } from '../editor.svelte';
+	import type { ImageElement, SignatureElement } from '$lib/pdf/types';
+	import type { OverlayProps } from './types';
 	import { SCALE } from '../constants';
 
-	let { el, editor }: { el: EditElement; editor: EditorState; preview?: boolean } = $props();
+	let { el, editor }: OverlayProps = $props();
 	const raster = $derived(el as SignatureElement | ImageElement);
 
 	// Mirror the export `drawImage` transform: rotate/skew are degrees about the

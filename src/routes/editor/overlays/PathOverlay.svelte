@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { EditElement, PathElement } from '$lib/pdf/types';
-	import type { EditorState } from '../editor.svelte';
+	import type { PathElement } from '$lib/pdf/types';
+	import type { OverlayProps } from './types';
 	import { SCALE } from '../constants';
 
-	let { el, editor }: { el: EditElement; editor: EditorState; preview?: boolean } = $props();
+	let { el, editor }: OverlayProps = $props();
 	const path = $derived(el as PathElement);
 
 	// Points are absolute top-left-origin PDF points; render relative to the box.

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { EditElement, ShapeElement } from '$lib/pdf/types';
-	import type { EditorState } from '../editor.svelte';
+	import type { ShapeElement } from '$lib/pdf/types';
+	import type { OverlayProps } from './types';
 	import { SCALE } from '../constants';
 
-	let { el, editor }: { el: EditElement; editor: EditorState; preview?: boolean } = $props();
+	let { el, editor }: OverlayProps = $props();
 	const shape = $derived(el as ShapeElement);
 
 	const w = $derived(Math.max(shape.width, 0) * SCALE);

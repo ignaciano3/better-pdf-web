@@ -124,7 +124,13 @@ describe('buildCheckoutPayload', () => {
 			variantId: '999',
 			userId: 'user_1',
 			email: 'a@b.com'
-		}) as any;
+		}) as {
+			data: {
+				type: string;
+				attributes: { checkout_data: { email: string; custom: { user_id: string } } };
+				relationships: { store: { data: { id: string } }; variant: { data: { id: string } } };
+			};
+		};
 		expect(payload.data.type).toBe('checkouts');
 		expect(payload.data.attributes.checkout_data.email).toBe('a@b.com');
 		expect(payload.data.attributes.checkout_data.custom.user_id).toBe('user_1');
