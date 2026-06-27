@@ -18,7 +18,7 @@
 	<!-- The editor owns a locked, full-height shell; it manages its own internal scrolling. -->
 	<div class="flex h-screen flex-col">
 		<div class="shrink-0">
-			<Header user={data.user} isRoot={data.isRoot} minimal />
+			<Header user={data.user} isRoot={data.isRoot} />
 		</div>
 		<div class="flex min-h-0 flex-1 flex-col">
 			{@render children()}

@@ -159,11 +159,13 @@
 			</button>
 		</div>
 
-		<!-- Center: Insert tools. On phones the whole group is a single
-	     horizontally-scrollable strip (one tidy row instead of stacking six);
-	     from `sm` up it wraps onto more rows so nothing is pushed off-screen (#3). -->
+		<!-- Center: Insert tools. Phones: a single horizontally-scrollable strip.
+	     sm–md (not enough room for one row): the original flex-wrap.
+	     lg+: one flex row where each section grows from its content size, so the
+	     wider sections (Fields) get proportionally more room and the centre fills
+	     instead of breaking into equal, half-empty columns (#3). -->
 		<div
-			class="order-3 flex w-full min-w-0 flex-nowrap items-center gap-x-4 gap-y-2 overflow-x-auto sm:order-2 sm:w-auto sm:flex-1 sm:flex-wrap sm:overflow-x-visible"
+			class="order-3 flex w-full min-w-0 flex-nowrap items-center gap-x-4 gap-y-2 overflow-x-auto sm:order-2 sm:w-auto sm:flex-1 sm:flex-wrap sm:overflow-x-visible lg:flex-nowrap lg:items-start"
 		>
 			<ContentSection {editor} {onDrawSignature} />
 			<FieldsSection {editor} />
@@ -189,12 +191,24 @@
 			{/if}
 			<div class="relative" data-menu="doc">
 				<button
-					class="rounded px-2.5 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+					class="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
 					aria-haspopup="menu"
 					aria-expanded={docMenuOpen}
 					onclick={() => (docMenuOpen = !docMenuOpen)}
 				>
-					Document ▾
+					Document
+					<svg
+						class="h-3.5 w-3.5 text-slate-400"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+					>
+						<path d="m6 9 6 6 6-6" />
+					</svg>
 				</button>
 				{#if docMenuOpen}
 					<div

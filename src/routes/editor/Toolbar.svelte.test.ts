@@ -99,7 +99,7 @@ describe('Toolbar', () => {
 		const editor = new EditorState();
 		render(Toolbar, { props: { editor, onDrawSignature: () => {}, ready: true } });
 
-		await user.click(screen.getByRole('button', { name: 'Document ▾' }));
+		await user.click(screen.getByRole('button', { name: 'Document' }));
 		flushSync();
 		expect(screen.queryByRole('menuitem', { name: 'Properties…' })).not.toBeNull();
 
@@ -133,7 +133,7 @@ describe('Toolbar', () => {
 		expect(screen.getByText('Upload')).toBeTruthy();
 		// Insert tools, Document menu and undo/redo are gone — single focus.
 		expect(screen.queryByRole('button', { name: 'Text' })).toBeNull();
-		expect(screen.queryByRole('button', { name: 'Document ▾' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Document' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull();
 		expect(screen.queryByText('Fields')).toBeNull();
 	});
@@ -143,14 +143,14 @@ describe('Toolbar', () => {
 		const editor = new EditorState();
 		render(Toolbar, { props: { editor, onDrawSignature: () => {}, ready: true } });
 
-		await user.click(screen.getByRole('button', { name: 'Document ▾' }));
+		await user.click(screen.getByRole('button', { name: 'Document' }));
 		flushSync();
 		await user.click(screen.getByRole('menuitem', { name: 'Properties…' }));
 		flushSync();
 		expect(editor.docPropsModalOpen).toBe(true);
 
 		// Selecting an item closes the menu; reopen for the next pick.
-		await user.click(screen.getByRole('button', { name: 'Document ▾' }));
+		await user.click(screen.getByRole('button', { name: 'Document' }));
 		flushSync();
 		await user.click(screen.getByRole('menuitem', { name: 'Outline / bookmarks…' }));
 		flushSync();

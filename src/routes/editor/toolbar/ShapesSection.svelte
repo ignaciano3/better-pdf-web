@@ -28,7 +28,7 @@
 	}
 </script>
 
-<div class="flex shrink-0 items-center gap-1.5">
+<div class="flex shrink-0 items-center gap-1.5 sm:min-w-0 sm:shrink lg:flex-auto">
 	<span class={sectionLabel}>Shapes</span>
 	<div class={sectionGroup}>
 		{#each shapeTools as t (t.kind)}

@@ -22,7 +22,7 @@
 	}
 </script>
 
-<div class="flex shrink-0 items-center gap-1.5">
+<div class="flex shrink-0 items-center gap-1.5 sm:min-w-0 sm:shrink lg:flex-auto">
 	<span class={sectionLabel}>Fields</span>
 	<div class={sectionGroup}>
 		{#each fieldTools as f (f.kind)}

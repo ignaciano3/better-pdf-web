@@ -29,7 +29,7 @@
 	// Page-control buttons (move/rotate/insert/delete). Icon-only, so each needs a
 	// descriptive aria-label; a visible focus ring keeps them keyboard-navigable.
 	const opBtn =
-		'rounded px-1.5 py-1 text-[11px] transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none disabled:opacity-30';
+		'inline-flex items-center justify-center rounded p-1 transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none disabled:opacity-30';
 
 	// Thumbnail dimensions, scaled to fit a small fixed width.
 	const THUMB_W = 96;
@@ -38,6 +38,85 @@
 		return `width: ${THUMB_W}px; height: ${h}px;`;
 	}
 </script>
+
+<!-- Stroked icons matching the toolbar's icon family (Upload / undo / Export),
+     defined once and reused across every page row instead of emoji glyphs. -->
+{#snippet iconChevronLeft()}
+	<svg
+		class="h-3.5 w-3.5"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+		aria-hidden="true"><path d="m11 17-5-5 5-5" /><path d="m18 17-5-5 5-5" /></svg
+	>
+{/snippet}
+{#snippet iconUp()}
+	<svg
+		class="h-3.5 w-3.5"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+		aria-hidden="true"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg
+	>
+{/snippet}
+{#snippet iconDown()}
+	<svg
+		class="h-3.5 w-3.5"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+		aria-hidden="true"><path d="M12 5v14" /><path d="m19 12-7 7-7-7" /></svg
+	>
+{/snippet}
+{#snippet iconRotate()}
+	<svg
+		class="h-3.5 w-3.5"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+		aria-hidden="true"
+		><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.85.99 6.6 2.6L21 8" /><path d="M21 3v5h-5" /></svg
+	>
+{/snippet}
+{#snippet iconPlus()}
+	<svg
+		class="h-3.5 w-3.5"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+		aria-hidden="true"><path d="M12 5v14" /><path d="M5 12h14" /></svg
+	>
+{/snippet}
+{#snippet iconTrash()}
+	<svg
+		class="h-3.5 w-3.5"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+		aria-hidden="true"
+		><path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path
+			d="m19 6-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+		/></svg
+	>
+{/snippet}
 
 {#if editor.pages.length > 0}
 	<aside
@@ -57,12 +136,12 @@
 				</button>
 				<button
 					type="button"
-					class="rounded px-1.5 py-0.5 text-sm text-slate-500 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none"
+					class="inline-flex items-center justify-center rounded p-1 text-slate-500 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none"
 					title="Hide pages panel"
 					aria-label="Hide pages panel"
 					onclick={() => (editor.showPages = false)}
 				>
-					«
+					{@render iconChevronLeft()}
 				</button>
 			</div>
 		</div>
@@ -139,7 +218,7 @@
 						title="Move up"
 						aria-label="Move page {i + 1} up"
 						disabled={i === 0}
-						onclick={() => editor.movePageUp(i)}>↑</button
+						onclick={() => editor.movePageUp(i)}>{@render iconUp()}</button
 					>
 					<button
 						type="button"
@@ -147,21 +226,21 @@
 						title="Move down"
 						aria-label="Move page {i + 1} down"
 						disabled={i === editor.pages.length - 1}
-						onclick={() => editor.movePageDown(i)}>↓</button
+						onclick={() => editor.movePageDown(i)}>{@render iconDown()}</button
 					>
 					<button
 						type="button"
 						class="{opBtn} text-slate-600"
 						title="Rotate 90°"
 						aria-label="Rotate page {i + 1} 90 degrees"
-						onclick={() => editor.rotatePage(i)}>⟳</button
+						onclick={() => editor.rotatePage(i)}>{@render iconRotate()}</button
 					>
 					<button
 						type="button"
 						class="{opBtn} text-slate-600"
 						title="Insert blank after"
 						aria-label="Insert blank page after page {i + 1}"
-						onclick={() => insertBlank(i)}>＋</button
+						onclick={() => insertBlank(i)}>{@render iconPlus()}</button
 					>
 					<button
 						type="button"
@@ -169,7 +248,7 @@
 						title="Delete page"
 						aria-label="Delete page {i + 1}"
 						disabled={editor.pages.length <= 1}
-						onclick={() => editor.deletePage(i)}>🗑</button
+						onclick={() => editor.deletePage(i)}>{@render iconTrash()}</button
 					>
 				</div>
 			</div>
