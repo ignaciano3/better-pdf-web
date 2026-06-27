@@ -71,9 +71,18 @@
 			editor.redo();
 		}
 	}
+
+	// Nothing persists across reloads yet, so warn before the user loses unsaved
+	// edits by closing or refreshing the tab. The native prompt is the only
+	// reliable mechanism here; the message string is ignored by modern browsers.
+	function onBeforeUnload(event: BeforeUnloadEvent) {
+		if (!editor.hasUnsavedWork) return;
+		event.preventDefault();
+		event.returnValue = '';
+	}
 </script>
 
-<svelte:window onkeydown={onKeydown} />
+<svelte:window onkeydown={onKeydown} onbeforeunload={onBeforeUnload} />
 
 <div class="flex min-h-0 flex-1 flex-col bg-slate-100">
 	<Toolbar {editor} ready={!showEmptyState} onDrawSignature={() => (showSignaturePad = true)} />

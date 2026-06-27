@@ -255,6 +255,14 @@ export class EditorState {
 	redoDepth = $state(0);
 	canUndo = $derived(this.undoDepth > 0);
 	canRedo = $derived(this.redoDepth > 0);
+	/**
+	 * True once the user has made at least one change since the document was
+	 * loaded/started — i.e. there's authored work that lives only in this tab and
+	 * would be lost on close/reload (nothing persists; export is the way to keep
+	 * it). A freshly loaded PDF with no edits is not "unsaved": the original file
+	 * still exists. Drives the toolbar status and the beforeunload guard.
+	 */
+	hasUnsavedWork = $derived(this.undoDepth > 0);
 
 	constructor() {
 		this.#committed = this.#takeSnapshot();

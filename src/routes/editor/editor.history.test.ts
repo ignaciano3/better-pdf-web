@@ -140,6 +140,18 @@ describe('EditorState undo/redo', () => {
 		expect(e.canRedo).toBe(false);
 	});
 
+	it('tracks unsaved work for the persistence warning', () => {
+		const e = makeEditor();
+		expect(e.hasUnsavedWork).toBe(false); // fresh editor, nothing to lose
+
+		e.addTextAt(10, 10, 0);
+		e.flushHistory();
+		expect(e.hasUnsavedWork).toBe(true); // an edit exists only in this tab
+
+		e.undo();
+		expect(e.hasUnsavedWork).toBe(false); // back to the empty baseline
+	});
+
 	it('undo/redo on empty history are safe no-ops', () => {
 		const e = makeEditor();
 		expect(() => {
