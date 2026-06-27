@@ -79,7 +79,15 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
-<div class="relative flex-1 overflow-auto p-8" bind:clientWidth={editor.canvasWidth}>
+<!-- `scrollbar-gutter: stable` reserves the vertical scrollbar's width up front so
+     `canvasWidth` (clientWidth) stays constant whether or not the page is tall
+     enough to scroll. Without it, fitToWidth measures the full width, the zoomed
+     page then triggers a vertical scrollbar that steals ~15px, and the now-too-wide
+     page spills into a spurious horizontal scrollbar. -->
+<div
+	class="relative flex-1 overflow-auto p-8 [scrollbar-gutter:stable]"
+	bind:clientWidth={editor.canvasWidth}
+>
 	<!-- While placing an image/signature, the destination isn't obvious until the
 	     click lands, so float a hint and switch the page cursor to a crosshair. -->
 	{#if editor.pendingImage || editor.pendingSignature}
