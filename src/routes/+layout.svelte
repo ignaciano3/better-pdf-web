@@ -14,21 +14,30 @@
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
-<div class="flex h-screen flex-col">
-	<div class="shrink-0">
-		<Header user={data.user} isRoot={data.isRoot} />
-	</div>
-	{#if isEditor}
+{#if isEditor}
+	<!-- The editor owns a locked, full-height shell; it manages its own internal scrolling. -->
+	<div class="flex h-screen flex-col">
+		<div class="shrink-0">
+			<Header user={data.user} isRoot={data.isRoot} />
+		</div>
 		<div class="flex min-h-0 flex-1 flex-col">
 			{@render children()}
 		</div>
-	{:else if isHome}
-		<main class="flex-1 overflow-auto">
-			{@render children()}
-		</main>
-	{:else}
-		<main class="flex-1 overflow-auto px-6 py-6">
-			{@render children()}
-		</main>
-	{/if}
-</div>
+	</div>
+{:else}
+	<!-- Content routes use native document scroll with a sticky header. -->
+	<div class="flex min-h-screen flex-col">
+		<div class="sticky top-0 z-40 shrink-0">
+			<Header user={data.user} isRoot={data.isRoot} />
+		</div>
+		{#if isHome}
+			<main class="flex-1">
+				{@render children()}
+			</main>
+		{:else}
+			<main class="flex-1 px-6 py-6">
+				{@render children()}
+			</main>
+		{/if}
+	</div>
+{/if}

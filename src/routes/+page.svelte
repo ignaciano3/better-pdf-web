@@ -284,7 +284,7 @@
 						</div>
 						<span class="font-display text-[15px] font-bold">Better PDF Web</span>
 					</div>
-					<p class="mt-3.5 max-w-xs text-sm leading-relaxed text-slate-500">
+					<p class="mt-3.5 max-w-xs text-sm leading-relaxed text-slate-600">
 						Edit &amp; create PDFs in your browser — privately. Your files are never stored on our
 						servers, only used to generate your PDF.
 					</p>
@@ -316,7 +316,7 @@
 
 			<div class="flex flex-wrap items-center justify-between gap-3.5">
 				<span class="text-[13px] text-slate-400">© 2026 Better PDF Web</span>
-				<span class="text-[13.5px] text-slate-500">
+				<span class="text-[13.5px] text-slate-600">
 					Powered by
 					<a
 						href="https://github.com/ignaciano3/better-pdf"
