@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { signIn, signUp } from '$lib/auth-client';
+	import Seo from '$lib/components/Seo.svelte';
 
 	let name = $state('');
 	let email = $state('');
@@ -28,6 +29,12 @@
 		await signIn.social({ provider: 'google', callbackURL: '/' });
 	}
 </script>
+
+<Seo
+	title="Sign up — Better PDF Web"
+	description="Create a free Better PDF Web account for more exports per hour and to upgrade to Pro for unlimited exports."
+	noindex
+/>
 
 <div class="mx-auto max-w-sm">
 	<h1 class="mb-6 text-2xl font-semibold text-gray-900">Sign up</h1>

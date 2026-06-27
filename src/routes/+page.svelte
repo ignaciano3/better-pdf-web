@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import Seo, { SITE_NAME } from '$lib/components/Seo.svelte';
 
 	const user = $derived(page.data['user'] as { email: string } | null | undefined);
 
@@ -71,7 +72,43 @@
 			a: 'Yes. The editor supports touch, so you can draw and drag pages around on phones and tablets.'
 		}
 	];
+
+	const origin = $derived(page.url.origin);
+
+	// FAQ rich result — reuses the same Q&A shown on the page.
+	const faqJsonLd = $derived({
+		'@context': 'https://schema.org',
+		'@type': 'FAQPage',
+		mainEntity: faqs.map((f) => ({
+			'@type': 'Question',
+			name: f.q,
+			acceptedAnswer: { '@type': 'Answer', text: f.a }
+		}))
+	});
+
+	// Product/app structured data — free, browser-based PDF editor.
+	const appJsonLd = $derived({
+		'@context': 'https://schema.org',
+		'@type': 'WebApplication',
+		name: SITE_NAME,
+		url: origin,
+		applicationCategory: 'BusinessApplication',
+		operatingSystem: 'Any (web browser)',
+		description:
+			'Edit and create PDFs in your browser — fill forms, add text and images, draw, sign, merge, split and reorder pages, then export. Free, private, no account needed.',
+		offers: {
+			'@type': 'Offer',
+			price: '0',
+			priceCurrency: 'USD'
+		}
+	});
 </script>
+
+<Seo
+	title="Better PDF Web — Edit &amp; create PDFs in your browser, free"
+	description="Fill PDF forms, add text and images, draw and sign, merge, split and reorder pages — all in your browser. Free up to 2 exports per hour, no account, no watermarks."
+	jsonLd={[appJsonLd, faqJsonLd]}
+/>
 
 <div class="bg-white font-sans text-slate-900 antialiased">
 	<!-- HERO -->

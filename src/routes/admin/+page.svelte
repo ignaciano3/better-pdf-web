@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
+	import Seo from '$lib/components/Seo.svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -14,6 +15,8 @@
 		return 'bg-gray-100 text-gray-700';
 	}
 </script>
+
+<Seo title="Admin · Users — Better PDF Web" description="Admin dashboard." noindex />
 
 <main class="mx-auto max-w-5xl px-6 py-12">
 	<div class="mb-6 flex items-center justify-between">

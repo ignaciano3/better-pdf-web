@@ -13,6 +13,7 @@
 	import WatermarkModal from './WatermarkModal.svelte';
 	import UpsellModal from './UpsellModal.svelte';
 	import { SHORTCUT_TO_DRAW, SELECT_SHORTCUT } from './constants';
+	import Seo from '$lib/components/Seo.svelte';
 
 	const editor = new EditorState();
 	// Free pdf.js worker memory (cached source documents) when leaving the editor.
@@ -143,6 +144,12 @@
 		event.returnValue = '';
 	}
 </script>
+
+<Seo
+	title="PDF editor — Better PDF Web"
+	description="Fill forms, add text and images, draw and sign, merge, split and reorder pages, then export — right in your browser."
+	noindex
+/>
 
 <svelte:window onkeydown={onKeydown} onbeforeunload={onBeforeUnload} />
 

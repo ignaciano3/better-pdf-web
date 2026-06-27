@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import Seo from '$lib/components/Seo.svelte';
 	import type { PageData } from './$types';
 
 	// Layout data (user/isRoot) flows into page data.
@@ -35,6 +36,11 @@
 		}
 	}
 </script>
+
+<Seo
+	title="Pricing — Better PDF Web"
+	description="Free PDF editing in your browser with no account. Go Pro for $6/mo ($48/year) for unlimited exports and priority processing, or grab a $3 day pass."
+/>
 
 <main class="mx-auto max-w-5xl px-6 py-16">
 	<div class="mb-10 text-center">

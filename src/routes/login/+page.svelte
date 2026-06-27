@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { signIn } from '$lib/auth-client';
+	import Seo from '$lib/components/Seo.svelte';
 
 	let email = $state('');
 	let password = $state('');
@@ -27,6 +28,12 @@
 		await signIn.social({ provider: 'google', callbackURL: '/' });
 	}
 </script>
+
+<Seo
+	title="Log in — Better PDF Web"
+	description="Log in to Better PDF Web to get more exports per hour and manage your plan."
+	noindex
+/>
 
 <div class="mx-auto max-w-sm">
 	<h1 class="mb-6 text-2xl font-semibold text-gray-900">Log in</h1>
