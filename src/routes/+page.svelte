@@ -30,6 +30,47 @@
 			body: 'Place clickable links and a navigable bookmark outline in your finished documents.'
 		}
 	];
+
+	const steps = [
+		{
+			n: '01',
+			title: 'Open a PDF',
+			body: 'Start a blank document or upload an existing file. Everything you do next runs right here in your browser.'
+		},
+		{
+			n: '02',
+			title: 'Edit everything',
+			body: 'Fill fields, add text and images, draw, sign, then merge, split and reorder pages until it’s right.'
+		},
+		{
+			n: '03',
+			title: 'Export',
+			body: 'Download your finished PDF. Free up to 2 exports per hour — no account, no watermarks.'
+		}
+	];
+
+	const faqs = [
+		{
+			q: 'Do I need an account?',
+			a: 'No. All editing tools are free with no sign-up. You get 2 exports per hour, or 5 when signed in.'
+		},
+		{
+			q: 'Are my files private?',
+			a: 'Yes. Files are never stored on our servers — they’re only sent to build your export, then discarded. We never add watermarks.'
+		},
+		{
+			q: 'What does it cost?',
+			a: 'The editor is free. Pro is $6/mo (or $48/year — that’s $4/mo) for unlimited exports and priority processing. A $3 day pass is coming soon.'
+		},
+		{
+			q: 'What can I edit?',
+			a: 'Fill AcroForm fields, add text and images, draw and sign, merge, split and reorder pages, embed custom fonts, and add links and bookmarks.'
+		},
+		{
+			q: 'Does it work on mobile?',
+			a: 'Yes. The editor supports touch, so you can draw and drag pages around on phones and tablets.'
+		}
+	];
 </script>
 
 <div class="bg-white font-sans text-slate-900 antialiased">
@@ -45,8 +86,8 @@
 
 				<p class="mt-5 max-w-lg text-lg leading-relaxed text-slate-600">
 					Fill forms, add text and images, draw and sign — then export.
-					<span class="font-semibold text-slate-900">Free up to 2 exports per hour</span>, no account
-					needed.
+					<span class="font-semibold text-slate-900">Free up to 2 exports per hour</span>, no
+					account needed.
 				</p>
 
 				<div class="mt-8 flex flex-wrap gap-3">
@@ -112,18 +153,27 @@
 					<!-- toolbar row B: tool groups (clipped with right fade) -->
 					<div class="relative border-b border-slate-100 bg-white">
 						<div class="flex items-center gap-2.25 overflow-hidden px-3.5 py-2.25">
-							<span class="flex-none font-mono text-[9px] font-medium tracking-[0.1em] text-slate-400">CONTENT</span>
+							<span
+								class="flex-none font-mono text-[9px] font-medium tracking-[0.1em] text-slate-400"
+								>CONTENT</span
+							>
 							<span class="flex-none text-[11.5px] font-semibold text-blue-600">Text</span>
 							<span class="flex-none text-[11.5px] text-slate-600">Image</span>
 							<span class="flex-none text-[11.5px] text-slate-600">Signature</span>
 							<span class="flex-none text-[11.5px] text-slate-600">Link</span>
 							<span class="mx-0.5 h-3.5 w-px flex-none bg-slate-200"></span>
-							<span class="flex-none font-mono text-[9px] font-medium tracking-[0.1em] text-slate-400">FIELDS</span>
+							<span
+								class="flex-none font-mono text-[9px] font-medium tracking-[0.1em] text-slate-400"
+								>FIELDS</span
+							>
 							<span class="flex-none text-[11.5px] text-slate-600">Text field</span>
 							<span class="flex-none text-[11.5px] text-slate-600">Checkbox</span>
 							<span class="flex-none text-[11.5px] text-slate-600">Dropdown</span>
 							<span class="mx-0.5 h-3.5 w-px flex-none bg-slate-200"></span>
-							<span class="flex-none font-mono text-[9px] font-medium tracking-[0.1em] text-slate-400">SHAPES</span>
+							<span
+								class="flex-none font-mono text-[9px] font-medium tracking-[0.1em] text-slate-400"
+								>SHAPES</span
+							>
 							<span class="flex-none text-[11.5px] text-slate-600">Rectangle</span>
 							<span class="flex-none text-[11.5px] text-slate-600">Draw</span>
 						</div>
@@ -138,7 +188,9 @@
 							class="flex w-27 flex-none flex-col items-center gap-2 border-r border-slate-100 bg-white py-3"
 						>
 							<div class="flex w-full items-center justify-between gap-1.5 px-3 whitespace-nowrap">
-								<span class="font-mono text-[9px] font-medium tracking-[0.08em] text-slate-400">PAGES</span>
+								<span class="font-mono text-[9px] font-medium tracking-[0.08em] text-slate-400"
+									>PAGES</span
+								>
 								<span class="text-[9.5px] font-semibold text-blue-600">+ Blank</span>
 							</div>
 							<div
@@ -157,7 +209,9 @@
 								<div class="h-1.75 w-[94%] rounded bg-slate-200"></div>
 								<div class="h-1.75 w-[86%] rounded bg-slate-200"></div>
 								<!-- selected editable text field -->
-								<div class="relative my-1.25 rounded border-[1.5px] border-blue-600 bg-blue-50/60 px-2.75 py-2.5">
+								<div
+									class="relative my-1.25 rounded border-[1.5px] border-blue-600 bg-blue-50/60 px-2.75 py-2.5"
+								>
 									<div class="h-1.75 w-[70%] rounded bg-slate-700"></div>
 									<span
 										class="absolute -top-1 -left-1 h-1.75 w-1.75 rounded-sm border-[1.5px] border-blue-600 bg-white"
@@ -175,25 +229,35 @@
 								<div class="h-1.75 w-[90%] rounded bg-slate-200"></div>
 								<!-- checkbox fields -->
 								<div class="mt-0.5 flex items-center gap-2">
-									<span class="relative h-2.75 w-2.75 flex-none rounded-sm border-[1.5px] border-blue-600 bg-blue-600">
-										<span class="absolute top-[0.5px] left-[2.5px] h-1.5 w-[3px] rotate-45 border-r-[1.5px] border-b-[1.5px] border-white"></span>
+									<span
+										class="relative h-2.75 w-2.75 flex-none rounded-sm border-[1.5px] border-blue-600 bg-blue-600"
+									>
+										<span
+											class="absolute top-[0.5px] left-[2.5px] h-1.5 w-[3px] rotate-45 border-r-[1.5px] border-b-[1.5px] border-white"
+										></span>
 									</span>
 									<div class="h-1.75 w-[52%] rounded bg-slate-300"></div>
 								</div>
 								<div class="flex items-center gap-2">
-									<span class="h-2.75 w-2.75 flex-none rounded-sm border-[1.5px] border-slate-300 bg-white"></span>
+									<span
+										class="h-2.75 w-2.75 flex-none rounded-sm border-[1.5px] border-slate-300 bg-white"
+									></span>
 									<div class="h-1.75 w-[44%] rounded bg-slate-200"></div>
 								</div>
 								<!-- dropdown field -->
 								<div class="mt-0.5 flex items-center gap-2.25">
 									<div class="h-1.75 w-[30%] rounded bg-slate-300"></div>
-									<div class="flex h-5.5 flex-1 items-center justify-between rounded-md border border-slate-300 bg-white px-2">
+									<div
+										class="flex h-5.5 flex-1 items-center justify-between rounded-md border border-slate-300 bg-white px-2"
+									>
 										<span class="h-1.5 w-[40%] rounded bg-slate-200"></span>
 										<span class="text-[8px] text-slate-400">▾</span>
 									</div>
 								</div>
 								<!-- signature field -->
-								<div class="relative mt-1 flex h-[42px] items-center rounded-md border border-dashed border-blue-600 bg-blue-50/50 px-3.5">
+								<div
+									class="relative mt-1 flex h-[42px] items-center rounded-md border border-dashed border-blue-600 bg-blue-50/50 px-3.5"
+								>
 									<svg width="74" height="22" viewBox="0 0 74 22" fill="none" class="opacity-80">
 										<path
 											d="M2 16C7 6 10 4 12 10s2 9 5 6 4-9 7-7 1 8 5 6 6-10 9-8 2 9 6 7 5-9 9-6 5 5 11 3"
@@ -202,7 +266,10 @@
 											stroke-linecap="round"
 										/>
 									</svg>
-									<span class="absolute top-1.5 right-2.5 font-mono text-[8px] tracking-wider text-slate-400">SIGN</span>
+									<span
+										class="absolute top-1.5 right-2.5 font-mono text-[8px] tracking-wider text-slate-400"
+										>SIGN</span
+									>
 								</div>
 								<!-- image placeholder -->
 								<div
@@ -218,7 +285,9 @@
 								<span class="text-[11px] text-slate-400">−</span>
 								<span class="font-mono text-[10px] text-slate-600">400%</span>
 								<span class="text-[11px] text-slate-400">+</span>
-								<span class="border-l border-slate-100 pl-1 text-[10px] font-semibold text-blue-600">Fit</span>
+								<span class="border-l border-slate-100 pl-1 text-[10px] font-semibold text-blue-600"
+									>Fit</span
+								>
 							</div>
 						</div>
 					</div>
@@ -234,7 +303,9 @@
 		>
 			<span class="relative h-3.5 w-4 flex-none">
 				<span class="absolute bottom-0 left-0 h-2.5 w-4 rounded bg-blue-600"></span>
-				<span class="absolute top-0 left-1 h-2 w-2 rounded-t-md border-[1.6px] border-b-0 border-blue-600"></span>
+				<span
+					class="absolute top-0 left-1 h-2 w-2 rounded-t-md border-[1.6px] border-b-0 border-blue-600"
+				></span>
 			</span>
 			<span class="text-[15px] text-slate-700">
 				<span class="font-semibold text-slate-900">Private by design</span> — your files are never stored
@@ -268,6 +339,111 @@
 					</div>
 				{/each}
 			</dl>
+		</div>
+	</section>
+
+	<!-- HOW IT WORKS -->
+	<section class="border-t border-slate-200 bg-slate-50">
+		<div class="mx-auto max-w-6xl px-6 pt-20 pb-21">
+			<h2
+				class="font-display max-w-md text-[clamp(1.75rem,3.4vw,2.5rem)] leading-tight font-bold tracking-tight text-balance"
+			>
+				From file to finished in three steps
+			</h2>
+			<p class="mt-4 max-w-lg text-base leading-relaxed text-slate-600">
+				No installs, no setup. Open the editor and you’re working.
+			</p>
+
+			<ol class="mt-12 grid gap-x-10 gap-y-10 sm:grid-cols-3">
+				{#each steps as step (step.n)}
+					<li class="border-t border-slate-200 pt-5">
+						<span class="font-mono text-sm font-medium tracking-[0.08em] text-blue-600"
+							>{step.n}</span
+						>
+						<h3 class="font-display mt-3 text-xl font-semibold text-slate-900">{step.title}</h3>
+						<p class="mt-2 text-[15px] leading-relaxed text-slate-600">{step.body}</p>
+					</li>
+				{/each}
+			</ol>
+		</div>
+	</section>
+
+	<!-- FAQ -->
+	<section class="mx-auto max-w-6xl px-6 pt-22 pb-23">
+		<div class="grid gap-x-12 gap-y-9 md:grid-cols-[5fr_7fr]">
+			<div class="md:max-w-sm">
+				<h2
+					class="font-display text-[clamp(1.75rem,3.4vw,2.5rem)] leading-tight font-bold tracking-tight text-balance"
+				>
+					Questions, answered
+				</h2>
+				<p class="mt-4 text-base leading-relaxed text-slate-600">
+					The short version: free, private, no account needed. The details are below.
+				</p>
+			</div>
+
+			<div class="border-t border-slate-200">
+				{#each faqs as item (item.q)}
+					<details class="group border-b border-slate-200">
+						<summary
+							class="flex cursor-pointer list-none items-center justify-between gap-4 py-5 transition-colors hover:text-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 [&::-webkit-details-marker]:hidden"
+						>
+							<span
+								class="font-display text-lg font-semibold text-slate-900 group-hover:text-blue-600"
+								>{item.q}</span
+							>
+							<svg
+								class="h-4 w-4 flex-none text-slate-400 transition-transform duration-200 group-open:rotate-45"
+								viewBox="0 0 16 16"
+								fill="none"
+								aria-hidden="true"
+							>
+								<path
+									d="M8 3v10M3 8h10"
+									stroke="currentColor"
+									stroke-width="1.6"
+									stroke-linecap="round"
+								/>
+							</svg>
+						</summary>
+						<p class="max-w-2xl pr-8 pb-5 text-[15px] leading-relaxed text-slate-600">{item.a}</p>
+					</details>
+				{/each}
+			</div>
+		</div>
+	</section>
+
+	<!-- CLOSING CTA -->
+	<section class="bg-slate-900">
+		<div class="mx-auto max-w-6xl px-6 py-18 text-center">
+			<h2
+				class="font-display mx-auto max-w-2xl text-[clamp(1.875rem,3.8vw,2.75rem)] leading-tight font-bold tracking-tight text-balance text-white"
+			>
+				Ready to edit your PDF?
+			</h2>
+			<p class="mx-auto mt-4 max-w-md text-base leading-relaxed text-slate-300">
+				Open the editor and start right away — no sign-up, no watermarks.
+			</p>
+
+			<div class="mt-8 flex flex-wrap justify-center gap-3">
+				<a
+					href="{resolve('/editor')}?operation=new"
+					class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:bg-blue-700"
+				>
+					Create new PDF
+					<span class="text-lg leading-none">→</span>
+				</a>
+				<a
+					href="{resolve('/editor')}?operation=upload"
+					class="inline-flex items-center gap-2 rounded-xl border border-white/20 px-5.5 py-3.5 text-base font-semibold text-white transition hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/5"
+				>
+					Edit existing PDF
+				</a>
+			</div>
+
+			<p class="mt-4.5 font-mono text-xs text-slate-400">
+				Free up to 2 exports per hour · 5 when signed in
+			</p>
 		</div>
 	</section>
 
