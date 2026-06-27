@@ -33,7 +33,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="absolute {isDraft ? '' : 'cursor-move'} {editor.selectedId === el.id
+	class="absolute {isDraft ? '' : 'touch-none cursor-move'} {editor.selectedId === el.id
 		? 'ring-2 ring-blue-400'
 		: ''}"
 	style="left: {poly.x * SCALE}px; top: {poly.y * SCALE}px; width: {w}px; height: {h}px;"

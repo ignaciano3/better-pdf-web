@@ -112,7 +112,7 @@
 			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 			<div
 				class="relative bg-white shadow-lg {editor.tool.type !== 'select'
-					? 'cursor-crosshair'
+					? 'cursor-crosshair touch-none'
 					: ''}"
 				style="width: {page.width * SCALE}px; height: {page.height * SCALE}px;"
 				onclick={(e) => onPageClick(e, pageIndex)}

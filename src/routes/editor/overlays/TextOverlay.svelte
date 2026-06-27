@@ -50,7 +50,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="absolute cursor-move whitespace-pre outline-none {editor.selectedId === el.id
+	class="absolute touch-none cursor-move whitespace-pre outline-none {editor.selectedId === el.id
 		? 'ring-2 ring-blue-400'
 		: ''}"
 	style="left: {text.x * SCALE}px; top: {text.y * SCALE}px; font-size: {text.size *

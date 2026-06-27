@@ -29,7 +29,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="absolute cursor-move {editor.selectedId === el.id ? 'ring-2 ring-blue-400' : ''}"
+	class="absolute touch-none cursor-move {editor.selectedId === el.id ? 'ring-2 ring-blue-400' : ''}"
 	style="left: {shape.x * SCALE}px; top: {shape.y * SCALE}px; width: {w}px; height: {h}px;"
 	onpointerdown={(e) => editor.startDrag(e, shape)}
 >
@@ -78,7 +78,7 @@
 	{#if editor.selectedId === el.id}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<span
-			class="absolute -right-1.5 -bottom-1.5 h-3 w-3 cursor-nwse-resize rounded-sm border border-white bg-blue-500"
+			class="absolute -right-1.5 -bottom-1.5 h-3 w-3 touch-none cursor-nwse-resize rounded-sm border border-white bg-blue-500"
 			onpointerdown={(e) => editor.startResize(e, shape)}
 		></span>
 	{/if}

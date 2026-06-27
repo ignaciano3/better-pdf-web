@@ -35,7 +35,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="absolute cursor-move {editor.selectedId === el.id ? 'ring-2 ring-blue-400' : ''}"
+	class="absolute touch-none cursor-move {editor.selectedId === el.id ? 'ring-2 ring-blue-400' : ''}"
 	style="left: {path.x * SCALE}px; top: {path.y * SCALE}px; width: {w}px; height: {h}px;"
 	onpointerdown={(e) => editor.startDrag(e, path)}
 >

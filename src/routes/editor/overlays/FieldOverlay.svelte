@@ -76,7 +76,7 @@
 		{@const p = radioPositions[i] ?? { x: field.x, y: field.y }}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			class="absolute flex cursor-move items-center {selected
+			class="absolute flex touch-none cursor-move items-center {selected
 				? 'ring-2 ring-blue-400'
 				: 'ring-1 ring-blue-300/60'}"
 			style="left: {p.x * SCALE}px; top: {p.y * SCALE}px; height: {radioSize * SCALE}px;"
@@ -108,7 +108,7 @@
 		<!-- Drag chrome strip across the top so the inner control stays usable. -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<span
-			class="absolute -top-3 left-0 h-3 w-full cursor-move bg-blue-300/70"
+			class="absolute -top-3 left-0 h-3 w-full touch-none cursor-move bg-blue-300/70"
 			onpointerdown={onChromeDown}
 		></span>
 
@@ -205,7 +205,7 @@
 		{#if selected}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<span
-				class="absolute -right-1.5 -bottom-1.5 h-3 w-3 cursor-nwse-resize rounded-sm border border-white bg-blue-500"
+				class="absolute -right-1.5 -bottom-1.5 h-3 w-3 touch-none cursor-nwse-resize rounded-sm border border-white bg-blue-500"
 				onpointerdown={(e) => editor.startResize(e, field)}
 			></span>
 		{/if}

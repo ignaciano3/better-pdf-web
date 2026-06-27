@@ -20,7 +20,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="absolute cursor-move {editor.selectedId === el.id ? 'ring-2 ring-blue-400' : ''}"
+	class="absolute touch-none cursor-move {editor.selectedId === el.id ? 'ring-2 ring-blue-400' : ''}"
 	style="left: {raster.x * SCALE}px; top: {raster.y * SCALE}px; width: {raster.width *
 		SCALE}px; height: {raster.height * SCALE}px;"
 	onpointerdown={(e) => editor.startDrag(e, raster)}
@@ -35,7 +35,7 @@
 	{#if editor.selectedId === el.id}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<span
-			class="absolute -right-1.5 -bottom-1.5 h-3 w-3 cursor-nwse-resize rounded-sm border border-white bg-blue-500"
+			class="absolute -right-1.5 -bottom-1.5 h-3 w-3 touch-none cursor-nwse-resize rounded-sm border border-white bg-blue-500"
 			onpointerdown={(e) => editor.startResize(e, raster)}
 		></span>
 	{/if}

@@ -735,6 +735,25 @@ export class EditorState {
 		if (height !== undefined && Number.isFinite(height)) el.height = Math.max(4, height);
 	}
 
+	/**
+	 * Drive a window-level pointer-drag gesture. `move` runs on every pointermove;
+	 * `end` runs once when the gesture finishes — either a normal pointerup or a
+	 * pointercancel (a touch pinch/scroll the browser reclaims). All listeners are
+	 * removed before `end` runs, so each caller only describes the work. Handling
+	 * pointercancel is what keeps mobile draws/drags from being silently abandoned.
+	 */
+	#trackGesture(move: (e: PointerEvent) => void, end: () => void = () => {}) {
+		const finish = () => {
+			window.removeEventListener('pointermove', move);
+			window.removeEventListener('pointerup', finish);
+			window.removeEventListener('pointercancel', finish);
+			end();
+		};
+		window.addEventListener('pointermove', move);
+		window.addEventListener('pointerup', finish);
+		window.addEventListener('pointercancel', finish);
+	}
+
 	/** Drag a single radio button (option `index`) to a new position on its page. */
 	startRadioDrag(event: PointerEvent, field: FieldElement, index: number) {
 		this.selectedId = field.id;
@@ -753,12 +772,7 @@ export class EditorState {
 				i === index ? { x: origin.x + dx, y: origin.y + dy } : p
 			);
 		};
-		const up = () => {
-			window.removeEventListener('pointermove', move);
-			window.removeEventListener('pointerup', up);
-		};
-		window.addEventListener('pointermove', move);
-		window.addEventListener('pointerup', up);
+		this.#trackGesture(move);
 	}
 
 	/** Clamp a top-left PDF point to its page bounds so nothing is placed or drawn
@@ -901,18 +915,14 @@ export class EditorState {
 			// opposite directions (top-right → bottom-left or bottom-left → top-right).
 			if (live.shape === 'line') live.antidiagonal = (curX - startX) * (curY - startY) < 0;
 		};
-		const up = () => {
-			window.removeEventListener('pointermove', move);
-			window.removeEventListener('pointerup', up);
+		this.#trackGesture(move, () => {
 			// A stray click with no real drag still yields a visible default shape.
 			if (live.width < SHAPE_MIN_SIZE) live.width = SHAPE_MIN_SIZE * 4;
 			if (live.shape !== 'line' && live.height < SHAPE_MIN_SIZE) live.height = SHAPE_MIN_SIZE * 4;
 			// One-shot tool: return to select after drawing.
 			this.suppressNextClick = true;
 			this.resetTool();
-		};
-		window.addEventListener('pointermove', move);
-		window.addEventListener('pointerup', up);
+		});
 		return true;
 	}
 
@@ -962,9 +972,7 @@ export class EditorState {
 			live.x = box.x;
 			live.y = box.y;
 		};
-		const up = () => {
-			window.removeEventListener('pointermove', move);
-			window.removeEventListener('pointerup', up);
+		this.#trackGesture(move, () => {
 			// Discard single-point taps that produce no visible stroke.
 			if (live.points.length < 2) {
 				this.elements = this.elements.filter((e) => e.id !== live.id);
@@ -972,9 +980,7 @@ export class EditorState {
 			}
 			this.suppressNextClick = true;
 			this.resetTool();
-		};
-		window.addEventListener('pointermove', move);
-		window.addEventListener('pointerup', up);
+		});
 		return true;
 	}
 
@@ -1018,16 +1024,12 @@ export class EditorState {
 			live.width = Math.abs(curX - startX);
 			live.height = Math.abs(curY - startY);
 		};
-		const up = () => {
-			window.removeEventListener('pointermove', move);
-			window.removeEventListener('pointerup', up);
+		this.#trackGesture(move, () => {
 			if (live.width < SHAPE_MIN_SIZE) live.width = LINK_DEFAULT_SIZE.width;
 			if (live.height < SHAPE_MIN_SIZE) live.height = LINK_DEFAULT_SIZE.height;
 			this.suppressNextClick = true;
 			this.resetTool();
-		};
-		window.addEventListener('pointermove', move);
-		window.addEventListener('pointerup', up);
+		});
 		return true;
 	}
 
@@ -1130,12 +1132,7 @@ export class EditorState {
 				el.points = originPoints.map((p) => ({ x: p.x + adx, y: p.y + ady }));
 			}
 		};
-		const up = () => {
-			window.removeEventListener('pointermove', move);
-			window.removeEventListener('pointerup', up);
-		};
-		window.addEventListener('pointermove', move);
-		window.addEventListener('pointerup', up);
+		this.#trackGesture(move);
 	}
 
 	startResize(
@@ -1162,12 +1159,7 @@ export class EditorState {
 				el.height = el.width / aspect;
 			}
 		};
-		const up = () => {
-			window.removeEventListener('pointermove', move);
-			window.removeEventListener('pointerup', up);
-		};
-		window.addEventListener('pointermove', move);
-		window.addEventListener('pointerup', up);
+		this.#trackGesture(move);
 	}
 
 	/** Cached object URL for a raster element's preview image. */

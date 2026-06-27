@@ -49,4 +49,17 @@ describe('ShapeOverlay live preview', () => {
 		const line = container.querySelector('line') as SVGLineElement;
 		expect(line.getAttribute('stroke-dasharray')).toBe('4');
 	});
+
+	// On touch devices a drag on the element must move it, not scroll the page.
+	// Without touch-action:none the browser claims the gesture and fires
+	// pointercancel, abandoning the drag (regression: mobile deselect).
+	it('marks the draggable box and resize handle as touch-action:none', () => {
+		const editor = new EditorState();
+		editor.selectedId = 'sh';
+		const { container } = render(ShapeOverlay, { props: { el: shape(), editor } });
+		const box = container.querySelector('.cursor-move') as HTMLElement;
+		expect(box.classList.contains('touch-none')).toBe(true);
+		const handle = container.querySelector('.cursor-nwse-resize') as HTMLElement;
+		expect(handle.classList.contains('touch-none')).toBe(true);
+	});
 });

@@ -22,7 +22,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="absolute cursor-move overflow-hidden rounded-sm border border-dashed {hasTarget
+	class="absolute touch-none cursor-move overflow-hidden rounded-sm border border-dashed {hasTarget
 		? 'border-blue-500 bg-blue-400/15'
 		: 'border-amber-500 bg-amber-400/20'} {editor.selectedId === el.id
 		? 'ring-2 ring-blue-400'
@@ -41,7 +41,7 @@
 	{#if editor.selectedId === el.id}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<span
-			class="absolute -right-1.5 -bottom-1.5 h-3 w-3 cursor-nwse-resize rounded-sm border border-white bg-blue-500"
+			class="absolute -right-1.5 -bottom-1.5 h-3 w-3 touch-none cursor-nwse-resize rounded-sm border border-white bg-blue-500"
 			onpointerdown={(e) => editor.startResize(e, link)}
 		></span>
 	{/if}
