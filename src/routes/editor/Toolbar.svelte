@@ -65,100 +65,108 @@
 <header
 	class="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-slate-200 bg-white px-3 py-2"
 >
-	<!-- Left: File (icons). Stacks New blank under Upload on narrow screens. -->
-	<div class="order-1 flex shrink-0 flex-col items-start gap-1 sm:flex-row sm:items-center">
-		<label
-			class="flex cursor-pointer items-center gap-1.5 rounded bg-slate-100 px-2.5 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200"
-			title="Upload a PDF"
-		>
-			<!-- upload icon -->
-			<svg
-				class="h-4 w-4"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				aria-hidden="true"
+	<!-- File + history cluster. Upload + New blank, then undo/redo. History sits
+	     inline with Upload on phones and on lg+, but tucks underneath it at
+	     in-between widths where the toolbar is tight — using the space beside the
+	     stacked tool sections instead of widening the controls row. -->
+	<div
+		class="order-1 flex shrink-0 items-center gap-2 sm:flex-col sm:items-start sm:gap-1 lg:flex-row lg:items-center lg:gap-2"
+	>
+		<!-- Upload + New blank. New blank stacks under Upload only on phones. -->
+		<div class="flex flex-col items-start gap-1 sm:flex-row sm:items-center">
+			<label
+				class="flex cursor-pointer items-center gap-1.5 rounded bg-slate-100 px-2.5 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200"
+				title="Upload a PDF"
 			>
-				<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-				<polyline points="17 8 12 3 7 8" />
-				<line x1="12" y1="3" x2="12" y2="15" />
-			</svg>
-			{editor.loadingPdf ? 'Loading…' : 'Upload'}
-			<input
-				type="file"
-				accept="application/pdf,.pdf"
-				class="hidden"
-				disabled={editor.loadingPdf}
-				onchange={onPdfChange}
-			/>
-		</label>
-		{#if editor.sourceBytes}
-			<button
-				onclick={newBlank}
-				class="shrink-0 rounded px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
-			>
-				New blank
-			</button>
+				<!-- upload icon -->
+				<svg
+					class="h-4 w-4"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					aria-hidden="true"
+				>
+					<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+					<polyline points="17 8 12 3 7 8" />
+					<line x1="12" y1="3" x2="12" y2="15" />
+				</svg>
+				{editor.loadingPdf ? 'Loading…' : 'Upload'}
+				<input
+					type="file"
+					accept="application/pdf,.pdf"
+					class="hidden"
+					disabled={editor.loadingPdf}
+					onchange={onPdfChange}
+				/>
+			</label>
+			{#if editor.sourceBytes}
+				<button
+					onclick={newBlank}
+					class="shrink-0 rounded px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+				>
+					New blank
+				</button>
+			{/if}
+		</div>
+
+		{#if ready}
+			<!-- Undo / redo. Disabled (not hidden) when there's nothing to step
+			     through, so the controls stay put. Keyboard: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z.
+			     The divider only shows when undo/redo sits inline with Upload (lg+). -->
+			<div class="flex shrink-0 items-center gap-0.5">
+				<div class="mr-1 hidden h-5 w-px bg-slate-200 lg:block"></div>
+				<button
+					onclick={() => editor.undo()}
+					disabled={!editor.canUndo}
+					class={iconBtn}
+					title="Undo (Ctrl+Z)"
+					aria-label="Undo"
+					aria-keyshortcuts="Control+Z"
+				>
+					<svg
+						class="h-4 w-4"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+					>
+						<path d="M9 14 4 9l5-5" />
+						<path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+					</svg>
+				</button>
+				<button
+					onclick={() => editor.redo()}
+					disabled={!editor.canRedo}
+					class={iconBtn}
+					title="Redo (Ctrl+Shift+Z)"
+					aria-label="Redo"
+					aria-keyshortcuts="Control+Shift+Z Control+Y"
+				>
+					<svg
+						class="h-4 w-4"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+					>
+						<path d="m15 14 5-5-5-5" />
+						<path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
+					</svg>
+				</button>
+			</div>
 		{/if}
 	</div>
 
-	<!-- Editing controls (undo/redo, insert tools, Document menu) appear only once
-	     there's a document to act on. Before that the empty state has a single
-	     focus: get a PDF in. Upload stays available above. -->
 	{#if ready}
-		<!-- Undo / redo. Disabled (not hidden) when there's nothing to step through,
-		     so the controls stay in a stable place. Keyboard: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z. -->
-		<div class="order-1 flex shrink-0 items-center gap-0.5 sm:order-2">
-			<div class="mr-1 hidden h-5 w-px bg-slate-200 sm:block"></div>
-			<button
-				onclick={() => editor.undo()}
-				disabled={!editor.canUndo}
-				class={iconBtn}
-				title="Undo (Ctrl+Z)"
-				aria-label="Undo"
-				aria-keyshortcuts="Control+Z"
-			>
-				<svg
-					class="h-4 w-4"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					aria-hidden="true"
-				>
-					<path d="M9 14 4 9l5-5" />
-					<path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
-				</svg>
-			</button>
-			<button
-				onclick={() => editor.redo()}
-				disabled={!editor.canRedo}
-				class={iconBtn}
-				title="Redo (Ctrl+Shift+Z)"
-				aria-label="Redo"
-				aria-keyshortcuts="Control+Shift+Z Control+Y"
-			>
-				<svg
-					class="h-4 w-4"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					aria-hidden="true"
-				>
-					<path d="m15 14 5-5-5-5" />
-					<path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
-				</svg>
-			</button>
-		</div>
-
 		<!-- Center: Insert tools. Phones: a single horizontally-scrollable strip.
 	     sm–md (not enough room for one row): the original flex-wrap.
 	     lg+: one flex row where each section grows from its content size, so the
