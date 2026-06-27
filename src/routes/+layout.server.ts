@@ -7,7 +7,7 @@ import type { LayoutServerLoad } from './$types';
 export const load: LayoutServerLoad = async ({ locals }) => {
 	// Anonymous callers never hit the DB.
 	if (!locals.user) {
-		return { user: null, isRoot: false, manageUrl: null };
+		return { user: null, plan: 'free' as const, isRoot: false, manageUrl: null };
 	}
 
 	const plan = await resolvePlan(locals.user.id);
@@ -23,5 +23,5 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		manageUrl = rows[0]?.manageUrl ?? null;
 	}
 
-	return { user: locals.user, isRoot: plan === 'root', manageUrl };
+	return { user: locals.user, plan, isRoot: plan === 'root', manageUrl };
 };

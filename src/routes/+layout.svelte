@@ -18,7 +18,7 @@
 	<!-- The editor owns a locked, full-height shell; it manages its own internal scrolling. -->
 	<div class="flex h-screen flex-col">
 		<div class="shrink-0">
-			<Header user={data.user} isRoot={data.isRoot} />
+			<Header user={data.user} plan={data.plan} isRoot={data.isRoot} />
 		</div>
 		<div class="flex min-h-0 flex-1 flex-col">
 			{@render children()}
@@ -28,7 +28,7 @@
 	<!-- Content routes use native document scroll with a sticky header. -->
 	<div class="flex min-h-screen flex-col">
 		<div class="sticky top-0 z-40 shrink-0">
-			<Header user={data.user} isRoot={data.isRoot} />
+			<Header user={data.user} plan={data.plan} isRoot={data.isRoot} />
 		</div>
 		{#if isHome}
 			<main class="flex-1">

@@ -101,7 +101,22 @@
 				<li>✓ Priority processing</li>
 				<li>✓ Heavy ops (OCR / compress) as they ship</li>
 			</ul>
-			{#if data.user}
+			{#if data.plan === 'pro' || data.plan === 'root'}
+				<div
+					class="mt-6 flex items-center justify-center gap-2 rounded-lg bg-blue-50 px-4 py-2 text-center text-sm font-semibold text-blue-700"
+				>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+						<path
+							d="M5 12l5 5L20 7"
+							stroke="currentColor"
+							stroke-width="2.5"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+					Your current plan
+				</div>
+			{:else if data.user}
 				<button
 					type="button"
 					onclick={startCheckout}

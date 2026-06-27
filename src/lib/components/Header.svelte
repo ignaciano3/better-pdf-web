@@ -3,7 +3,15 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { signOut } from '$lib/auth-client';
 
-	let { user, isRoot = false }: { user: { email: string } | null; isRoot?: boolean } = $props();
+	let {
+		user,
+		plan = 'free',
+		isRoot = false
+	}: {
+		user: { email: string } | null;
+		plan?: 'free' | 'pro' | 'root';
+		isRoot?: boolean;
+	} = $props();
 
 	let signingOut = $state(false);
 	let menuOpen = $state(false);
@@ -70,7 +78,15 @@
 						>Admin</a
 					>
 				{/if}
-				<span class="text-slate-500">{user.email}</span>
+				<span class="flex items-center gap-2 text-slate-500">
+					{user.email}
+					{#if plan === 'pro'}
+						<span
+							class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold tracking-wide text-blue-700 uppercase"
+							>Pro</span
+						>
+					{/if}
+				</span>
 				<button
 					type="button"
 					onclick={handleSignOut}
@@ -171,7 +187,15 @@
 					>
 				{/if}
 				<div class="mt-1 border-t border-slate-100 pt-2">
-					<p class="truncate px-2 py-1 text-sm text-slate-500">{user.email}</p>
+					<p class="flex items-center gap-2 px-2 py-1 text-sm text-slate-500">
+						<span class="truncate">{user.email}</span>
+						{#if plan === 'pro'}
+							<span
+								class="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold tracking-wide text-blue-700 uppercase"
+								>Pro</span
+							>
+						{/if}
+					</p>
 					<button
 						type="button"
 						onclick={handleSignOut}
