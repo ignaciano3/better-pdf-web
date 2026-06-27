@@ -93,8 +93,9 @@
 				{field.value === opt ? radioGlyph : ''}
 			</span>
 			{#if selected}
-				<span
-					class="pointer-events-none ml-1 text-xs whitespace-nowrap text-slate-500 italic">{opt}</span>
+				<span class="pointer-events-none ml-1 text-xs whitespace-nowrap text-slate-500 italic"
+					>{opt}</span
+				>
 			{/if}
 		</div>
 	{/each}

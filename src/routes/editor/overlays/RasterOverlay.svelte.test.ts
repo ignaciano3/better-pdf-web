@@ -4,14 +4,14 @@ import { render } from '@testing-library/svelte';
 vi.mock('../export.remote', () => ({ exportPdf: vi.fn() }));
 vi.mock('../extractFields.remote', () => ({ extractFields: vi.fn() }));
 
-
 import RasterOverlay from './RasterOverlay.svelte';
 import { EditorState } from '../editor.svelte';
 import type { ImageElement } from '$lib/pdf/types';
 
 // jsdom has no Blob URL factory; rasterUrl() only needs a string back.
 beforeAll(() => {
-	if (!URL.createObjectURL) URL.createObjectURL = vi.fn(() => 'blob:test') as typeof URL.createObjectURL;
+	if (!URL.createObjectURL)
+		URL.createObjectURL = vi.fn(() => 'blob:test') as typeof URL.createObjectURL;
 });
 
 function image(extra: Partial<ImageElement> = {}): ImageElement {

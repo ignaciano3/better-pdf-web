@@ -66,7 +66,11 @@ export function mapEventToRow(event: LemonSqueezyWebhook): SubscriptionUpsert | 
 	};
 
 	if (attrs.status === 'cancelled') {
-		return { ...base, status: 'active', currentPeriodEnd: parseDate(attrs.ends_at ?? attrs.renews_at) };
+		return {
+			...base,
+			status: 'active',
+			currentPeriodEnd: parseDate(attrs.ends_at ?? attrs.renews_at)
+		};
 	}
 	if (ACTIVE_STATUSES.has(attrs.status)) {
 		return { ...base, status: 'active', currentPeriodEnd: parseDate(attrs.renews_at) };

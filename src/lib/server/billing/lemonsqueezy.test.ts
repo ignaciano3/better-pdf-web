@@ -9,7 +9,16 @@ function sign(body: string): string {
 	return createHmac('sha256', SECRET).update(body).digest('hex');
 }
 
-function event(status: string, opts: Partial<{ name: string; userId: string; renews: string | null; ends: string | null; portal: string }> = {}): LemonSqueezyWebhook {
+function event(
+	status: string,
+	opts: Partial<{
+		name: string;
+		userId: string;
+		renews: string | null;
+		ends: string | null;
+		portal: string;
+	}> = {}
+): LemonSqueezyWebhook {
 	return {
 		meta: {
 			event_name: opts.name ?? 'subscription_updated',

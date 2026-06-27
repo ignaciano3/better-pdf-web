@@ -6,23 +6,24 @@ p1_count: 0
 timestamp: 2026-06-27T05-26-17Z
 slug: src-routes-editor-page-svelte
 ---
+
 # Critique: Editor (`src/routes/editor/+page.svelte`) — re-score (3rd run)
 
 ## Design Health Score
 
-| # | Heuristic | Score | Δ | Key Issue |
-|---|-----------|-------|---|-----------|
-| 1 | Visibility of System Status | 3 | +1 | "Unsaved" status + beforeunload now communicate persistence; no server-retention note |
-| 2 | Match System / Real World | 3 | – | AcroForm jargon (Combo box, List box) still unexplained |
-| 3 | User Control and Freedom | 4 | +1 | Undo/redo + Cmd/Z + confirm-before-discard + escapes everywhere |
-| 4 | Consistency and Standards | 4 | – | Single Export, unified slate, shared modal pattern |
-| 5 | Error Prevention | 3 | +1 | Confirm on discard + beforeunload guard; delete-page still relies on undo |
-| 6 | Recognition Rather Than Recall | 3 | – | Page-panel controls now labeled + focus-ringed (helps assistive tech) |
-| 7 | Flexibility and Efficiency | 2 | – | Undo/redo shortcuts only; no tool shortcuts or bulk ops |
-| 8 | Aesthetic and Minimalist Design | 3 | – | Single-focus empty state; editing toolbar still full (by choice) |
-| 9 | Error Recovery | 3 | – | Clear messages; undo + reassuring upsell |
-| 10 | Help and Documentation | 2 | – | Control tooltips/labels; no first-run help |
-| **Total** | | **30/40** | **+3** | **Good — solid foundation** |
+| #         | Heuristic                       | Score     | Δ      | Key Issue                                                                             |
+| --------- | ------------------------------- | --------- | ------ | ------------------------------------------------------------------------------------- |
+| 1         | Visibility of System Status     | 3         | +1     | "Unsaved" status + beforeunload now communicate persistence; no server-retention note |
+| 2         | Match System / Real World       | 3         | –      | AcroForm jargon (Combo box, List box) still unexplained                               |
+| 3         | User Control and Freedom        | 4         | +1     | Undo/redo + Cmd/Z + confirm-before-discard + escapes everywhere                       |
+| 4         | Consistency and Standards       | 4         | –      | Single Export, unified slate, shared modal pattern                                    |
+| 5         | Error Prevention                | 3         | +1     | Confirm on discard + beforeunload guard; delete-page still relies on undo             |
+| 6         | Recognition Rather Than Recall  | 3         | –      | Page-panel controls now labeled + focus-ringed (helps assistive tech)                 |
+| 7         | Flexibility and Efficiency      | 2         | –      | Undo/redo shortcuts only; no tool shortcuts or bulk ops                               |
+| 8         | Aesthetic and Minimalist Design | 3         | –      | Single-focus empty state; editing toolbar still full (by choice)                      |
+| 9         | Error Recovery                  | 3         | –      | Clear messages; undo + reassuring upsell                                              |
+| 10        | Help and Documentation          | 2         | –      | Control tooltips/labels; no first-run help                                            |
+| **Total** |                                 | **30/40** | **+3** | **Good — solid foundation**                                                           |
 
 ## Anti-Patterns Verdict
 

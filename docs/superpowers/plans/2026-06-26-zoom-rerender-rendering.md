@@ -38,11 +38,13 @@
 ## Task 1: `PdfDocStore` — cache live pdf.js documents
 
 **Files:**
+
 - Create: `src/lib/pdf/pdf-doc-store.ts`
 - Modify: `src/lib/pdf/render.ts` (export `loadPdfjs`)
 - Test: `src/lib/pdf/pdf-doc-store.test.ts`
 
 **Interfaces:**
+
 - Consumes: `loadPdfjs(): Promise<typeof import('pdfjs-dist')>` from `render.ts` (newly exported).
 - Produces:
   - `loadPdfjs` is now `export`ed from `render.ts`.
@@ -230,9 +232,11 @@ git commit -m "feat(pdf): add PdfDocStore caching live pdf.js documents per sour
 ## Task 2: Lower the placeholder/thumbnail oversample
 
 **Files:**
+
 - Modify: `src/lib/pdf/render.ts:39-44` (`renderOversample`)
 
 **Interfaces:**
+
 - Consumes: nothing new.
 - Produces: `renderSourcePdf` output PNGs are now ~1.5–2× device pixels (placeholder/thumbnail only). The public signature of `renderSourcePdf` is unchanged.
 
@@ -280,10 +284,12 @@ git commit -m "perf(pdf): lower PNG oversample now that it is placeholder-only"
 ## Task 3: Wire `PdfDocStore` lifecycle into `EditorState`
 
 **Files:**
+
 - Modify: `src/routes/editor/editor.svelte.ts`
 - Test: `src/routes/editor/editor.svelte.test.ts` (add cases) — verify existing test file path first.
 
 **Interfaces:**
+
 - Consumes: `PdfDocStore` from `$lib/pdf/pdf-doc-store`; `PDFDocumentProxy` type from `pdfjs-dist`.
 - Produces on `EditorState`:
   - `getPdfDoc(docIndex: number): Promise<PDFDocumentProxy>` — resolves the live doc for `docIndex` from `this.sources[docIndex]`; rejects if those bytes are absent.
@@ -434,10 +440,12 @@ git commit -m "feat(editor): own PdfDocStore lifecycle with getPdfDoc + dispose"
 ## Task 4: `PdfPageCanvas` — the live sharp-raster layer
 
 **Files:**
+
 - Create: `src/routes/editor/PdfPageCanvas.svelte`
 - Test: `src/routes/editor/PdfPageCanvas.svelte.test.ts`
 
 **Interfaces:**
+
 - Consumes:
   - `EditorState.getPdfDoc(docIndex): Promise<PDFDocumentProxy>` (Task 3).
   - `EditorState.zoom: number`, `EditorState.sources: Uint8Array[]`.
@@ -448,6 +456,7 @@ git commit -m "feat(editor): own PdfDocStore lifecycle with getPdfDoc + dispose"
   Renders an absolutely-centred placeholder `<img>` (the PNG) with a `<canvas>` over it; the canvas backing store is sized `ceil(SCALE * zoom * dpr * box.{w,h})` and the display box is `box.{w,h} * SCALE` rotated by `rotation`.
 
 **Behaviour notes for the implementer (encoded in the code below):**
+
 - Debounce re-render ~150ms after `editor.zoom` settles.
 - Cancel the in-flight `RenderTask` before starting a new one; a monotonically increasing `seq` guards against out-of-order completion so only the latest scale wins.
 - Only render when the canvas is intersecting the viewport (`IntersectionObserver`, 200px rootMargin); off-screen pages render when scrolled in.
@@ -524,7 +533,14 @@ describe('PdfPageCanvas', () => {
 		const editor = makeEditor();
 		editor.zoom = 1;
 		render(PdfPageCanvas, {
-			props: { editor, docIndex: 0, sourceIndex: 0, render: renderInfo, rotation: 0, box: { width: 100, height: 100 } }
+			props: {
+				editor,
+				docIndex: 0,
+				sourceIndex: 0,
+				render: renderInfo,
+				rotation: 0,
+				box: { width: 100, height: 100 }
+			}
 		});
 		flushSync();
 		await vi.advanceTimersByTimeAsync(200); // past the debounce
@@ -536,7 +552,14 @@ describe('PdfPageCanvas', () => {
 		const editor = makeEditor();
 		editor.zoom = 1;
 		render(PdfPageCanvas, {
-			props: { editor, docIndex: 0, sourceIndex: 0, render: renderInfo, rotation: 0, box: { width: 100, height: 100 } }
+			props: {
+				editor,
+				docIndex: 0,
+				sourceIndex: 0,
+				render: renderInfo,
+				rotation: 0,
+				box: { width: 100, height: 100 }
+			}
 		});
 		flushSync();
 		await vi.advanceTimersByTimeAsync(200);
@@ -554,7 +577,14 @@ describe('PdfPageCanvas', () => {
 	it('renders the PNG placeholder img', () => {
 		const editor = makeEditor();
 		const { container } = render(PdfPageCanvas, {
-			props: { editor, docIndex: 0, sourceIndex: 0, render: renderInfo, rotation: 0, box: { width: 100, height: 100 } }
+			props: {
+				editor,
+				docIndex: 0,
+				sourceIndex: 0,
+				render: renderInfo,
+				rotation: 0,
+				box: { width: 100, height: 100 }
+			}
 		});
 		const img = container.querySelector('img');
 		expect(img?.getAttribute('src')).toBe(renderInfo.dataUrl);
@@ -618,7 +648,14 @@ Create `src/routes/editor/PdfPageCanvas.svelte`:
 		currentTask?.cancel();
 		currentTask = null;
 
-		let page: { getViewport: (o: { scale: number }) => { width: number; height: number }; render: (o: { canvas: HTMLCanvasElement; viewport: unknown }) => { promise: Promise<void>; cancel(): void }; cleanup: () => void } | null = null;
+		let page: {
+			getViewport: (o: { scale: number }) => { width: number; height: number };
+			render: (o: { canvas: HTMLCanvasElement; viewport: unknown }) => {
+				promise: Promise<void>;
+				cancel(): void;
+			};
+			cleanup: () => void;
+		} | null = null;
 		try {
 			const doc = await editor.getPdfDoc(docIndex);
 			if (mine !== seq) return;
@@ -715,9 +752,11 @@ git commit -m "feat(editor): add PdfPageCanvas live re-rasterising layer"
 ## Task 5: Wire `PdfPageCanvas` into `Canvas.svelte`
 
 **Files:**
+
 - Modify: `src/routes/editor/Canvas.svelte:113-128` (the source-page `<img>` block)
 
 **Interfaces:**
+
 - Consumes: `PdfPageCanvas` (Task 4); existing `editor.pageRender(i)`, `editor.pageRotation(i)`, `editor.pageContentBox(i)`, and the `pageOps` entry's `docIndex`/`sourceIndex`.
 - Produces: source pages now show the sharp canvas; blank pages, overlays, watermark, floating toolbar, and the `+ Add page` button are unchanged.
 
@@ -726,7 +765,7 @@ git commit -m "feat(editor): add PdfPageCanvas live re-rasterising layer"
 In `src/routes/editor/Canvas.svelte`, add to the imports (after the `FloatingToolbar` import on line 6):
 
 ```ts
-	import PdfPageCanvas from './PdfPageCanvas.svelte';
+import PdfPageCanvas from './PdfPageCanvas.svelte';
 ```
 
 - [ ] **Step 2: Replace the `<img>` block with `<PdfPageCanvas>`**
@@ -734,46 +773,46 @@ In `src/routes/editor/Canvas.svelte`, add to the imports (after the `FloatingToo
 Replace lines 113–128 (the `{#if editor.pageRender(pageIndex)}` block containing the `<img>`):
 
 ```svelte
-				{#if editor.pageRender(pageIndex)}
-					{@const render = editor.pageRender(pageIndex)}
-					{@const rot = editor.pageRotation(pageIndex)}
-					{@const box = editor.pageContentBox(pageIndex)}
-					<!-- Scale the source image to the (un-rotated) content box, not its
+{#if editor.pageRender(pageIndex)}
+	{@const render = editor.pageRender(pageIndex)}
+	{@const rot = editor.pageRotation(pageIndex)}
+	{@const box = editor.pageContentBox(pageIndex)}
+	<!-- Scale the source image to the (un-rotated) content box, not its
 					     intrinsic size, so a page-size override matches the export, which
 					     stretches the embedded page to fill the same box. -->
-					<img
-						src={render?.dataUrl}
-						alt={`Page ${pageIndex + 1}`}
-						class="pointer-events-none absolute top-1/2 left-1/2 max-w-none select-none"
-						style="width: {box.width * SCALE}px; height: {box.height *
-							SCALE}px; transform: translate(-50%, -50%) rotate({rot}deg);"
-						draggable="false"
-					/>
-				{/if}
+	<img
+		src={render?.dataUrl}
+		alt={`Page ${pageIndex + 1}`}
+		class="pointer-events-none absolute top-1/2 left-1/2 max-w-none select-none"
+		style="width: {box.width * SCALE}px; height: {box.height *
+			SCALE}px; transform: translate(-50%, -50%) rotate({rot}deg);"
+		draggable="false"
+	/>
+{/if}
 ```
 
 with:
 
 ```svelte
-				{#if editor.pageRender(pageIndex)}
-					{@const render = editor.pageRender(pageIndex)}
-					{@const rot = editor.pageRotation(pageIndex)}
-					{@const box = editor.pageContentBox(pageIndex)}
-					{@const op = editor.pageOps[pageIndex]}
-					<!-- Source pages re-rasterise on zoom for native-viewer sharpness;
+{#if editor.pageRender(pageIndex)}
+	{@const render = editor.pageRender(pageIndex)}
+	{@const rot = editor.pageRotation(pageIndex)}
+	{@const box = editor.pageContentBox(pageIndex)}
+	{@const op = editor.pageOps[pageIndex]}
+	<!-- Source pages re-rasterise on zoom for native-viewer sharpness;
 					     the PNG render is the placeholder. The display box matches the
 					     content box (and the export), unaffected by zoom. -->
-					{#if op && op.kind === 'source' && render}
-						<PdfPageCanvas
-							{editor}
-							docIndex={op.docIndex ?? 0}
-							sourceIndex={op.sourceIndex}
-							{render}
-							rotation={rot}
-							{box}
-						/>
-					{/if}
-				{/if}
+	{#if op && op.kind === 'source' && render}
+		<PdfPageCanvas
+			{editor}
+			docIndex={op.docIndex ?? 0}
+			sourceIndex={op.sourceIndex}
+			{render}
+			rotation={rot}
+			{box}
+		/>
+	{/if}
+{/if}
 ```
 
 (`editor.pageRender` already returns `null` for blank pages, so the inner `op.kind === 'source'` guard simply hands `PdfPageCanvas` the exact `docIndex`/`sourceIndex` it needs.)
@@ -800,9 +839,11 @@ git commit -m "feat(editor): render source pages through PdfPageCanvas"
 ## Task 6: Dispose pdf.js documents on editor teardown
 
 **Files:**
+
 - Modify: `src/routes/editor/+page.svelte`
 
 **Interfaces:**
+
 - Consumes: `EditorState.dispose()` (Task 3).
 - Produces: cached pdf.js documents are destroyed when the editor route unmounts.
 
@@ -811,15 +852,15 @@ git commit -m "feat(editor): render source pages through PdfPageCanvas"
 In `src/routes/editor/+page.svelte`, add `onDestroy` to the script. After the `const editor = new EditorState();` line, add:
 
 ```ts
-	import { onDestroy } from 'svelte';
-	// (place the import with the other top-of-script imports)
+import { onDestroy } from 'svelte';
+// (place the import with the other top-of-script imports)
 ```
 
 and after the `const editor = new EditorState();` declaration:
 
 ```ts
-	// Free pdf.js worker memory (cached source documents) when leaving the editor.
-	onDestroy(() => editor.dispose());
+// Free pdf.js worker memory (cached source documents) when leaving the editor.
+onDestroy(() => editor.dispose());
 ```
 
 - [ ] **Step 2: Type-check**
@@ -839,9 +880,11 @@ git commit -m "fix(editor): dispose cached pdf.js documents on teardown"
 ## Task 7: e2e — zoom re-rasterises the source page
 
 **Files:**
+
 - Create: `e2e/zoom-rerender.spec.ts`
 
 **Interfaces:**
+
 - Consumes: the running app at `/editor`; a source PDF to upload (generated in-test so no binary fixture is checked in).
 
 **Note:** There is no PDF fixture in `e2e/` today and the empty-state offers Upload or Start blank. The cheapest real source PDF is one the app itself produces: export a blank page, then re-upload it. The test below does exactly that, so it needs no committed binary.
@@ -856,7 +899,10 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
 async function gotoEditor(page: Page) {
-	await page.addInitScript((fp) => localStorage.setItem('bpw:fingerprint', fp), `e2e-zoom-${randomUUID()}`);
+	await page.addInitScript(
+		(fp) => localStorage.setItem('bpw:fingerprint', fp),
+		`e2e-zoom-${randomUUID()}`
+	);
 	await page.goto('/editor');
 	await expect(page.getByRole('button', { name: 'Export PDF' })).toBeVisible();
 }
@@ -951,5 +997,7 @@ Use superpowers:finishing-a-development-branch to decide merge/PR.
 - **Spec §6 (memory/lifecycle):** `page.cleanup()` per render (Task 4 `finally`); destroy on `clearSource`/`loadPdf`/`onDestroy` (Tasks 3, 6).
 - **Type consistency:** `getPdfDoc(docIndex)`, `dispose()`, `PdfDocStore.get/destroy/destroyAll`, and the `PdfPageCanvas` prop names (`render`, `rotation`, `box`) are used identically across tasks.
 - **Out of scope honoured:** export path and tiled rendering untouched.
+
 ```
 
+```

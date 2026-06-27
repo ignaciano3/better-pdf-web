@@ -4,7 +4,6 @@ import { render } from '@testing-library/svelte';
 vi.mock('../export.remote', () => ({ exportPdf: vi.fn() }));
 vi.mock('../extractFields.remote', () => ({ extractFields: vi.fn() }));
 
-
 import FieldOverlay from './FieldOverlay.svelte';
 import { EditorState } from '../editor.svelte';
 import type { FieldElement } from '$lib/pdf/types';

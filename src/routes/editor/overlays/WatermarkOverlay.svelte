@@ -3,8 +3,14 @@
 	import { SCALE } from '../constants';
 
 	// `pageWidth`/`pageHeight` are unzoomed canvas px (already × SCALE by caller).
-	let { watermark, pageWidth, pageHeight }: {
-		watermark: Watermark; pageWidth: number; pageHeight: number;
+	let {
+		watermark,
+		pageWidth,
+		pageHeight
+	}: {
+		watermark: Watermark;
+		pageWidth: number;
+		pageHeight: number;
 	} = $props();
 
 	const text = $derived(watermark.text.trim());

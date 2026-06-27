@@ -22,6 +22,7 @@
 ## File Structure
 
 **Feature A — Flatten:**
+
 - Modify `src/lib/pdf/types.ts` — add `EditState.flatten?: boolean`.
 - Modify `src/lib/pdf/build.ts` — `flattenAllFields` helper + gate in `buildPdf`.
 - Create `src/lib/pdf/build.flatten.test.ts` — build/flatten tests.
@@ -31,6 +32,7 @@
 - Modify `src/routes/editor/export-validate.test.ts` — validator tests.
 
 **Feature B — Watermark:**
+
 - Modify `src/lib/pdf/types.ts` — add `Watermark` + `EditState.watermark?`.
 - Modify `src/lib/pdf/build.ts` — `drawWatermark` + thread page widths.
 - Create `src/lib/pdf/build.watermark.test.ts` — build tests.
@@ -50,11 +52,13 @@
 ### Task A1: Flatten in the build (model + helper + gate)
 
 **Files:**
+
 - Modify: `src/lib/pdf/types.ts` (add `flatten` to `EditState`)
 - Modify: `src/lib/pdf/build.ts` (helper + `buildPdf` gate)
 - Test: `src/lib/pdf/build.flatten.test.ts` (create)
 
 **Interfaces:**
+
 - Consumes: existing `buildPdf(state: EditState): Promise<Uint8Array>`, `PdfDocument` from `@ignaciano3/better-pdf`.
 - Produces: `EditState.flatten?: boolean`; `buildPdf` returns flattened bytes when `state.flatten === true` and the document has ≥1 field element.
 
@@ -187,10 +191,12 @@ git commit -m "feat(export): flatten authored fields on export"
 ### Task A2: Validate `flatten` in the export boundary
 
 **Files:**
+
 - Modify: `src/routes/editor/export-validate.ts`
 - Test: `src/routes/editor/export-validate.test.ts`
 
 **Interfaces:**
+
 - Consumes: `validateExportInput(input): ExportInput` and the `state` object it builds.
 - Produces: a 422 when `state.flatten` is present and not a boolean.
 
@@ -205,7 +211,10 @@ it('accepts a boolean flatten flag', () => {
 });
 
 it('rejects a non-boolean flatten flag', () => {
-	const input = { state: { pageSize: [595, 842], elements: [], flatten: 'yes' }, fingerprint: 'fp' };
+	const input = {
+		state: { pageSize: [595, 842], elements: [], flatten: 'yes' },
+		fingerprint: 'fp'
+	};
 	expect(() => validateExportInput(input)).toThrow();
 });
 ```
@@ -222,9 +231,9 @@ Expected: FAIL — "rejects a non-boolean flatten flag" does not throw (no valid
 In `src/routes/editor/export-validate.ts`, inside `validateExportInput`, immediately before the final `return { state: state as EditState, fingerprint };`, add:
 
 ```ts
-	if (state.flatten !== undefined && typeof state.flatten !== 'boolean') {
-		error(422, 'Invalid flatten flag');
-	}
+if (state.flatten !== undefined && typeof state.flatten !== 'boolean') {
+	error(422, 'Invalid flatten flag');
+}
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -244,10 +253,12 @@ git commit -m "feat(export): validate flatten flag"
 ### Task A3: Flatten toggle in editor state + Document properties modal
 
 **Files:**
+
 - Modify: `src/routes/editor/editor.svelte.ts`
 - Modify: `src/routes/editor/DocumentPropertiesModal.svelte`
 
 **Interfaces:**
+
 - Consumes: `EditorState.export()` building the `state` object (~`editor.svelte.ts:1241`).
 - Produces: `EditorState.flatten: boolean` ($state); `state.flatten` is shipped when true.
 
@@ -256,8 +267,8 @@ git commit -m "feat(export): validate flatten flag"
 In `src/routes/editor/editor.svelte.ts`, near the other document-level state (after `outline = $state<OutlineItem[]>([]);`, ~line 179), add:
 
 ```ts
-	/** When true, fields are flattened (baked) on export. */
-	flatten = $state(false);
+/** When true, fields are flattened (baked) on export. */
+flatten = $state(false);
 ```
 
 - [ ] **Step 2: Include it in the exported state**
@@ -273,10 +284,10 @@ In the `export()` method, in the `state` object literal (~line 1241), after the 
 In `src/routes/editor/DocumentPropertiesModal.svelte`, inside the `<div class="flex flex-col gap-3">` block, after the Keywords `<label>…</label>`, add:
 
 ```svelte
-				<label class="mt-1 flex items-center gap-2 text-sm">
-					<input type="checkbox" bind:checked={editor.flatten} />
-					<span class="text-gray-700">Flatten fields on export (print-ready, non-editable)</span>
-				</label>
+<label class="mt-1 flex items-center gap-2 text-sm">
+	<input type="checkbox" bind:checked={editor.flatten} />
+	<span class="text-gray-700">Flatten fields on export (print-ready, non-editable)</span>
+</label>
 ```
 
 - [ ] **Step 4: Typecheck + existing tests**
@@ -298,9 +309,11 @@ git commit -m "feat(export): flatten toggle in document properties"
 ### Task B1: Watermark model
 
 **Files:**
+
 - Modify: `src/lib/pdf/types.ts`
 
 **Interfaces:**
+
 - Produces: `Watermark` interface and `EditState.watermark?: Watermark`.
 
 - [ ] **Step 1: Add the type**
@@ -358,10 +371,12 @@ git commit -m "feat(watermark): add Watermark model"
 ### Task B2: Draw the watermark in the build
 
 **Files:**
+
 - Modify: `src/lib/pdf/build.ts`
 - Test: `src/lib/pdf/build.watermark.test.ts` (create)
 
 **Interfaces:**
+
 - Consumes: `EditState.watermark`, `doc.getFont(name)`, `PdfFont.widthOfTextAtSize`, `page.drawText`.
 - Produces: a watermark drawn centered on every page when `state.watermark` has non-empty text. `buildBlankRebuild`/`buildSourceRebuild` now also collect a `pageWidths: number[]` array parallel to `pageHeights`.
 
@@ -445,7 +460,7 @@ function drawWatermark(
 In `buildBlankRebuild`, add a `pageWidths` array alongside `pageHeights`. Where `pageHeights.push(h)` / `pageHeights.push(state.pageSize[1])` occur, also push the corresponding width (`w` and `state.pageSize[0]`). Declare `const pageWidths: number[] = [];` next to `const pageHeights: number[] = [];`. After the `await stampAndAuthor(...)` call and before `applyDocumentProps(...)`, add:
 
 ```ts
-	if (state.watermark) drawWatermark(doc, pageWidths, pageHeights, state.watermark);
+if (state.watermark) drawWatermark(doc, pageWidths, pageHeights, state.watermark);
 ```
 
 In `buildSourceRebuild`, do the same: declare `const pageWidths: number[] = [];`, push the page width next to each `pageHeights.push(...)` (push `boxW` in the `source` branch and `op.size[0]` in the `blank` branch), and after `await stampAndAuthor(...)`, before `applyDocumentProps(...)`, add the identical `if (state.watermark) drawWatermark(...)` line.
@@ -472,10 +487,12 @@ git commit -m "feat(watermark): draw centered text watermark on every page"
 ### Task B3: Validate `watermark` in the export boundary
 
 **Files:**
+
 - Modify: `src/routes/editor/export-validate.ts`
 - Test: `src/routes/editor/export-validate.test.ts`
 
 **Interfaces:**
+
 - Consumes: `validateExportInput`, the existing `STANDARD_FONTS`/font list (if none exists, define a local `const`).
 - Produces: 422 on malformed watermark.
 
@@ -519,9 +536,18 @@ In `src/routes/editor/export-validate.ts`, add a standard-font constant near the
 
 ```ts
 const STANDARD_FONTS = [
-	'Helvetica', 'Helvetica-Bold', 'Helvetica-Oblique', 'Helvetica-BoldOblique',
-	'Courier', 'Courier-Bold', 'Courier-Oblique', 'Courier-BoldOblique',
-	'Times-Roman', 'Times-Bold', 'Times-Italic', 'Times-BoldItalic'
+	'Helvetica',
+	'Helvetica-Bold',
+	'Helvetica-Oblique',
+	'Helvetica-BoldOblique',
+	'Courier',
+	'Courier-Bold',
+	'Courier-Oblique',
+	'Courier-BoldOblique',
+	'Times-Roman',
+	'Times-Bold',
+	'Times-Italic',
+	'Times-BoldItalic'
 ];
 ```
 
@@ -532,8 +558,12 @@ Add a validator function near `validateMetadata`:
 function validateWatermark(wm: unknown): void {
 	if (!wm || typeof wm !== 'object') error(422, 'Invalid watermark');
 	const w = wm as {
-		text?: unknown; font?: unknown; size?: unknown;
-		color?: unknown; opacity?: unknown; rotation?: unknown;
+		text?: unknown;
+		font?: unknown;
+		size?: unknown;
+		color?: unknown;
+		opacity?: unknown;
+		rotation?: unknown;
 	};
 	if (typeof w.text !== 'string') error(422, 'Invalid watermark text');
 	if ((w.text as string).length > MAX_TEXT_LEN) error(422, 'Watermark text too large');
@@ -551,7 +581,13 @@ function validateWatermark(wm: unknown): void {
 	}
 	if (w.color !== undefined) {
 		const c = w.color as { r?: unknown; g?: unknown; b?: unknown };
-		if (!c || typeof c !== 'object' || !isFiniteNumber(c.r) || !isFiniteNumber(c.g) || !isFiniteNumber(c.b)) {
+		if (
+			!c ||
+			typeof c !== 'object' ||
+			!isFiniteNumber(c.r) ||
+			!isFiniteNumber(c.g) ||
+			!isFiniteNumber(c.b)
+		) {
 			error(422, 'Invalid watermark color');
 		}
 	}
@@ -561,7 +597,7 @@ function validateWatermark(wm: unknown): void {
 Then call it in `validateExportInput`, before the final `return`, next to the `flatten` check:
 
 ```ts
-	if (state.watermark !== undefined) validateWatermark(state.watermark);
+if (state.watermark !== undefined) validateWatermark(state.watermark);
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -581,9 +617,11 @@ git commit -m "feat(watermark): validate watermark in export boundary"
 ### Task B4: Watermark editor state + export wiring
 
 **Files:**
+
 - Modify: `src/routes/editor/editor.svelte.ts`
 
 **Interfaces:**
+
 - Produces: `EditorState.watermark: Watermark | null` ($state), `EditorState.watermarkModalOpen: boolean` ($state); `state.watermark` shipped when set and text non-empty.
 
 - [ ] **Step 1: Import the type**
@@ -595,10 +633,10 @@ In `src/routes/editor/editor.svelte.ts`, add `Watermark` to the existing type im
 Near the document-level state (after the `flatten` field from Task A3), add:
 
 ```ts
-	/** Optional text watermark stamped on every page at export. */
-	watermark = $state<Watermark | null>(null);
-	/** True while the watermark editor modal is open. */
-	watermarkModalOpen = $state(false);
+/** Optional text watermark stamped on every page at export. */
+watermark = $state<Watermark | null>(null);
+/** True while the watermark editor modal is open. */
+watermarkModalOpen = $state(false);
 ```
 
 - [ ] **Step 3: Include it in the exported state**
@@ -628,12 +666,14 @@ git commit -m "feat(watermark): editor state + export wiring"
 ### Task B5: Watermark modal + Document-menu trigger
 
 **Files:**
+
 - Create: `src/routes/editor/WatermarkModal.svelte`
 - Modify: `src/routes/editor/Toolbar.svelte` (Document menu item)
 - Modify: `src/routes/editor/+page.svelte` (mount modal)
 - Test: `src/routes/editor/WatermarkModal.svelte.test.ts` (create)
 
 **Interfaces:**
+
 - Consumes: `EditorState.watermark`, `EditorState.watermarkModalOpen`.
 - Produces: a modal that creates/edits/removes `editor.watermark`.
 
@@ -651,13 +691,19 @@ Create `src/routes/editor/WatermarkModal.svelte`:
 	const open = $derived(editor.watermarkModalOpen);
 
 	const fonts: StandardFontName[] = [
-		'Helvetica-Bold', 'Helvetica', 'Times-Bold', 'Times-Roman', 'Courier-Bold'
+		'Helvetica-Bold',
+		'Helvetica',
+		'Times-Bold',
+		'Times-Roman',
+		'Courier-Bold'
 	];
 
 	function toHex(c: { r: number; g: number; b: number } | undefined): string {
 		const v = c ?? { r: 0.5, g: 0.5, b: 0.5 };
 		const h = (n: number) =>
-			Math.round(Math.max(0, Math.min(1, n)) * 255).toString(16).padStart(2, '0');
+			Math.round(Math.max(0, Math.min(1, n)) * 255)
+				.toString(16)
+				.padStart(2, '0');
 		return `#${h(v.r)}${h(v.g)}${h(v.b)}`;
 	}
 	function fromHex(hex: string): { r: number; g: number; b: number } {
@@ -671,7 +717,14 @@ Create `src/routes/editor/WatermarkModal.svelte`:
 	// A default watermark used when enabling from scratch.
 	function ensure() {
 		if (!editor.watermark) {
-			editor.watermark = { text: 'DRAFT', font: 'Helvetica-Bold', size: 48, opacity: 0.3, rotation: 45, color: { r: 0.5, g: 0.5, b: 0.5 } };
+			editor.watermark = {
+				text: 'DRAFT',
+				font: 'Helvetica-Bold',
+				size: 48,
+				opacity: 0.3,
+				rotation: 45,
+				color: { r: 0.5, g: 0.5, b: 0.5 }
+			};
 		}
 	}
 
@@ -688,7 +741,9 @@ Create `src/routes/editor/WatermarkModal.svelte`:
 	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4"
-		onclick={(e) => { if (e.target === e.currentTarget) close(); }}
+		onclick={(e) => {
+			if (e.target === e.currentTarget) close();
+		}}
 	>
 		<div class="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
 			<h2 class="mb-4 text-base font-semibold text-gray-900">Watermark</h2>
@@ -720,7 +775,8 @@ Create `src/routes/editor/WatermarkModal.svelte`:
 							<select
 								class="rounded border border-gray-300 px-2 py-1.5 text-sm"
 								value={wm.font ?? 'Helvetica-Bold'}
-								onchange={(e) => (wm.font = (e.currentTarget as HTMLSelectElement).value as StandardFontName)}
+								onchange={(e) =>
+									(wm.font = (e.currentTarget as HTMLSelectElement).value as StandardFontName)}
 							>
 								{#each fonts as f (f)}<option value={f}>{f}</option>{/each}
 							</select>
@@ -728,7 +784,9 @@ Create `src/routes/editor/WatermarkModal.svelte`:
 						<label class="flex w-24 flex-col gap-1">
 							<span class="text-xs font-medium text-gray-600">Size</span>
 							<input
-								type="number" min="6" max="300"
+								type="number"
+								min="6"
+								max="300"
 								class="rounded border border-gray-300 px-2 py-1.5 text-sm"
 								value={wm.size ?? 48}
 								oninput={(e) => (wm.size = Number((e.currentTarget as HTMLInputElement).value))}
@@ -749,7 +807,9 @@ Create `src/routes/editor/WatermarkModal.svelte`:
 						<label class="flex w-28 flex-col gap-1">
 							<span class="text-xs font-medium text-gray-600">Rotation°</span>
 							<input
-								type="number" min="-180" max="180"
+								type="number"
+								min="-180"
+								max="180"
 								class="rounded border border-gray-300 px-2 py-1.5 text-sm"
 								value={wm.rotation ?? 45}
 								oninput={(e) => (wm.rotation = Number((e.currentTarget as HTMLInputElement).value))}
@@ -757,9 +817,14 @@ Create `src/routes/editor/WatermarkModal.svelte`:
 						</label>
 					</div>
 					<label class="flex flex-col gap-1">
-						<span class="text-xs font-medium text-gray-600">Opacity {Math.round((wm.opacity ?? 0.3) * 100)}%</span>
+						<span class="text-xs font-medium text-gray-600"
+							>Opacity {Math.round((wm.opacity ?? 0.3) * 100)}%</span
+						>
 						<input
-							type="range" min="0" max="1" step="0.05"
+							type="range"
+							min="0"
+							max="1"
+							step="0.05"
 							value={wm.opacity ?? 0.3}
 							oninput={(e) => (wm.opacity = Number((e.currentTarget as HTMLInputElement).value))}
 							aria-label="Watermark opacity"
@@ -795,13 +860,13 @@ Create `src/routes/editor/WatermarkModal.svelte`:
 In `src/routes/editor/+page.svelte`, add the import next to the other modal imports (~line 10):
 
 ```ts
-	import WatermarkModal from './WatermarkModal.svelte';
+import WatermarkModal from './WatermarkModal.svelte';
 ```
 
 And mount it next to the others (~line 140, after `<DocumentPropertiesModal {editor} />`):
 
 ```svelte
-	<WatermarkModal {editor} />
+<WatermarkModal {editor} />
 ```
 
 - [ ] **Step 3: Add the Document-menu trigger**
@@ -809,16 +874,16 @@ And mount it next to the others (~line 140, after `<DocumentPropertiesModal {edi
 In `src/routes/editor/Toolbar.svelte`, in the Document dropdown, after the "Outline / bookmarks…" button block, add:
 
 ```svelte
-					<button
-						class={menuItem}
-						role="menuitem"
-						onclick={() => {
-							editor.watermarkModalOpen = true;
-							docMenuOpen = false;
-						}}
-					>
-						Watermark…
-					</button>
+<button
+	class={menuItem}
+	role="menuitem"
+	onclick={() => {
+		editor.watermarkModalOpen = true;
+		docMenuOpen = false;
+	}}
+>
+	Watermark…
+</button>
 ```
 
 - [ ] **Step 4: Write the component test**
@@ -889,10 +954,12 @@ git commit -m "feat(watermark): editor modal + document-menu trigger"
 ### Task B6: Canvas watermark preview overlay
 
 **Files:**
+
 - Create: `src/routes/editor/overlays/WatermarkOverlay.svelte`
 - Modify: `src/routes/editor/Canvas.svelte`
 
 **Interfaces:**
+
 - Consumes: `EditorState.watermark`, the per-page `{ width, height }` in `Canvas.svelte`'s `{#each editor.pages …}` loop, and `SCALE` from `../constants`.
 - Produces: a non-interactive, centered, rotated, semi-transparent text preview per page. Mirrors the export's center math.
 
@@ -908,8 +975,14 @@ Create `src/routes/editor/overlays/WatermarkOverlay.svelte`:
 	import { SCALE } from '../constants';
 
 	// `pageWidth`/`pageHeight` are unzoomed canvas px (already × SCALE by caller).
-	let { watermark, pageWidth, pageHeight }: {
-		watermark: Watermark; pageWidth: number; pageHeight: number;
+	let {
+		watermark,
+		pageWidth,
+		pageHeight
+	}: {
+		watermark: Watermark;
+		pageWidth: number;
+		pageHeight: number;
 	} = $props();
 
 	const text = $derived(watermark.text.trim());
@@ -949,19 +1022,19 @@ Create `src/routes/editor/overlays/WatermarkOverlay.svelte`:
 In `src/routes/editor/Canvas.svelte`, add the import near `import { overlayFor } from './overlays';`:
 
 ```ts
-	import WatermarkOverlay from './overlays/WatermarkOverlay.svelte';
+import WatermarkOverlay from './overlays/WatermarkOverlay.svelte';
 ```
 
 Inside the per-page `<div>` (the `{#each editor.pages as page, pageIndex …}` block), after the elements `{#each editor.elementsForPage(pageIndex) …}{/each}` and before the `FloatingToolbar` `{#if}`, add:
 
 ```svelte
-				{#if editor.watermark}
-					<WatermarkOverlay
-						watermark={editor.watermark}
-						pageWidth={page.width * SCALE}
-						pageHeight={page.height * SCALE}
-					/>
-				{/if}
+{#if editor.watermark}
+	<WatermarkOverlay
+		watermark={editor.watermark}
+		pageWidth={page.width * SCALE}
+		pageHeight={page.height * SCALE}
+	/>
+{/if}
 ```
 
 - [ ] **Step 3: Typecheck**
@@ -996,6 +1069,7 @@ If the previous step surfaced fixes, commit them with a clear message. Otherwise
 ---
 
 ## Notes for the implementer
+
 - Task A1 and B2 both edit `buildPdf`/build functions; do A1 first (it restructures `buildPdf`'s return), then B2 builds on that structure.
 - Tasks within a feature are ordered; A-tasks and B-tasks are independent except that B1 adds `watermark` to `EditState` right after the `flatten` field A1 adds — if executing B before A, place the field appropriately and adjust the export wiring order.
 - The lib's `getFont`, `widthOfTextAtSize`, `drawText({rotate, opacity})`, `getForm().flatten()`, and `getForm().getFields()` are all confirmed present in `@ignaciano3/better-pdf` 1.1.

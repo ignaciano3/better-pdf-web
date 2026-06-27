@@ -31,7 +31,7 @@ pointer math, overlays, thumbnails, or the export path.
   costs a little memory.)
 - **Pointer math unchanged.** The live canvas keeps its CSS box at
   `page.width*SCALE × page.height*SCALE`; the wrapper keeps applying CSS `zoom`.
-  Only the canvas *backing store* grows with zoom. `cssScale = SCALE*zoom` and
+  Only the canvas _backing store_ grows with zoom. `cssScale = SCALE*zoom` and
   all overlay coordinates are untouched.
 
 ## Current architecture (touch points)
@@ -47,6 +47,7 @@ pointer math, overlays, thumbnails, or the export path.
 ## Plan
 
 ### 1. Keep the pdf.js document alive
+
 - Add a small cache (new `src/lib/pdf/pdf-doc-store.ts`, or fields on
   `EditorState`) that lazily opens and caches a `PDFDocumentProxy` per `docIndex`
   from `sources[docIndex]` bytes (open from a **copy** — pdf.js detaches buffers).
@@ -55,6 +56,7 @@ pointer math, overlays, thumbnails, or the export path.
   proxy). Destroy all cached docs in `clearSource()` and on editor teardown.
 
 ### 2. `PdfPageCanvas.svelte` (new) — the live raster
+
 - Props: `editor`, `docIndex`, `sourceIndex`, `page` (dims), `rotation`.
 - Layout: `<canvas>` with `style.width = page.width*SCALE`,
   `style.height = page.height*SCALE` (unchanged display box). The existing PNG
@@ -70,18 +72,22 @@ pointer math, overlays, thumbnails, or the export path.
 - Fade/replace the placeholder once the sharp canvas has painted.
 
 ### 3. Render only what's visible
+
 - `IntersectionObserver` per page so an N-page doc re-renders just on-screen
   pages; off-screen pages (re)render when scrolled into view.
 
 ### 4. Wire into `Canvas.svelte`
+
 - Replace the `<img>` block with `<PdfPageCanvas …>` for `source` pages. Blank
   pages stay as-is. Overlays and the `+ Add page` button are untouched.
 
 ### 5. Thumbnails unchanged
+
 - `PageManager` keeps using the PNG `pageRender(i)` — tiny and cheap. The PNG
   oversample can drop back to ~1.5–2× since it's now placeholder/thumbnail only.
 
 ### 6. Memory / lifecycle
+
 - `page.cleanup()` after each render; cap cached docs; destroy `PDFDocumentProxy`
   instances on `clearSource()` and component teardown.
 

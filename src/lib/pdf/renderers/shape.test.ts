@@ -22,7 +22,16 @@ function captureLine(element: ShapeElement, pageHeight: number) {
 }
 
 function line(overrides: Partial<ShapeElement> = {}): ShapeElement {
-	return { type: 'shape', id: 'l', shape: 'line', x: 50, y: 80, width: 120, height: 90, ...overrides };
+	return {
+		type: 'shape',
+		id: 'l',
+		shape: 'line',
+		x: 50,
+		y: 80,
+		width: 120,
+		height: 90,
+		...overrides
+	};
 }
 
 describe('renderShape — line direction (#1)', () => {

@@ -6,21 +6,22 @@ p1_count: 2
 timestamp: 2026-06-27T14-43-01Z
 slug: src-routes-page-svelte
 ---
+
 ## Design Health Score
 
-| # | Heuristic | Score | Key Issue |
-|---|-----------|-------|-----------|
-| 1 | Visibility of System Status | 3 | Static page; hover/focus states present, nothing async to report |
-| 2 | Match System / Real World | 4 | Plain, honest language throughout ("Free up to 2 exports per hour") |
-| 3 | User Control and Freedom | 3 | n/a for a landing page; links behave |
-| 4 | Consistency and Standards | 3 | Body prose drifts to slate-500 below the DS slate-600 floor; numbered features grid contradicts the design system's own bans |
-| 5 | Error Prevention | 3 | No inputs to guard |
-| 6 | Recognition Rather Than Recall | 4 | First action obvious; CTAs labeled |
-| 7 | Flexibility and Efficiency | 3 | Two clear CTAs, keyboard-reachable |
-| 8 | Aesthetic and Minimalist Design | 3 | Hero is excellent; features grid is a generic 6-card grid; mobile header is broken |
-| 9 | Error Recovery | 3 | n/a |
-| 10 | Help and Documentation | 3 | Microcopy carries it; GitHub link present |
-| **Total** | | **32/40** | **Good — solid foundation, two real problems** |
+| #         | Heuristic                       | Score     | Key Issue                                                                                                                    |
+| --------- | ------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 1         | Visibility of System Status     | 3         | Static page; hover/focus states present, nothing async to report                                                             |
+| 2         | Match System / Real World       | 4         | Plain, honest language throughout ("Free up to 2 exports per hour")                                                          |
+| 3         | User Control and Freedom        | 3         | n/a for a landing page; links behave                                                                                         |
+| 4         | Consistency and Standards       | 3         | Body prose drifts to slate-500 below the DS slate-600 floor; numbered features grid contradicts the design system's own bans |
+| 5         | Error Prevention                | 3         | No inputs to guard                                                                                                           |
+| 6         | Recognition Rather Than Recall  | 4         | First action obvious; CTAs labeled                                                                                           |
+| 7         | Flexibility and Efficiency      | 3         | Two clear CTAs, keyboard-reachable                                                                                           |
+| 8         | Aesthetic and Minimalist Design | 3         | Hero is excellent; features grid is a generic 6-card grid; mobile header is broken                                           |
+| 9         | Error Recovery                  | 3         | n/a                                                                                                                          |
+| 10        | Help and Documentation          | 3         | Microcopy carries it; GitHub link present                                                                                    |
+| **Total** |                                 | **32/40** | **Good — solid foundation, two real problems**                                                                               |
 
 ## Anti-Patterns Verdict
 

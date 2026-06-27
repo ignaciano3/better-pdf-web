@@ -20,7 +20,9 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="absolute touch-none cursor-move {editor.selectedId === el.id ? 'ring-2 ring-blue-400' : ''}"
+	class="absolute touch-none cursor-move {editor.selectedId === el.id
+		? 'ring-2 ring-blue-400'
+		: ''}"
 	style="left: {raster.x * SCALE}px; top: {raster.y * SCALE}px; width: {raster.width *
 		SCALE}px; height: {raster.height * SCALE}px;"
 	onpointerdown={(e) => editor.startDrag(e, raster)}

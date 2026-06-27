@@ -1,120 +1,242 @@
 {
-  "schemaVersion": 2,
-  "generatedAt": "2026-06-27T00:00:00Z",
-  "title": "Design System: better-pdf",
-  "extensions": {
-    "colorMeta": {
-      "action-blue": { "role": "primary", "displayName": "Action Blue", "canonical": "#2563eb", "tonalRamp": ["#172554", "#1e3a8a", "#1d4ed8", "#2563eb", "#3b82f6", "#60a5fa", "#bfdbfe", "#eff6ff"] },
-      "ink": { "role": "neutral", "displayName": "Ink (Slate 900)", "canonical": "#0f172a", "tonalRamp": ["#020617", "#0f172a", "#1e293b", "#334155", "#475569", "#94a3b8", "#e2e8f0", "#f8fafc"] },
-      "body-slate": { "role": "neutral", "displayName": "Body Slate", "canonical": "#475569", "tonalRamp": ["#020617", "#0f172a", "#1e293b", "#334155", "#475569", "#64748b", "#94a3b8", "#cbd5e1"] },
-      "danger": { "role": "tertiary", "displayName": "Danger Red", "canonical": "#b91c1c", "tonalRamp": ["#450a0a", "#7f1d1d", "#991b1b", "#b91c1c", "#dc2626", "#ef4444", "#fca5a5", "#fef2f2"] },
-      "pro-violet": { "role": "tertiary", "displayName": "Pro Violet", "canonical": "#6b21a8", "tonalRamp": ["#3b0764", "#581c87", "#6b21a8", "#7e22ce", "#9333ea", "#c084fc", "#e9d5ff", "#f3e8ff"] }
-    },
-    "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "Marketing hero headlines only — Space Grotesk, geometric and precise." },
-      "headline": { "displayName": "Headline", "purpose": "Section and modal titles." },
-      "title": { "displayName": "Title", "purpose": "Card titles, panel headers, list-item leads." },
-      "body": { "displayName": "Body", "purpose": "Prose and descriptions; cap measure at 65–75ch, never lighter than Body Slate." },
-      "label": { "displayName": "Label (Mono)", "purpose": "Structural/meta text only — toolbar group labels, counters, hints. IBM Plex Mono, often UPPERCASE." }
-    },
-    "shadows": [
-      { "name": "resting", "value": "0 1px 2px rgba(15,23,42,0.06)", "purpose": "Buttons and inputs at rest — barely there." },
-      { "name": "lifted", "value": "0 10px 15px -3px rgba(15,23,42,0.10)", "purpose": "Hovered CTAs, floating toolbars, popovers." },
-      { "name": "floating", "value": "0 25px 50px -12px rgba(15,23,42,0.20)", "purpose": "Document/editor mockup and true overlays only." },
-      { "name": "action-glow", "value": "0 10px 15px -3px rgba(37,99,235,0.30)", "purpose": "Primary CTA only — the one colored shadow." }
-    ],
-    "motion": [
-      { "name": "ease-out-quint", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Entrances and lifts (hero float). Exponential ease-out, no bounce." },
-      { "name": "transition-fast", "value": "150ms ease", "purpose": "Default state transitions — color, border, transform on buttons/inputs." }
-    ],
-    "breakpoints": [
-      { "name": "sm", "value": "640px" },
-      { "name": "md", "value": "768px" },
-      { "name": "lg", "value": "1024px" }
-    ]
-  },
-  "components": [
-    {
-      "name": "Primary Button",
-      "kind": "button",
-      "refersTo": "button-primary",
-      "description": "The in-app primary action. Action Blue, flat at rest, fast hover.",
-      "html": "<button class=\"ds-btn-primary\">Export PDF</button>",
-      "css": ".ds-btn-primary { background: #2563eb; color: #fff; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-weight: 600; font-size: 0.875rem; padding: 10px 16px; border: none; border-radius: 8px; box-shadow: 0 1px 2px rgba(15,23,42,0.06); transition: background 150ms ease, transform 150ms ease; cursor: pointer; } .ds-btn-primary:hover { background: #1d4ed8; } .ds-btn-primary:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
-    },
-    {
-      "name": "CTA Button",
-      "kind": "button",
-      "refersTo": "button-cta",
-      "description": "Marketing hero call-to-action — larger, rounder, with action glow and lift.",
-      "html": "<button class=\"ds-btn-cta\">Open the editor <span aria-hidden=\"true\">→</span></button>",
-      "css": ".ds-btn-cta { display: inline-flex; align-items: center; gap: 8px; background: #2563eb; color: #fff; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-weight: 600; font-size: 1rem; padding: 14px 24px; border: none; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(37,99,235,0.30); transition: background 150ms ease, transform 200ms cubic-bezier(0.22,1,0.36,1); cursor: pointer; } .ds-btn-cta:hover { background: #1d4ed8; transform: translateY(-2px); } .ds-btn-cta:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; } @media (prefers-reduced-motion: reduce) { .ds-btn-cta { transition: background 150ms ease; } .ds-btn-cta:hover { transform: none; } }"
-    },
-    {
-      "name": "Ghost Button",
-      "kind": "button",
-      "refersTo": "button-ghost",
-      "description": "Secondary action — white with slate hairline, hover shifts toward Action Blue. No gray fills.",
-      "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
-      "css": ".ds-btn-ghost { background: #fff; color: #0f172a; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-weight: 600; font-size: 1rem; padding: 14px 22px; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 2px rgba(15,23,42,0.06); transition: border-color 150ms ease, background 150ms ease, transform 200ms cubic-bezier(0.22,1,0.36,1); cursor: pointer; } .ds-btn-ghost:hover { border-color: rgba(37,99,235,0.45); background: rgba(239,246,255,0.6); transform: translateY(-2px); } .ds-btn-ghost:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; } @media (prefers-reduced-motion: reduce) { .ds-btn-ghost:hover { transform: none; } }"
-    },
-    {
-      "name": "Text Input",
-      "kind": "input",
-      "refersTo": "input",
-      "description": "Standard field — white, slate hairline, focus shifts to Action Blue with a Focus Blue ring.",
-      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Document title\" />",
-      "css": ".ds-input { background: #fff; color: #0f172a; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 0.9375rem; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px; transition: border-color 150ms ease, box-shadow 150ms ease; } .ds-input::placeholder { color: #94a3b8; } .ds-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(96,165,250,0.45); }"
-    },
-    {
-      "name": "Toolbar Group Label",
-      "kind": "custom",
-      "refersTo": null,
-      "description": "The editor's instrument readout — mono UPPERCASE label that separates tool clusters.",
-      "html": "<div class=\"ds-toolgroup\"><span class=\"ds-toolgroup-label\">CONTENT</span><span class=\"ds-tool ds-tool--active\">Text</span><span class=\"ds-tool\">Image</span><span class=\"ds-tool\">Signature</span></div>",
-      "css": ".ds-toolgroup { display: inline-flex; align-items: center; gap: 9px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; } .ds-toolgroup-label { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.1em; color: #64748b; } .ds-tool { font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 11.5px; color: #475569; cursor: pointer; } .ds-tool--active { color: #2563eb; font-weight: 600; }"
-    },
-    {
-      "name": "Card",
-      "kind": "card",
-      "refersTo": "card",
-      "description": "Container — white, slate hairline, flat at rest. Shadow only on hover.",
-      "html": "<div class=\"ds-card\"><h3 class=\"ds-card-title\">Merge, split & reorder</h3><p class=\"ds-card-body\">Combine files, pull pages apart, and drag pages into the order you want.</p></div>",
-      "css": ".ds-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; transition: box-shadow 150ms ease, border-color 150ms ease; } .ds-card:hover { box-shadow: 0 10px 15px -3px rgba(15,23,42,0.10); } .ds-card-title { font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 1.0625rem; font-weight: 600; color: #0f172a; margin: 0 0 6px; } .ds-card-body { font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 0.9375rem; line-height: 1.6; color: #475569; margin: 0; }"
-    }
-  ],
-  "narrative": {
-    "northStar": "The Quiet Workbench",
-    "overview": "better-pdf is a workbench, not a showroom. The user came to do one job to one document, and the interface's first duty is to get out of the way and let the page itself be the only thing with color and weight. The surface is a calm field of white and slate; chrome is hairline-thin and near-flat at rest. When the user is ready to act, a single confident blue appears — and only then. The system reads as a well-kept instrument: fast, precise, trustworthy. It rejects Adobe bloat, spammy free-tool conversion traps, generic SaaS clichés, and cold enterprise sterility. Type does the hierarchy work; color does the action work; shadow does almost nothing.",
-    "keyCharacteristics": [
-      "Document is the hero; UI recedes to white + slate.",
-      "One accent (Action Blue) means 'act' — rare and earned.",
-      "Flat and technical at rest; motion and color are responses to intent.",
-      "Mono labels for meta/structure; geometric display for headlines.",
-      "Honest, unhurried, never a dark pattern."
-    ],
-    "rules": [
-      { "name": "The Action-Blue Rule", "body": "Blue is a verb. It appears on ≤10% of any screen and only where the user can act, select, or is focused. If blue is decorating, it's wrong — make it slate.", "section": "colors" },
-      { "name": "The One-Neutral Rule", "body": "Slate is the neutral family. Gray (gray-*/zinc-*) is forbidden going forward; current gray-* usage is legacy drift to migrate, not a pattern to copy.", "section": "colors" },
-      { "name": "The Mono-For-Structure Rule", "body": "Mono is reserved for structural/meta text — group labels, counters, file meta, hints. Never set body prose or headlines in mono.", "section": "typography" },
-      { "name": "The Flat-At-Rest Rule", "body": "Surfaces are flat until the user touches them. Shadow appears on hover, on float, or on focus — never as default chrome.", "section": "elevation" }
-    ],
-    "dos": [
-      "Do keep Action Blue (#2563eb) on ≤10% of any screen — CTAs, active/selected, focus only.",
-      "Do use hairline Border Slate (#e2e8f0) as the default separator and stay flat at rest.",
-      "Do set body copy at Body Slate (#475569) or darker and verify ≥4.5:1 contrast.",
-      "Do reserve IBM Plex Mono for structural/meta text and Space Grotesk for headlines.",
-      "Do give every interactive element a visible Focus Blue (#60a5fa) ring and a prefers-reduced-motion fallback.",
-      "Do keep Pro Violet (#6b21a8) distinct from Action Blue so 'upgrade' never disguises itself as a core action."
-    ],
-    "donts": [
-      "Don't be Adobe-bloated: no dense multi-row ribbons, no stacked modals, no chrome burying the document.",
-      "Don't be a spammy free-tool site: no popups, no interstitial upsell, no conversion traps.",
-      "Don't be generic SaaS: no gradient-blob heroes, no cream/sand backgrounds, no identical icon-card grids, no tracked-uppercase eyebrows, no 01/02/03 numbered scaffolding by reflex.",
-      "Don't be cold enterprise: no sterile all-navy-and-gray B2B dashboard.",
-      "Don't mix neutral families — gray-*/zinc-* is forbidden; slate is the one ramp.",
-      "Don't use blue as decoration, gradient text, colored side-stripe borders, or decorative glassmorphism.",
-      "Don't let muted slate (#94a3b8) carry body prose — it's meta/placeholder only."
-    ]
-  }
+	"schemaVersion": 2,
+	"generatedAt": "2026-06-27T00:00:00Z",
+	"title": "Design System: better-pdf",
+	"extensions": {
+		"colorMeta": {
+			"action-blue": {
+				"role": "primary",
+				"displayName": "Action Blue",
+				"canonical": "#2563eb",
+				"tonalRamp": [
+					"#172554",
+					"#1e3a8a",
+					"#1d4ed8",
+					"#2563eb",
+					"#3b82f6",
+					"#60a5fa",
+					"#bfdbfe",
+					"#eff6ff"
+				]
+			},
+			"ink": {
+				"role": "neutral",
+				"displayName": "Ink (Slate 900)",
+				"canonical": "#0f172a",
+				"tonalRamp": [
+					"#020617",
+					"#0f172a",
+					"#1e293b",
+					"#334155",
+					"#475569",
+					"#94a3b8",
+					"#e2e8f0",
+					"#f8fafc"
+				]
+			},
+			"body-slate": {
+				"role": "neutral",
+				"displayName": "Body Slate",
+				"canonical": "#475569",
+				"tonalRamp": [
+					"#020617",
+					"#0f172a",
+					"#1e293b",
+					"#334155",
+					"#475569",
+					"#64748b",
+					"#94a3b8",
+					"#cbd5e1"
+				]
+			},
+			"danger": {
+				"role": "tertiary",
+				"displayName": "Danger Red",
+				"canonical": "#b91c1c",
+				"tonalRamp": [
+					"#450a0a",
+					"#7f1d1d",
+					"#991b1b",
+					"#b91c1c",
+					"#dc2626",
+					"#ef4444",
+					"#fca5a5",
+					"#fef2f2"
+				]
+			},
+			"pro-violet": {
+				"role": "tertiary",
+				"displayName": "Pro Violet",
+				"canonical": "#6b21a8",
+				"tonalRamp": [
+					"#3b0764",
+					"#581c87",
+					"#6b21a8",
+					"#7e22ce",
+					"#9333ea",
+					"#c084fc",
+					"#e9d5ff",
+					"#f3e8ff"
+				]
+			}
+		},
+		"typographyMeta": {
+			"display": {
+				"displayName": "Display",
+				"purpose": "Marketing hero headlines only — Space Grotesk, geometric and precise."
+			},
+			"headline": { "displayName": "Headline", "purpose": "Section and modal titles." },
+			"title": {
+				"displayName": "Title",
+				"purpose": "Card titles, panel headers, list-item leads."
+			},
+			"body": {
+				"displayName": "Body",
+				"purpose": "Prose and descriptions; cap measure at 65–75ch, never lighter than Body Slate."
+			},
+			"label": {
+				"displayName": "Label (Mono)",
+				"purpose": "Structural/meta text only — toolbar group labels, counters, hints. IBM Plex Mono, often UPPERCASE."
+			}
+		},
+		"shadows": [
+			{
+				"name": "resting",
+				"value": "0 1px 2px rgba(15,23,42,0.06)",
+				"purpose": "Buttons and inputs at rest — barely there."
+			},
+			{
+				"name": "lifted",
+				"value": "0 10px 15px -3px rgba(15,23,42,0.10)",
+				"purpose": "Hovered CTAs, floating toolbars, popovers."
+			},
+			{
+				"name": "floating",
+				"value": "0 25px 50px -12px rgba(15,23,42,0.20)",
+				"purpose": "Document/editor mockup and true overlays only."
+			},
+			{
+				"name": "action-glow",
+				"value": "0 10px 15px -3px rgba(37,99,235,0.30)",
+				"purpose": "Primary CTA only — the one colored shadow."
+			}
+		],
+		"motion": [
+			{
+				"name": "ease-out-quint",
+				"value": "cubic-bezier(0.22, 1, 0.36, 1)",
+				"purpose": "Entrances and lifts (hero float). Exponential ease-out, no bounce."
+			},
+			{
+				"name": "transition-fast",
+				"value": "150ms ease",
+				"purpose": "Default state transitions — color, border, transform on buttons/inputs."
+			}
+		],
+		"breakpoints": [
+			{ "name": "sm", "value": "640px" },
+			{ "name": "md", "value": "768px" },
+			{ "name": "lg", "value": "1024px" }
+		]
+	},
+	"components": [
+		{
+			"name": "Primary Button",
+			"kind": "button",
+			"refersTo": "button-primary",
+			"description": "The in-app primary action. Action Blue, flat at rest, fast hover.",
+			"html": "<button class=\"ds-btn-primary\">Export PDF</button>",
+			"css": ".ds-btn-primary { background: #2563eb; color: #fff; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-weight: 600; font-size: 0.875rem; padding: 10px 16px; border: none; border-radius: 8px; box-shadow: 0 1px 2px rgba(15,23,42,0.06); transition: background 150ms ease, transform 150ms ease; cursor: pointer; } .ds-btn-primary:hover { background: #1d4ed8; } .ds-btn-primary:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+		},
+		{
+			"name": "CTA Button",
+			"kind": "button",
+			"refersTo": "button-cta",
+			"description": "Marketing hero call-to-action — larger, rounder, with action glow and lift.",
+			"html": "<button class=\"ds-btn-cta\">Open the editor <span aria-hidden=\"true\">→</span></button>",
+			"css": ".ds-btn-cta { display: inline-flex; align-items: center; gap: 8px; background: #2563eb; color: #fff; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-weight: 600; font-size: 1rem; padding: 14px 24px; border: none; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(37,99,235,0.30); transition: background 150ms ease, transform 200ms cubic-bezier(0.22,1,0.36,1); cursor: pointer; } .ds-btn-cta:hover { background: #1d4ed8; transform: translateY(-2px); } .ds-btn-cta:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; } @media (prefers-reduced-motion: reduce) { .ds-btn-cta { transition: background 150ms ease; } .ds-btn-cta:hover { transform: none; } }"
+		},
+		{
+			"name": "Ghost Button",
+			"kind": "button",
+			"refersTo": "button-ghost",
+			"description": "Secondary action — white with slate hairline, hover shifts toward Action Blue. No gray fills.",
+			"html": "<button class=\"ds-btn-ghost\">Cancel</button>",
+			"css": ".ds-btn-ghost { background: #fff; color: #0f172a; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-weight: 600; font-size: 1rem; padding: 14px 22px; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 2px rgba(15,23,42,0.06); transition: border-color 150ms ease, background 150ms ease, transform 200ms cubic-bezier(0.22,1,0.36,1); cursor: pointer; } .ds-btn-ghost:hover { border-color: rgba(37,99,235,0.45); background: rgba(239,246,255,0.6); transform: translateY(-2px); } .ds-btn-ghost:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; } @media (prefers-reduced-motion: reduce) { .ds-btn-ghost:hover { transform: none; } }"
+		},
+		{
+			"name": "Text Input",
+			"kind": "input",
+			"refersTo": "input",
+			"description": "Standard field — white, slate hairline, focus shifts to Action Blue with a Focus Blue ring.",
+			"html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Document title\" />",
+			"css": ".ds-input { background: #fff; color: #0f172a; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 0.9375rem; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px; transition: border-color 150ms ease, box-shadow 150ms ease; } .ds-input::placeholder { color: #94a3b8; } .ds-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(96,165,250,0.45); }"
+		},
+		{
+			"name": "Toolbar Group Label",
+			"kind": "custom",
+			"refersTo": null,
+			"description": "The editor's instrument readout — mono UPPERCASE label that separates tool clusters.",
+			"html": "<div class=\"ds-toolgroup\"><span class=\"ds-toolgroup-label\">CONTENT</span><span class=\"ds-tool ds-tool--active\">Text</span><span class=\"ds-tool\">Image</span><span class=\"ds-tool\">Signature</span></div>",
+			"css": ".ds-toolgroup { display: inline-flex; align-items: center; gap: 9px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; } .ds-toolgroup-label { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.1em; color: #64748b; } .ds-tool { font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 11.5px; color: #475569; cursor: pointer; } .ds-tool--active { color: #2563eb; font-weight: 600; }"
+		},
+		{
+			"name": "Card",
+			"kind": "card",
+			"refersTo": "card",
+			"description": "Container — white, slate hairline, flat at rest. Shadow only on hover.",
+			"html": "<div class=\"ds-card\"><h3 class=\"ds-card-title\">Merge, split & reorder</h3><p class=\"ds-card-body\">Combine files, pull pages apart, and drag pages into the order you want.</p></div>",
+			"css": ".ds-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; transition: box-shadow 150ms ease, border-color 150ms ease; } .ds-card:hover { box-shadow: 0 10px 15px -3px rgba(15,23,42,0.10); } .ds-card-title { font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 1.0625rem; font-weight: 600; color: #0f172a; margin: 0 0 6px; } .ds-card-body { font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 0.9375rem; line-height: 1.6; color: #475569; margin: 0; }"
+		}
+	],
+	"narrative": {
+		"northStar": "The Quiet Workbench",
+		"overview": "better-pdf is a workbench, not a showroom. The user came to do one job to one document, and the interface's first duty is to get out of the way and let the page itself be the only thing with color and weight. The surface is a calm field of white and slate; chrome is hairline-thin and near-flat at rest. When the user is ready to act, a single confident blue appears — and only then. The system reads as a well-kept instrument: fast, precise, trustworthy. It rejects Adobe bloat, spammy free-tool conversion traps, generic SaaS clichés, and cold enterprise sterility. Type does the hierarchy work; color does the action work; shadow does almost nothing.",
+		"keyCharacteristics": [
+			"Document is the hero; UI recedes to white + slate.",
+			"One accent (Action Blue) means 'act' — rare and earned.",
+			"Flat and technical at rest; motion and color are responses to intent.",
+			"Mono labels for meta/structure; geometric display for headlines.",
+			"Honest, unhurried, never a dark pattern."
+		],
+		"rules": [
+			{
+				"name": "The Action-Blue Rule",
+				"body": "Blue is a verb. It appears on ≤10% of any screen and only where the user can act, select, or is focused. If blue is decorating, it's wrong — make it slate.",
+				"section": "colors"
+			},
+			{
+				"name": "The One-Neutral Rule",
+				"body": "Slate is the neutral family. Gray (gray-*/zinc-*) is forbidden going forward; current gray-* usage is legacy drift to migrate, not a pattern to copy.",
+				"section": "colors"
+			},
+			{
+				"name": "The Mono-For-Structure Rule",
+				"body": "Mono is reserved for structural/meta text — group labels, counters, file meta, hints. Never set body prose or headlines in mono.",
+				"section": "typography"
+			},
+			{
+				"name": "The Flat-At-Rest Rule",
+				"body": "Surfaces are flat until the user touches them. Shadow appears on hover, on float, or on focus — never as default chrome.",
+				"section": "elevation"
+			}
+		],
+		"dos": [
+			"Do keep Action Blue (#2563eb) on ≤10% of any screen — CTAs, active/selected, focus only.",
+			"Do use hairline Border Slate (#e2e8f0) as the default separator and stay flat at rest.",
+			"Do set body copy at Body Slate (#475569) or darker and verify ≥4.5:1 contrast.",
+			"Do reserve IBM Plex Mono for structural/meta text and Space Grotesk for headlines.",
+			"Do give every interactive element a visible Focus Blue (#60a5fa) ring and a prefers-reduced-motion fallback.",
+			"Do keep Pro Violet (#6b21a8) distinct from Action Blue so 'upgrade' never disguises itself as a core action."
+		],
+		"donts": [
+			"Don't be Adobe-bloated: no dense multi-row ribbons, no stacked modals, no chrome burying the document.",
+			"Don't be a spammy free-tool site: no popups, no interstitial upsell, no conversion traps.",
+			"Don't be generic SaaS: no gradient-blob heroes, no cream/sand backgrounds, no identical icon-card grids, no tracked-uppercase eyebrows, no 01/02/03 numbered scaffolding by reflex.",
+			"Don't be cold enterprise: no sterile all-navy-and-gray B2B dashboard.",
+			"Don't mix neutral families — gray-*/zinc-* is forbidden; slate is the one ramp.",
+			"Don't use blue as decoration, gradient text, colored side-stripe borders, or decorative glassmorphism.",
+			"Don't let muted slate (#94a3b8) carry body prose — it's meta/placeholder only."
+		]
+	}
 }

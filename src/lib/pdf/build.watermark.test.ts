@@ -32,7 +32,11 @@ describe('buildPdf watermark', () => {
 		const SQ: [number, number] = [400, 400];
 		const baseline = await buildPdf({ pageSize: SQ, elements: [] });
 		for (const rotation of [0, 90]) {
-			const out = await buildPdf({ pageSize: SQ, elements: [], watermark: { text: 'DRAFT', rotation } });
+			const out = await buildPdf({
+				pageSize: SQ,
+				elements: [],
+				watermark: { text: 'DRAFT', rotation }
+			});
 			expect(isPdf(out)).toBe(true);
 			expect(out.byteLength).toBeGreaterThan(baseline.byteLength);
 		}

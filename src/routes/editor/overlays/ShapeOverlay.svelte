@@ -22,14 +22,14 @@
 	const dashArr = $derived(
 		shape.dash && shape.dash.length > 0 ? shape.dash.map((d) => d * SCALE).join(' ') : undefined
 	);
-	const dashOff = $derived(
-		shape.dashPhase !== undefined ? shape.dashPhase * SCALE : undefined
-	);
+	const dashOff = $derived(shape.dashPhase !== undefined ? shape.dashPhase * SCALE : undefined);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="absolute touch-none cursor-move {editor.selectedId === el.id ? 'ring-2 ring-blue-400' : ''}"
+	class="absolute touch-none cursor-move {editor.selectedId === el.id
+		? 'ring-2 ring-blue-400'
+		: ''}"
 	style="left: {shape.x * SCALE}px; top: {shape.y * SCALE}px; width: {w}px; height: {h}px;"
 	onpointerdown={(e) => editor.startDrag(e, shape)}
 >

@@ -4,7 +4,6 @@ import { render } from '@testing-library/svelte';
 vi.mock('../export.remote', () => ({ exportPdf: vi.fn() }));
 vi.mock('../extractFields.remote', () => ({ extractFields: vi.fn() }));
 
-
 import PathOverlay from './PathOverlay.svelte';
 import { EditorState } from '../editor.svelte';
 import type { PathElement } from '$lib/pdf/types';

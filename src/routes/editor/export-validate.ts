@@ -40,9 +40,18 @@ const MAX_OUTLINE_TITLE_LEN = 2_000;
 const FIELD_KINDS = ['text', 'checkbox', 'radio', 'dropdown', 'signature', 'listbox', 'combo'];
 
 const STANDARD_FONTS = [
-	'Helvetica', 'Helvetica-Bold', 'Helvetica-Oblique', 'Helvetica-BoldOblique',
-	'Courier', 'Courier-Bold', 'Courier-Oblique', 'Courier-BoldOblique',
-	'Times-Roman', 'Times-Bold', 'Times-Italic', 'Times-BoldItalic'
+	'Helvetica',
+	'Helvetica-Bold',
+	'Helvetica-Oblique',
+	'Helvetica-BoldOblique',
+	'Courier',
+	'Courier-Bold',
+	'Courier-Oblique',
+	'Courier-BoldOblique',
+	'Times-Roman',
+	'Times-Bold',
+	'Times-Italic',
+	'Times-BoldItalic'
 ];
 
 function isFiniteNumber(n: unknown): n is number {
@@ -194,8 +203,12 @@ function validateMetadata(meta: unknown): void {
 function validateWatermark(wm: unknown): void {
 	if (!wm || typeof wm !== 'object') error(422, 'Invalid watermark');
 	const w = wm as {
-		text?: unknown; font?: unknown; size?: unknown;
-		color?: unknown; opacity?: unknown; rotation?: unknown;
+		text?: unknown;
+		font?: unknown;
+		size?: unknown;
+		color?: unknown;
+		opacity?: unknown;
+		rotation?: unknown;
 	};
 	if (typeof w.text !== 'string') error(422, 'Invalid watermark text');
 	if ((w.text as string).length > MAX_TEXT_LEN) error(422, 'Watermark text too large');
@@ -213,7 +226,13 @@ function validateWatermark(wm: unknown): void {
 	}
 	if (w.color !== undefined) {
 		const c = w.color as { r?: unknown; g?: unknown; b?: unknown };
-		if (!c || typeof c !== 'object' || !isFiniteNumber(c.r) || !isFiniteNumber(c.g) || !isFiniteNumber(c.b)) {
+		if (
+			!c ||
+			typeof c !== 'object' ||
+			!isFiniteNumber(c.r) ||
+			!isFiniteNumber(c.g) ||
+			!isFiniteNumber(c.b)
+		) {
 			error(422, 'Invalid watermark color');
 		}
 	}

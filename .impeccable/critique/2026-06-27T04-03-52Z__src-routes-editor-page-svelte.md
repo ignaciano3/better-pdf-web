@@ -6,27 +6,28 @@ p1_count: 3
 timestamp: 2026-06-27T04-03-52Z
 slug: src-routes-editor-page-svelte
 ---
+
 # Critique: Editor (`src/routes/editor/+page.svelte`)
 
 ## Design Health Score
 
-| # | Heuristic | Score | Key Issue |
-|---|-----------|-------|-----------|
-| 1 | Visibility of System Status | 2 | No save/autosave indicator, no "files auto-delete ~2h" notice, no export-gate/rate hint until hit |
-| 2 | Match System / Real World | 3 | Mostly natural; AcroForm jargon (Combo box, List box, Radio group) unexplained for first-timers |
-| 3 | User Control and Freedom | 2 | No global undo/redo in an editor; modals/polygon do have escapes |
-| 4 | Consistency and Standards | 2 | TWO Export buttons (toolbar rect + floating pill), mixed gray/slate neutral families |
-| 5 | Error Prevention | 2 | Good link-warning + export gate; no confirm on clear-source / delete-page |
-| 6 | Recognition Rather Than Recall | 3 | Tools are text-labeled (good); page-panel icon controls unlabeled (title-only) |
-| 7 | Flexibility and Efficiency | 1 | No keyboard shortcuts for tools/export/undo; no bulk page ops |
-| 8 | Aesthetic and Minimalist Design | 2 | 16 always-on equal-weight tools = wall of options; no primary; empty gray dominates |
-| 9 | Error Recovery | 3 | Plain-language errors; upsell reassures "your edits are still here" (excellent) |
-| 10 | Help and Documentation | 2 | Good contextual polygon/placement hints; no shortcuts, no first-run help |
-| **Total** | | **22/40** | **Acceptable — significant improvements needed** |
+| #         | Heuristic                       | Score     | Key Issue                                                                                         |
+| --------- | ------------------------------- | --------- | ------------------------------------------------------------------------------------------------- |
+| 1         | Visibility of System Status     | 2         | No save/autosave indicator, no "files auto-delete ~2h" notice, no export-gate/rate hint until hit |
+| 2         | Match System / Real World       | 3         | Mostly natural; AcroForm jargon (Combo box, List box, Radio group) unexplained for first-timers   |
+| 3         | User Control and Freedom        | 2         | No global undo/redo in an editor; modals/polygon do have escapes                                  |
+| 4         | Consistency and Standards       | 2         | TWO Export buttons (toolbar rect + floating pill), mixed gray/slate neutral families              |
+| 5         | Error Prevention                | 2         | Good link-warning + export gate; no confirm on clear-source / delete-page                         |
+| 6         | Recognition Rather Than Recall  | 3         | Tools are text-labeled (good); page-panel icon controls unlabeled (title-only)                    |
+| 7         | Flexibility and Efficiency      | 1         | No keyboard shortcuts for tools/export/undo; no bulk page ops                                     |
+| 8         | Aesthetic and Minimalist Design | 2         | 16 always-on equal-weight tools = wall of options; no primary; empty gray dominates               |
+| 9         | Error Recovery                  | 3         | Plain-language errors; upsell reassures "your edits are still here" (excellent)                   |
+| 10        | Help and Documentation          | 2         | Good contextual polygon/placement hints; no shortcuts, no first-run help                          |
+| **Total** |                                 | **22/40** | **Acceptable — significant improvements needed**                                                  |
 
 ## Anti-Patterns Verdict
 
-**LLM assessment:** Low slop. Clean, familiar, no gradient/glass/eyebrow clichés. But it reads slightly *unfinished* rather than *designed*: a flat row of 16 identical-weight text buttons, a generic centered empty-state card floating in a sea of `bg-gray-100`, and no visual primary. By the product test (would a Linear/Figma/Sejda-fluent user trust it), it passes on familiarity but stalls at the wall-of-tools and the duplicate Export.
+**LLM assessment:** Low slop. Clean, familiar, no gradient/glass/eyebrow clichés. But it reads slightly _unfinished_ rather than _designed_: a flat row of 16 identical-weight text buttons, a generic centered empty-state card floating in a sea of `bg-gray-100`, and no visual primary. By the product test (would a Linear/Figma/Sejda-fluent user trust it), it passes on familiarity but stalls at the wall-of-tools and the duplicate Export.
 
 **Deterministic scan:** 1 warning — `gray-on-color` at `Canvas.svelte:156` (`text-gray-500` on hover `bg-blue-50`, the "+ Add page" button). Minor; resolves to blue on hover.
 
@@ -44,7 +45,7 @@ The editor is functionally rich and the bones are right, but it shows the whole 
 
 ## Priority Issues
 
-**[P1] Blank canvas opens at 249% zoom.** Fit-to-width on a portrait page in a wide viewport over-zooms; the user can't see the page and gets a horizontal scrollbar. Fix: clamp the initial fit (fit-to-*height* or `min(fitWidth, 100%)`) so a new page lands fully visible. → `/impeccable optimize` or a targeted fix in `Canvas.svelte` fit logic.
+**[P1] Blank canvas opens at 249% zoom.** Fit-to-width on a portrait page in a wide viewport over-zooms; the user can't see the page and gets a horizontal scrollbar. Fix: clamp the initial fit (fit-to-_height_ or `min(fitWidth, 100%)`) so a new page lands fully visible. → `/impeccable optimize` or a targeted fix in `Canvas.svelte` fit logic.
 
 **[P1] Two Export buttons.** Toolbar rectangle (top-right) and floating pill (bottom-right) are the same action, same color, different shape — duplicated and inconsistent. Pick one. The floating pill over the canvas is the stronger affordance; demote or remove the toolbar one. → `/impeccable layout`.
 

@@ -61,11 +61,12 @@ Next request
 
 One new column on the existing `subscription` table:
 
-| Column | Type | Meaning |
-| --- | --- | --- |
+| Column      | Type              | Meaning                                                    |
+| ----------- | ----------------- | ---------------------------------------------------------- |
 | `manageUrl` | `text` (nullable) | LS customer-portal URL for self-serve cancel / card update |
 
 Existing columns are reused:
+
 - `providerId` now holds the **LS subscription id** (for reconciliation/debug).
 - `currentPeriodEnd` holds the paid-through date (`renews_at` or, after cancel,
   `ends_at`).
@@ -80,11 +81,11 @@ LS sends subscription lifecycle events. The mapper normalizes them so that the
 existing `resolvePlan()` logic (grants pro only when `status='active'` AND
 `currentPeriodEnd` is in the future) keeps working untouched.
 
-| LS event / status | Row written |
-| --- | --- |
+| LS event / status                                                              | Row written                                                                      |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
 | `subscription_created` / `subscription_updated`, status `active` or `on_trial` | `plan='pro', status='active', currentPeriodEnd=renews_at, providerId, manageUrl` |
-| `subscription_cancelled` (cancelled but paid through period) | keep `plan='pro', status='active'`, set `currentPeriodEnd=ends_at` |
-| `subscription_expired`, or terminal `unpaid` / `past_due` exhausted | `status='inactive'` (drops to free) |
+| `subscription_cancelled` (cancelled but paid through period)                   | keep `plan='pro', status='active'`, set `currentPeriodEnd=ends_at`               |
+| `subscription_expired`, or terminal `unpaid` / `past_due` exhausted            | `status='inactive'` (drops to free)                                              |
 
 **Why cancellation needs no special logic:** on cancel we leave the user
 `plan='pro', status='active'` but set `currentPeriodEnd` to the paid-through
@@ -98,6 +99,7 @@ quickly.
 ## Components
 
 ### `src/lib/server/billing/lemonsqueezy.ts` (new, isolated, unit-tested)
+
 - `createCheckout({ userId, email, variantId }) → Promise<{ url }>` — builds the
   LS checkout payload (store id, variant, `checkout_data.custom.user_id`,
   prefilled email), calls the LS API, returns the hosted checkout URL.
@@ -108,36 +110,40 @@ quickly.
   fully unit-testable from JSON fixtures.
 
 ### `POST /api/billing/checkout` (new route)
+
 - Requires an authenticated session (reuse existing auth/session helpers).
 - Reads desired cadence (`monthly` | `annual`) from the request, selects the
   matching variant id from env.
 - Calls `createCheckout`, returns `{ url }` for the client to redirect to.
 
 ### `POST /api/billing/webhook` (new route)
+
 - Reads the **raw** body, verifies the `X-Signature` header via `verifyWebhook`.
   Invalid signature → 401, no DB write.
 - Parses the event, runs `mapEventToRow`, upserts the `subscription` row.
 - Returns 200 fast (do minimal work synchronously).
 
 ### Pricing page (`src/routes/pricing/+page.svelte`)
+
 - Replace the disabled "Billing coming soon" Pro button with a real Upgrade
   button that POSTs to `/api/billing/checkout` with the selected cadence (from
   the existing monthly/annual toggle) and redirects to the returned URL.
 - Logged-out users keep the existing "Get started" → `/signup` path.
 
 ### "Manage billing" link
+
 - Surface the user's `manageUrl` via layout data when present; render a "Manage
   billing" link (header or pricing page) so Pro users self-cancel / update card.
 
 ## Configuration (env vars)
 
-| Var | Purpose |
-| --- | --- |
-| `LEMONSQUEEZY_API_KEY` | Server-side LS API auth (checkout creation) |
-| `LEMONSQUEEZY_STORE_ID` | LS store id |
-| `LEMONSQUEEZY_WEBHOOK_SECRET` | HMAC secret for webhook verification |
-| `LEMONSQUEEZY_VARIANT_PRO_MONTHLY` | Variant id for the monthly Pro plan |
-| `LEMONSQUEEZY_VARIANT_PRO_ANNUAL` | Variant id for the annual Pro plan |
+| Var                                | Purpose                                     |
+| ---------------------------------- | ------------------------------------------- |
+| `LEMONSQUEEZY_API_KEY`             | Server-side LS API auth (checkout creation) |
+| `LEMONSQUEEZY_STORE_ID`            | LS store id                                 |
+| `LEMONSQUEEZY_WEBHOOK_SECRET`      | HMAC secret for webhook verification        |
+| `LEMONSQUEEZY_VARIANT_PRO_MONTHLY` | Variant id for the monthly Pro plan         |
+| `LEMONSQUEEZY_VARIANT_PRO_ANNUAL`  | Variant id for the annual Pro plan          |
 
 LS test mode (test API key + test cards) is used to validate the full loop
 before switching to live keys.
@@ -145,6 +151,7 @@ before switching to live keys.
 ## Testing
 
 **Unit (no network — canned LS JSON fixtures):**
+
 - `verifyWebhook`: valid signature passes; tampered body fails; wrong/missing
   signature fails.
 - `mapEventToRow`: one case per lifecycle row in the mapping table above,

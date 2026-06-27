@@ -6,27 +6,29 @@ p1_count: 2
 timestamp: 2026-06-27T15-08-14Z
 slug: src-routes-editor
 ---
+
 ## Design Health Score
 
-| # | Heuristic | Score | Key Issue |
-|---|-----------|-------|-----------|
-| 1 | Visibility of System Status | 3 | Loading/Exporting labels, Unsaved dot, zoom %, active-tool highlight, error banner — solid; no page-render skeleton |
-| 2 | Match System / Real World | 4 | Plain, domain-correct labels (Text field, Radio group, Merge/append, Outline/bookmarks) |
-| 3 | User Control and Freedom | 4 | Undo/redo, Esc to deselect, Delete, confirm-before-discard, beforeunload guard |
-| 4 | Consistency and Standards | 2 | Mixed icon vocabulary: crisp SVGs vs emoji/glyph icons; two competing blue CTAs |
-| 5 | Error Prevention | 4 | Confirm dialog, unload guard, invalid-link pre-export warning, numeric min/max constraints |
-| 6 | Recognition Rather Than Recall | 4 | Contextual floating toolbar, visible tools, tooltips with shortcut hints |
-| 7 | Flexibility and Efficiency | 4 | Tool accelerators, undo/redo shortcuts, drag-to-reorder pages, duplicate |
-| 8 | Aesthetic and Minimalist Design | 2 | Marketing header + 3-row toolbar = heavy chrome competing with the canvas; Sign up out-shouts Export |
-| 9 | Error Recovery | 3 | role="alert" error banner, specific actionable invalid-link warning |
-| 10 | Help and Documentation | 2 | Tooltips and trust microcopy only; no formal help/shortcut reference |
-| **Total** | | **32/40** | **Good on desktop — but the score is desktop-weighted; mobile is a P1 the heuristics don't fully capture** |
+| #         | Heuristic                       | Score     | Key Issue                                                                                                           |
+| --------- | ------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------- |
+| 1         | Visibility of System Status     | 3         | Loading/Exporting labels, Unsaved dot, zoom %, active-tool highlight, error banner — solid; no page-render skeleton |
+| 2         | Match System / Real World       | 4         | Plain, domain-correct labels (Text field, Radio group, Merge/append, Outline/bookmarks)                             |
+| 3         | User Control and Freedom        | 4         | Undo/redo, Esc to deselect, Delete, confirm-before-discard, beforeunload guard                                      |
+| 4         | Consistency and Standards       | 2         | Mixed icon vocabulary: crisp SVGs vs emoji/glyph icons; two competing blue CTAs                                     |
+| 5         | Error Prevention                | 4         | Confirm dialog, unload guard, invalid-link pre-export warning, numeric min/max constraints                          |
+| 6         | Recognition Rather Than Recall  | 4         | Contextual floating toolbar, visible tools, tooltips with shortcut hints                                            |
+| 7         | Flexibility and Efficiency      | 4         | Tool accelerators, undo/redo shortcuts, drag-to-reorder pages, duplicate                                            |
+| 8         | Aesthetic and Minimalist Design | 2         | Marketing header + 3-row toolbar = heavy chrome competing with the canvas; Sign up out-shouts Export                |
+| 9         | Error Recovery                  | 3         | role="alert" error banner, specific actionable invalid-link warning                                                 |
+| 10        | Help and Documentation          | 2         | Tooltips and trust microcopy only; no formal help/shortcut reference                                                |
+| **Total** |                                 | **32/40** | **Good on desktop — but the score is desktop-weighted; mobile is a P1 the heuristics don't fully capture**          |
 
 ## Anti-Patterns Verdict
 
-**LLM assessment**: The editor does NOT read as AI-generated — the opposite problem, if anything. The interaction model is unusually deep and considered for a browser tool: undo/redo with real keyboard accelerators, Esc/Delete, a confirm dialog before discarding work, a beforeunload guard, an invalid-link warning *before* export, and a contextual floating toolbar that changes its controls per element type. That's craftsmanship, not slop.
+**LLM assessment**: The editor does NOT read as AI-generated — the opposite problem, if anything. The interaction model is unusually deep and considered for a browser tool: undo/redo with real keyboard accelerators, Esc/Delete, a confirm dialog before discarding work, a beforeunload guard, an invalid-link warning _before_ export, and a contextual floating toolbar that changes its controls per element type. That's craftsmanship, not slop.
 
 Where it slips is **chrome discipline and platform reach** — exactly the things the project's North Star ("the tool gets out of the way," "the document is the hero") cares most about. Two tells:
+
 1. The full marketing header (logo + Pricing + Log in + a loud blue **Sign up**) sits on top of the editor, so on a work surface the single most prominent pixel is a marketing CTA — and it's blue, the same "this is the action" color as the real primary, **Export PDF**. Two blue CTAs competing dilutes the Action-Blue rule.
 2. The Pages panel and floating toolbar use emoji/character glyphs (⟳ ＋ 🗑 ↑ ↓ « » ▾ ⚙) where the rest of the UI uses crisp stroked SVGs. Mixed icon vocabulary is a named product ban, and emoji render inconsistently across platforms.
 
@@ -36,7 +38,7 @@ Where it slips is **chrome discipline and platform reach** — exactly the thing
 
 ## Overall Impression
 
-A genuinely well-engineered editor with a thoughtful desktop interaction model, wrapped in too much chrome and a mobile layout that doesn't hold together. The biggest opportunity isn't adding anything — it's *removing*: slim the header on the editor route so the canvas is the hero, make Export the only blue, and let the toolbar collapse gracefully on small screens.
+A genuinely well-engineered editor with a thoughtful desktop interaction model, wrapped in too much chrome and a mobile layout that doesn't hold together. The biggest opportunity isn't adding anything — it's _removing_: slim the header on the editor route so the canvas is the hero, make Export the only blue, and let the toolbar collapse gracefully on small screens.
 
 ## What's Working
 
@@ -46,7 +48,7 @@ A genuinely well-engineered editor with a thoughtful desktop interaction model, 
 
 ## Priority Issues
 
-- **[P1] The editor is barely usable at mobile width.** At 390px the toolbar expands to four stacked rows (Upload/Document, then CONTENT, FIELDS over three lines, SHAPES over two), consuming most of the viewport before the canvas. Below that the Pages panel (`w-44`) sits *side-by-side* with the canvas, stealing ~half the width, and the Export FAB overlaps the zoom pill at the bottom.
+- **[P1] The editor is barely usable at mobile width.** At 390px the toolbar expands to four stacked rows (Upload/Document, then CONTENT, FIELDS over three lines, SHAPES over two), consuming most of the viewport before the canvas. Below that the Pages panel (`w-44`) sits _side-by-side_ with the canvas, stealing ~half the width, and the Export FAB overlaps the zoom pill at the bottom.
   - **Why it matters**: A large share of "fill this form / sign this" traffic is mobile, and the product promises "calm enough for first-timers." Right now a phone user can't comfortably edit.
   - **Fix**: Below `sm`, collapse the insert tools into a single horizontally-scrollable strip or a "Insert ▾" menu; collapse the Pages panel by default (it already has a collapsed-tab affordance — default to it on small screens) and let it overlay rather than share width; lift/inset the zoom pill so the FAB never overlaps it.
   - **Suggested command**: /impeccable adapt

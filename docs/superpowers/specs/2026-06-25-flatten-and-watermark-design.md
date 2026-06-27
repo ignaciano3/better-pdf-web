@@ -17,6 +17,7 @@ authored AcroForm field is baked into page content instead of staying
 interactive.
 
 ### Why a second pass
+
 Authored fields are built with `FormBuilder` (`doc.createForm()`), which has no
 flatten method. `flatten()` lives on `PdfForm`, obtained from a **loaded**
 document via `doc.getForm()` (confirmed in `core/document.d.ts:191` and
@@ -24,16 +25,18 @@ document via `doc.getForm()` (confirmed in `core/document.d.ts:191` and
 -built interactive bytes.
 
 ### Model
+
 `EditState.flatten?: boolean` (in `src/lib/pdf/types.ts`).
 
 ### Build (`src/lib/pdf/build.ts`)
+
 - New isolated, independently-testable helper:
   ```ts
   async function flattenAllFields(bytes: Uint8Array): Promise<Uint8Array> {
-    const doc = await PdfDocument.load(bytes);
-    const form = doc.getForm();
-    form.flatten();
-    return await doc.save();
+  	const doc = await PdfDocument.load(bytes);
+  	const form = doc.getForm();
+  	form.flatten();
+  	return await doc.save();
   }
   ```
 - In `buildPdf`, after the existing build returns interactive bytes: if
@@ -42,19 +45,22 @@ document via `doc.getForm()` (confirmed in `core/document.d.ts:191` and
   ⇒ flatten is a no-op, skip the extra load/save.)
 
 ### Validator (`src/routes/editor/export-validate.ts`)
+
 Accept optional `flatten`; reject non-boolean. It is a plain flag so the only
 check is the type.
 
 ### Editor + UI
+
 - `EditorState.flatten = $state(false)` (`editor.svelte.ts`); include
   `...(this.flatten ? { flatten: true } : {})` in the exported `state` object.
 - Surface the toggle **inside the Document properties modal**
   (`DocumentPropertiesModal.svelte`), as a checkbox:
-  *"Flatten fields on export (print-ready, non-editable)"*. It is a document
+  _"Flatten fields on export (print-ready, non-editable)"_. It is a document
   -level export option, so it lives with the other document properties rather
   than next to the Export button.
 
 ### Edge cases
+
 - Signature fields are already drawn as a PNG plus an interactive widget;
   flattening bakes the widget appearance, the drawn PNG is unaffected.
 - Flatten + re-upload: a flattened export has no AcroForm, so re-uploading it
@@ -74,20 +80,23 @@ Stamp a single **text** watermark (e.g. "DRAFT") centered and rotated on
 > as a better-pdf feature request).
 
 ### Model (`src/lib/pdf/types.ts`)
+
 ```ts
 export interface Watermark {
-  text: string;
-  font?: StandardFontName;     // default Helvetica-Bold
-  size?: number;               // pt, default 48
-  color?: { r: number; g: number; b: number }; // default mid-gray
-  opacity?: number;            // 0..1, default 0.3
-  rotation?: number;           // degrees, default 45
+	text: string;
+	font?: StandardFontName; // default Helvetica-Bold
+	size?: number; // pt, default 48
+	color?: { r: number; g: number; b: number }; // default mid-gray
+	opacity?: number; // 0..1, default 0.3
+	rotation?: number; // degrees, default 45
 }
 ```
+
 Added to `EditState.watermark?: Watermark`. **v1 applies to all pages** — no
 per-page range yet (noted as a future extension).
 
 ### Build (`src/lib/pdf/build.ts`)
+
 - New `drawWatermark(doc, pageWidths, pageHeights, wm)` called once after
   `stampAndAuthor`, iterating every output page.
 - Measure the string at `size` with the chosen standard font via
@@ -100,12 +109,14 @@ per-page range yet (noted as a future extension).
   (today `stampAndAuthor` only tracks heights for the Y-flip).
 
 ### Validator (`src/routes/editor/export-validate.ts`)
+
 Validate `watermark` when present: `text` is a non-empty string within
 `MAX_TEXT_LEN`; `font` ∈ standard-font set (when present); `color` is a valid
 RGB triple (when present); `opacity` ∈ [0,1]; `rotation`/`size` finite (when
 present). Reject unknown shapes (security boundary).
 
 ### Editor + UI
+
 - `EditorState.watermark = $state<Watermark | null>(null)` and
   `watermarkModalOpen = $state(false)` (`editor.svelte.ts`); include
   `...(this.watermark ? { watermark: $state.snapshot(this.watermark) } : {})`
@@ -119,6 +130,7 @@ present). Reject unknown shapes (security boundary).
   user sees it before export (mirrors the build output).
 
 ### Edge cases
+
 - No watermark configured (`watermark` null) ⇒ omitted from `state`, build
   unchanged.
 - Empty/whitespace `text` ⇒ treated as no watermark (omitted from `state`).
@@ -126,6 +138,7 @@ present). Reject unknown shapes (security boundary).
 ---
 
 ## Out of scope (future)
+
 - **Image watermark** — blocked on the lib gaining `drawImage` opacity/rotate.
 - Per-page / page-range watermark targeting.
 - Tiled / repeated watermark layout.
@@ -134,6 +147,7 @@ present). Reject unknown shapes (security boundary).
 - N-up page tiling.
 
 ## Testing
+
 - **Flatten:** unit-test `flattenAllFields` round-trips (build interactive →
   flatten → re-load → assert no AcroForm fields); `buildPdf` no-ops flatten when
   no fields. Validator accepts boolean, rejects non-boolean.

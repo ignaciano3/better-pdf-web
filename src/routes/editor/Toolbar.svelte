@@ -186,17 +186,6 @@
 	     is the floating action button over the canvas (see +page.svelte), not here:
 	     one primary action, close to the work, clear of the header's Sign-up button. -->
 		<div class="order-2 ml-auto flex shrink-0 items-center gap-2 sm:order-3 sm:ml-0">
-			{#if editor.hasUnsavedWork}
-				<!-- Honest persistence status: nothing is saved server-side; export is
-				     the way to keep the work. Calm amber dot, not an alarm. -->
-				<span
-					class="hidden items-center gap-1.5 text-xs text-slate-500 sm:flex"
-					title="Your changes live in this tab only. Export to keep them — closing or reloading will lose them."
-				>
-					<span class="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden="true"></span>
-					Unsaved
-				</span>
-			{/if}
 			<div class="relative" data-menu="doc">
 				<button
 					class="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"

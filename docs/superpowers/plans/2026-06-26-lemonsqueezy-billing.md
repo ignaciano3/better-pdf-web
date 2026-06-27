@@ -38,10 +38,12 @@
 ## Task 1: Add `manageUrl` column to the subscription table
 
 **Files:**
+
 - Modify: `src/lib/server/db/schema.app.ts`
 - Generate: a new file under `drizzle/` (created by `drizzle-kit generate`)
 
 **Interfaces:**
+
 - Produces: `subscription.manageUrl` (Drizzle column, `text`, nullable) consumed by Tasks 5 and 7.
 
 - [ ] **Step 1: Add the column to the schema**
@@ -84,9 +86,11 @@ git commit -m "feat(billing): add subscription.manageUrl column for LS portal"
 ## Task 2: LS payload types
 
 **Files:**
+
 - Create: `src/lib/server/billing/types.ts`
 
 **Interfaces:**
+
 - Produces:
   - `LemonSqueezyWebhook` — parsed webhook shape consumed by `mapEventToRow` (Task 3) and the webhook route (Task 5).
   - `SubscriptionUpsert` — `{ userId: string; plan: 'pro'; status: 'active' | 'inactive'; currentPeriodEnd: Date | null; providerId: string; manageUrl: string | null }` consumed by Task 3 (return type) and Task 5 (upsert values).
@@ -154,10 +158,12 @@ git commit -m "feat(billing): add LS webhook + subscription-upsert types"
 ## Task 3: Pure billing helpers (signature, event mapping, checkout payload)
 
 **Files:**
+
 - Create: `src/lib/server/billing/lemonsqueezy.ts`
 - Test: `src/lib/server/billing/lemonsqueezy.test.ts`
 
 **Interfaces:**
+
 - Consumes: `LemonSqueezyWebhook`, `SubscriptionUpsert` from `./types`.
 - Produces:
   - `verifyWebhookSignature(rawBody: string, signature: string | null, secret: string): boolean`
@@ -180,7 +186,16 @@ function sign(body: string): string {
 	return createHmac('sha256', SECRET).update(body).digest('hex');
 }
 
-function event(status: string, opts: Partial<{ name: string; userId: string; renews: string | null; ends: string | null; portal: string }> = {}): LemonSqueezyWebhook {
+function event(
+	status: string,
+	opts: Partial<{
+		name: string;
+		userId: string;
+		renews: string | null;
+		ends: string | null;
+		portal: string;
+	}> = {}
+): LemonSqueezyWebhook {
 	return {
 		meta: {
 			event_name: opts.name ?? 'subscription_updated',
@@ -417,10 +432,12 @@ git commit -m "feat(billing): pure LS helpers (signature, event map, checkout pa
 ## Task 4: `createCheckout` network call + config
 
 **Files:**
+
 - Modify: `src/lib/server/billing/lemonsqueezy.ts` (add `createCheckout`)
 - Modify: `src/lib/server/billing/lemonsqueezy.test.ts` (add `createCheckout` tests)
 
 **Interfaces:**
+
 - Consumes: `buildCheckoutPayload` (Task 3), `env` from `$env/dynamic/private`, `Cadence` from `./types`.
 - Produces: `createCheckout(args: { userId: string; email: string; cadence: Cadence }): Promise<{ url: string }>` consumed by Task 5's checkout route.
 
@@ -566,11 +583,13 @@ git commit -m "feat(billing): createCheckout LS API call with cadence variant se
 ## Task 5: Checkout + webhook routes
 
 **Files:**
+
 - Create: `src/routes/api/billing/checkout/+server.ts`
 - Create: `src/routes/api/billing/webhook/+server.ts`
 - Test: `src/routes/api/billing/webhook/server.test.ts`
 
 **Interfaces:**
+
 - Consumes: `createCheckout`, `verifyWebhookSignature`, `mapEventToRow` (Tasks 3–4); `requireUser` (`$lib/server/session`); `getDb` (`$lib/server/db`); `subscription` (`$lib/server/db/schema.app`); `env`.
 - Produces: HTTP endpoints. `POST /api/billing/checkout` → `{ url }`. `POST /api/billing/webhook` → 200/401.
 
@@ -723,9 +742,11 @@ git commit -m "feat(billing): checkout + webhook endpoints"
 ## Task 6: Surface `manageUrl` in layout data
 
 **Files:**
+
 - Modify: `src/routes/+layout.server.ts`
 
 **Interfaces:**
+
 - Consumes: `getDb`, `subscription`, `eq` (drizzle), existing `resolvePlan`.
 - Produces: layout `data.manageUrl: string | null` consumed by Task 7's pricing page.
 
@@ -780,9 +801,11 @@ git commit -m "feat(billing): surface LS manage-billing URL in layout data"
 ## Task 7: Wire pricing page (Upgrade buttons + Manage billing)
 
 **Files:**
+
 - Modify: `src/routes/pricing/+page.svelte`
 
 **Interfaces:**
+
 - Consumes: layout `data.user`, `data.manageUrl`; `POST /api/billing/checkout`.
 
 - [ ] **Step 1: Add a checkout handler in the script block**
@@ -843,9 +866,7 @@ Replace the footer paragraph at the bottom of `<main>` (the "Prices in USD. Bill
 ```svelte
 {#if data.manageUrl}
 	<p class="mt-8 text-center text-sm">
-		<a href={data.manageUrl} class="font-medium text-blue-600 hover:underline">
-			Manage billing
-		</a>
+		<a href={data.manageUrl} class="font-medium text-blue-600 hover:underline"> Manage billing </a>
 	</p>
 {/if}
 <p class="mt-2 text-center text-xs text-gray-400">
@@ -874,9 +895,11 @@ git commit -m "feat(billing): wire Upgrade button and Manage billing link on pri
 ## Task 8: Document env vars + end-to-end LS test-mode validation
 
 **Files:**
+
 - Modify: `.env.example`
 
 **Interfaces:**
+
 - Consumes: everything above. No new code.
 
 - [ ] **Step 1: Document the env vars**
@@ -907,6 +930,7 @@ Expected: all billing tests green. Pre-existing `home.svelte.test.ts` health-che
 - [ ] **Step 3: Configure LS test mode**
 
 In the Lemon Squeezy dashboard (test mode ON):
+
 1. Create a Pro product with two variants (monthly $6, annual $48). Copy both variant ids into `.env`.
 2. Create an API key; copy into `LEMONSQUEEZY_API_KEY`. Copy the store id.
 3. Start a tunnel: `npx cloudflared tunnel --url http://localhost:5173` (or ngrok). Copy the public URL.
@@ -916,6 +940,7 @@ In the Lemon Squeezy dashboard (test mode ON):
 - [ ] **Step 4: End-to-end happy path**
 
 With `npm run dev` running behind the tunnel:
+
 1. Log in, go to `/pricing`, click "Upgrade to Pro" → redirected to LS checkout.
 2. Pay with an LS test card (`4242 4242 4242 4242`).
 3. Confirm the webhook hit `/api/billing/webhook` (server logs) and a `subscription` row exists with `plan='pro', status='active', provider_id` set, `manage_url` set (check `npm run db:studio`).
@@ -939,5 +964,5 @@ git commit -m "docs(billing): document Lemon Squeezy env vars + test-mode setup"
 ## Notes for the implementer
 
 - **Idempotency / replays:** LS may redeliver webhooks. The upsert is keyed on `userId`, so replays are harmless. Do not add an event-id dedupe table — YAGNI for v1.
-- **Why status-driven mapping (not event-name):** subscription_* events always carry the current `attributes.status`, so one switch on status covers create/update/cancel/expire consistently and keeps `resolvePlan` unchanged. This matches the spec's intent (the spec's event table and this status table are equivalent).
+- **Why status-driven mapping (not event-name):** subscription\_\* events always carry the current `attributes.status`, so one switch on status covers create/update/cancel/expire consistently and keeps `resolvePlan` unchanged. This matches the spec's intent (the spec's event table and this status table are equivalent).
 - **Out of scope (do not build):** Day pass (one-off `order_created` + time-boxed entitlement), proration UI, dunning emails, multi-seat.

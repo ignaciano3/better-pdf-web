@@ -6,23 +6,24 @@ p1_count: 0
 timestamp: 2026-06-27T04-56-56Z
 slug: src-routes-editor-page-svelte
 ---
+
 # Critique: Editor (`src/routes/editor/+page.svelte`) — re-score
 
 ## Design Health Score
 
-| # | Heuristic | Score | Δ | Key Issue |
-|---|-----------|-------|---|-----------|
-| 1 | Visibility of System Status | 2 | – | No save/autosave state, no "files auto-delete ~2h" notice; undo/redo depth now visible |
-| 2 | Match System / Real World | 3 | – | AcroForm jargon (Combo box, List box) still unexplained |
-| 3 | User Control and Freedom | 3 | +1 | Undo/redo + Cmd/Z added; but clear-source is unrecoverable, no destructive confirms |
-| 4 | Consistency and Standards | 4 | +2 | Dual Export resolved (single FAB); gray→slate unified to one neutral family |
-| 5 | Error Prevention | 2 | – | Still no confirm on clear-source / delete-page (undo mitigates as recovery, not prevention) |
-| 6 | Recognition Rather Than Recall | 3 | – | Page-panel icons now legible (slate-500) but still title-only |
-| 7 | Flexibility and Efficiency | 2 | +1 | First keyboard accelerators (Ctrl/Cmd+Z, Shift+Z, Ctrl+Y); no tool shortcuts/bulk yet |
-| 8 | Aesthetic and Minimalist Design | 3 | +1 | Empty state now single-focus; one primary Export; no more 16-tool wall on first impression |
-| 9 | Error Recovery | 3 | – | Messages still good (specific, reassuring); undo adds a recovery net |
-| 10 | Help and Documentation | 2 | – | Shortcut tooltips/aria added; still no first-run help |
-| **Total** | | **27/40** | **+5** | **Acceptable (upper end, nearing Good)** |
+| #         | Heuristic                       | Score     | Δ      | Key Issue                                                                                   |
+| --------- | ------------------------------- | --------- | ------ | ------------------------------------------------------------------------------------------- |
+| 1         | Visibility of System Status     | 2         | –      | No save/autosave state, no "files auto-delete ~2h" notice; undo/redo depth now visible      |
+| 2         | Match System / Real World       | 3         | –      | AcroForm jargon (Combo box, List box) still unexplained                                     |
+| 3         | User Control and Freedom        | 3         | +1     | Undo/redo + Cmd/Z added; but clear-source is unrecoverable, no destructive confirms         |
+| 4         | Consistency and Standards       | 4         | +2     | Dual Export resolved (single FAB); gray→slate unified to one neutral family                 |
+| 5         | Error Prevention                | 2         | –      | Still no confirm on clear-source / delete-page (undo mitigates as recovery, not prevention) |
+| 6         | Recognition Rather Than Recall  | 3         | –      | Page-panel icons now legible (slate-500) but still title-only                               |
+| 7         | Flexibility and Efficiency      | 2         | +1     | First keyboard accelerators (Ctrl/Cmd+Z, Shift+Z, Ctrl+Y); no tool shortcuts/bulk yet       |
+| 8         | Aesthetic and Minimalist Design | 3         | +1     | Empty state now single-focus; one primary Export; no more 16-tool wall on first impression  |
+| 9         | Error Recovery                  | 3         | –      | Messages still good (specific, reassuring); undo adds a recovery net                        |
+| 10        | Help and Documentation          | 2         | –      | Shortcut tooltips/aria added; still no first-run help                                       |
+| **Total** |                                 | **27/40** | **+5** | **Acceptable (upper end, nearing Good)**                                                    |
 
 ## Anti-Patterns Verdict
 

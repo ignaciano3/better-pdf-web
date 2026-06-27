@@ -60,14 +60,14 @@
 					/>
 				</svg>
 			</a>
-			<a href={resolve('/pricing')} class="font-medium text-slate-600 transition hover:text-slate-900"
-				>Pricing</a
+			<a
+				href={resolve('/pricing')}
+				class="font-medium text-slate-600 transition hover:text-slate-900">Pricing</a
 			>
 			{#if user}
 				{#if isRoot}
-					<a
-						href={resolve('/admin')}
-						class="font-medium text-purple-700 transition hover:underline">Admin</a
+					<a href={resolve('/admin')} class="font-medium text-purple-700 transition hover:underline"
+						>Admin</a
 					>
 				{/if}
 				<span class="text-slate-500">{user.email}</span>
