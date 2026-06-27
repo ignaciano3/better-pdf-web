@@ -32,7 +32,7 @@
 	}
 </script>
 
-<div class="flex min-w-0 items-center gap-1.5">
+<div class="flex shrink-0 items-center gap-1.5">
 	<span class={sectionLabel}>Content</span>
 	<div class={sectionGroup}>
 		<button

@@ -40,7 +40,9 @@
 </script>
 
 {#if editor.pages.length > 0}
-	<aside class="flex w-44 flex-col gap-3 overflow-y-auto border-r border-slate-200 bg-white p-3">
+	<aside
+		class="absolute inset-y-0 left-0 z-30 flex w-44 flex-col gap-3 overflow-y-auto border-r border-slate-200 bg-white p-3 shadow-xl sm:relative sm:z-auto sm:shadow-none"
+	>
 		<div class="flex items-center justify-between">
 			<h2 class="text-xs font-semibold tracking-wide text-slate-500 uppercase">Pages</h2>
 			<div class="flex items-center gap-1">

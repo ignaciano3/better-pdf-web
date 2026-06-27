@@ -26,6 +26,16 @@
 	let promptedUpload = false;
 	const showEmptyState = $derived(!editor.sourceBytes && !started && editor.elements.length === 0);
 
+	// On phones the Pages rail would steal half the canvas width, so default it
+	// closed there (it becomes an overlay drawer the user can summon). Runs once on
+	// the client — effects don't run during SSR, so `window` is safe here.
+	let pagesDefaulted = false;
+	$effect(() => {
+		if (pagesDefaulted) return;
+		pagesDefaulted = true;
+		if (window.matchMedia('(max-width: 639px)').matches) editor.showPages = false;
+	});
+
 	// Deep-link from the home CTAs via `?operation=`:
 	//   new    → jump straight into a blank canvas (skip the empty state)
 	//   upload → open the file picker straight away so the user can choose a PDF
@@ -148,6 +158,15 @@
 	<div class="relative flex min-h-0 flex-1">
 		{#if !showEmptyState}
 			{#if editor.showPages}
+				<!-- On phones the rail floats over the canvas; this backdrop dismisses it
+				     so the page underneath keeps full width. Hidden on sm+ where the rail
+				     is a normal inline column. -->
+				<button
+					type="button"
+					class="absolute inset-0 z-20 bg-slate-900/20 sm:hidden"
+					aria-label="Close pages panel"
+					onclick={() => (editor.showPages = false)}
+				></button>
 				<PageManager {editor} />
 			{:else}
 				<!-- Collapsed Pages panel: a thin tab to bring it back. -->

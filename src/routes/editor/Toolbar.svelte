@@ -159,10 +159,11 @@
 			</button>
 		</div>
 
-		<!-- Center: Insert tools. Wraps onto more rows when the viewport is too narrow
-	     to fit every section on one line (#3), so nothing is pushed off-screen. -->
+		<!-- Center: Insert tools. On phones the whole group is a single
+	     horizontally-scrollable strip (one tidy row instead of stacking six);
+	     from `sm` up it wraps onto more rows so nothing is pushed off-screen (#3). -->
 		<div
-			class="order-3 flex w-full min-w-0 flex-wrap items-center gap-x-4 gap-y-2 sm:order-2 sm:w-auto sm:flex-1"
+			class="order-3 flex w-full min-w-0 flex-nowrap items-center gap-x-4 gap-y-2 overflow-x-auto sm:order-2 sm:w-auto sm:flex-1 sm:flex-wrap sm:overflow-x-visible"
 		>
 			<ContentSection {editor} {onDrawSignature} />
 			<FieldsSection {editor} />

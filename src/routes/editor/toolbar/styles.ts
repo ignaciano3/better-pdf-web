@@ -5,11 +5,12 @@
 export const sectionLabel =
 	'shrink-0 text-[11px] font-semibold uppercase tracking-wide text-slate-500';
 
-/** Wrapper around a section's bordered button group. Wraps its buttons onto more
- * rows when the section is squeezed, so a long group (e.g. Fields) never spills
- * over the neighbouring zone. */
+/** Wrapper around a section's bordered button group. On phones it stays on one
+ * line and the whole toolbar scrolls horizontally; from `sm` up it wraps onto
+ * more rows when squeezed, so a long group (e.g. Fields) never spills over the
+ * neighbouring zone. */
 export const sectionGroup =
-	'flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 p-1';
+	'flex flex-nowrap items-center gap-1 rounded-lg border border-slate-200 p-1 sm:flex-wrap';
 
 /** A single tool button — highlighted while its tool is the active one. The
  * active state carries a non-color cue (bolder weight) on top of the blue fill,

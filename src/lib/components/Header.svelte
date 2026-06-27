@@ -3,7 +3,14 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { signOut } from '$lib/auth-client';
 
-	let { user, isRoot = false }: { user: { email: string } | null; isRoot?: boolean } = $props();
+	// `minimal` is the workbench variant (editor): no inline marketing nav and no
+	// blue Sign up on the bar — everything folds into one quiet menu at every width,
+	// so the only blue on the editor is the Export action.
+	let {
+		user,
+		isRoot = false,
+		minimal = false
+	}: { user: { email: string } | null; isRoot?: boolean; minimal?: boolean } = $props();
 
 	let signingOut = $state(false);
 	let menuOpen = $state(false);
@@ -45,8 +52,8 @@
 			>
 		</a>
 
-		<!-- Desktop nav -->
-		<nav class="hidden items-center gap-6 text-sm md:flex">
+		<!-- Desktop nav (suppressed in the minimal workbench variant) -->
+		<nav class="{minimal ? 'hidden' : 'hidden md:flex'} items-center gap-6 text-sm">
 			<a
 				href="https://github.com/ignaciano3/better-pdf"
 				target="_blank"
@@ -93,9 +100,10 @@
 			{/if}
 		</nav>
 
-		<!-- Mobile: primary action stays one tap away; everything else folds into the menu -->
-		<div class="flex shrink-0 items-center gap-2 md:hidden">
-			{#if !user}
+		<!-- Compact cluster: a quiet menu button (+ Sign up on marketing, not on the
+		     editor). Mobile-only on marketing pages; shown at all widths when minimal. -->
+		<div class="flex shrink-0 items-center gap-2 {minimal ? '' : 'md:hidden'}">
+			{#if !user && !minimal}
 				<a
 					href={resolve('/signup')}
 					class="rounded-lg bg-blue-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
@@ -136,10 +144,16 @@
 
 	<!-- Mobile menu panel -->
 	{#if menuOpen}
-		<nav
-			id="mobile-nav"
-			class="mobile-nav absolute inset-x-0 top-full z-50 border-b border-slate-200 bg-white px-4 pt-1 pb-3 shadow-lg shadow-slate-900/5 md:hidden"
-		>
+		<div class="absolute inset-x-0 top-full z-50 {minimal ? '' : 'md:hidden'}">
+			<!-- Marketing: a full-width strip under the bar. Editor (minimal): a compact
+			     card right-aligned under the menu button within the same max-width track. -->
+			<div class={minimal ? 'mx-auto flex max-w-6xl justify-end px-6' : ''}>
+				<nav
+					id="mobile-nav"
+					class="mobile-nav bg-white px-4 pt-1 pb-3 shadow-lg shadow-slate-900/5 {minimal
+						? 'mt-1 w-64 rounded-xl border border-slate-200'
+						: 'w-full border-b border-slate-200'}"
+				>
 			<a
 				href={resolve('/pricing')}
 				onclick={() => (menuOpen = false)}
@@ -188,8 +202,20 @@
 					class="block rounded-lg px-2 py-3 text-base font-medium text-slate-700 transition hover:bg-slate-50"
 					>Log in</a
 				>
+				{#if minimal}
+					<!-- On the editor the blue Sign up CTA is gone from the bar; keep it
+					     reachable here so Export stays the only blue on the workbench. -->
+					<a
+						href={resolve('/signup')}
+						onclick={() => (menuOpen = false)}
+						class="mt-1 block rounded-lg bg-slate-900 px-4 py-2.5 text-center font-semibold text-white transition hover:bg-slate-700"
+						>Sign up</a
+					>
+				{/if}
 			{/if}
-		</nav>
+			</nav>
+			</div>
+		</div>
 	{/if}
 </header>
 
