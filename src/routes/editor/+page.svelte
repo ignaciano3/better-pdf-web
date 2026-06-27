@@ -110,12 +110,13 @@
 				</div>
 			</div>
 		{:else}
-			<!-- Canvas region: its own positioning context so the floating zoom bar and
-			     export button anchor to the gray canvas area, not the Pages sidebar (#1). -->
+			<!-- Canvas region: its own positioning context so the floating zoom bar
+			     anchors to the canvas area, not the Pages sidebar (#1). -->
 			<div class="relative flex min-h-0 min-w-0 flex-1">
 				<Canvas {editor} />
 				<ZoomControls {editor} />
-				<!-- Warn about links that would be silently dropped at export (#3). -->
+				<!-- Warn about links that would be silently dropped at export (#3).
+				     Sits above the floating Export button. -->
 				{#if editor.invalidLinks.length > 0}
 					<div
 						class="absolute right-6 bottom-20 z-20 max-w-xs rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 shadow-lg ring-1 ring-amber-300"
@@ -125,12 +126,29 @@
 						Set a URL or page in each link’s toolbar.
 					</div>
 				{/if}
-				<!-- Floating export, pinned bottom-right over the canvas (#13). -->
+				<!-- The single, primary Export action: a floating button over the canvas,
+				     close to where editing happens and always visible regardless of scroll.
+				     Anchored past the canvas's reserved scrollbar gutter so it sits at the
+				     viewport corner, clear of the page's content. Lift is motion-safe. -->
 				<button
 					onclick={() => editor.export()}
 					disabled={editor.exporting}
-					class="absolute right-6 bottom-6 z-20 rounded-full bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-blue-700 disabled:opacity-50"
+					class="absolute right-6 bottom-6 z-20 inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 disabled:opacity-50 motion-safe:hover:-translate-y-0.5"
 				>
+					<svg
+						class="h-4 w-4"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+					>
+						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+						<polyline points="7 10 12 15 17 10" />
+						<line x1="12" y1="15" x2="12" y2="3" />
+					</svg>
 					{editor.exporting ? 'Exporting…' : 'Export PDF'}
 				</button>
 			</div>

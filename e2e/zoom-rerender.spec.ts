@@ -8,7 +8,9 @@ async function gotoEditor(page: Page) {
 		`e2e-zoom-${randomUUID()}`
 	);
 	await page.goto('/editor');
-	await expect(page.getByRole('button', { name: 'Export PDF' })).toBeVisible();
+	// Editor shell is loaded once the always-present toolbar renders. (Export is a
+	// floating action button that only appears once the canvas is shown.)
+	await expect(page.getByRole('button', { name: 'Text', exact: true })).toBeVisible();
 }
 
 test('zooming re-rasterises the source page to a larger canvas backing store', async ({ page }) => {

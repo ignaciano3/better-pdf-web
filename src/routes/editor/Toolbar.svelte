@@ -99,8 +99,10 @@
 		<ShapesSection {editor} />
 	</div>
 
-	<!-- Right: document menu + export. On mobile it shares the top row with File
-	     (ml-auto pushes it to the edge); on sm+ it sits at the far right as before. -->
+	<!-- Right: document menu. On mobile it shares the top row with File (ml-auto
+	     pushes it to the edge); on sm+ it sits at the far right as before. Export
+	     is the floating action button over the canvas (see +page.svelte), not here:
+	     one primary action, close to the work, clear of the header's Sign-up button. -->
 	<div class="order-2 ml-auto flex shrink-0 items-center gap-2 sm:order-3 sm:ml-0">
 		<div class="relative" data-menu="doc">
 			<button
@@ -173,13 +175,5 @@
 				</div>
 			{/if}
 		</div>
-
-		<button
-			onclick={() => editor.export()}
-			disabled={editor.exporting}
-			class="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-		>
-			{editor.exporting ? 'Exporting…' : 'Export PDF'}
-		</button>
 	</div>
 </header>

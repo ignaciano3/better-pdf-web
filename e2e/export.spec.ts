@@ -11,7 +11,9 @@ async function gotoEditorWithFingerprint(page: Page, fingerprint: string) {
 		localStorage.setItem('bpw:fingerprint', fp);
 	}, fingerprint);
 	await page.goto('/editor');
-	await expect(page.getByRole('button', { name: 'Export PDF' })).toBeVisible();
+	// Editor shell is loaded once the always-present toolbar renders. (Export is a
+	// floating action button that only appears once the canvas is shown.)
+	await expect(page.getByRole('button', { name: 'Text', exact: true })).toBeVisible();
 }
 
 /** Reveal the blank canvas, arm the Text tool, and click to add a "New text" element. */
@@ -37,9 +39,8 @@ test('upload-less core flow: edit a blank page and export a PDF', async ({ page 
 
 	// Export triggers an <a download> with a Blob; capture the download event.
 	const downloadPromise = page.waitForEvent('download');
-	// Two "Export PDF" buttons exist once the canvas is shown (toolbar + floating
-	// action button #13); click the toolbar one (first in DOM).
-	await page.getByRole('button', { name: 'Export PDF' }).first().click();
+	// The single Export action is the floating button over the canvas.
+	await page.getByRole('button', { name: 'Export PDF' }).click();
 	const download = await downloadPromise;
 
 	expect(download.suggestedFilename()).toBe('document.pdf');
