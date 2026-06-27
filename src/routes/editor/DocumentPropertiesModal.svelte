@@ -50,38 +50,38 @@
 		}}
 	>
 		<div class="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
-			<h2 class="mb-4 text-base font-semibold text-gray-900">Document properties</h2>
+			<h2 class="mb-4 text-base font-semibold text-slate-900">Document properties</h2>
 
 			<div class="flex flex-col gap-3">
 				{#each [['title', 'Title'], ['author', 'Author'], ['subject', 'Subject'], ['creator', 'Creator'], ['producer', 'Producer']] as const as [key, label] (key)}
 					<label class="flex flex-col gap-1">
-						<span class="text-xs font-medium text-gray-600">{label}</span>
+						<span class="text-xs font-medium text-slate-600">{label}</span>
 						<input
 							type="text"
-							class="rounded border border-gray-300 px-2 py-1.5 text-sm"
+							class="rounded border border-slate-300 px-2 py-1.5 text-sm"
 							value={field(key)}
 							oninput={(e) => setField(key, (e.currentTarget as HTMLInputElement).value)}
 						/>
 					</label>
 				{/each}
 				<label class="flex flex-col gap-1">
-					<span class="text-xs font-medium text-gray-600">Keywords (comma-separated)</span>
+					<span class="text-xs font-medium text-slate-600">Keywords (comma-separated)</span>
 					<input
 						type="text"
-						class="rounded border border-gray-300 px-2 py-1.5 text-sm"
+						class="rounded border border-slate-300 px-2 py-1.5 text-sm"
 						bind:value={keywordsDraft}
 					/>
 				</label>
 				<label class="mt-1 flex items-center gap-2 text-sm">
 					<input type="checkbox" bind:checked={editor.flatten} />
-					<span class="text-gray-700">Flatten fields on export (print-ready, non-editable)</span>
+					<span class="text-slate-700">Flatten fields on export (print-ready, non-editable)</span>
 				</label>
 			</div>
 
 			<div class="mt-5 flex justify-end gap-2">
 				<button
 					type="button"
-					class="rounded px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+					class="rounded px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
 					onclick={cancel}
 				>
 					Cancel

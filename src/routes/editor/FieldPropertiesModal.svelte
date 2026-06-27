@@ -125,17 +125,17 @@
 	>
 		<div class="max-h-[85vh] w-full max-w-md overflow-auto rounded-xl bg-white p-5 shadow-xl">
 			<div class="mb-3 flex items-center justify-between">
-				<h2 class="text-base font-semibold text-gray-900">Field properties</h2>
-				<span class="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{field.field}</span>
+				<h2 class="text-base font-semibold text-slate-900">Field properties</h2>
+				<span class="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{field.field}</span>
 			</div>
 
-			<label class="mb-1 block text-sm font-medium text-gray-700" for="field-name">Name</label>
+			<label class="mb-1 block text-sm font-medium text-slate-700" for="field-name">Name</label>
 			<input
 				id="field-name"
 				type="text"
 				class="w-full rounded border px-2 py-1 text-sm {nameError
 					? 'border-red-400'
-					: 'border-gray-300'}"
+					: 'border-slate-300'}"
 				bind:value={nameDraft}
 			/>
 			{#if nameError}
@@ -151,13 +151,13 @@
 				</label>
 			</div>
 
-			<label class="mt-3 mb-1 block text-sm font-medium text-gray-700" for="field-tooltip">
+			<label class="mt-3 mb-1 block text-sm font-medium text-slate-700" for="field-tooltip">
 				Tooltip
 			</label>
 			<input
 				id="field-tooltip"
 				type="text"
-				class="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+				class="w-full rounded border border-slate-300 px-2 py-1 text-sm"
 				bind:value={field.tooltip}
 			/>
 
@@ -196,7 +196,7 @@
 							if (field.border)
 								field.border.width = Number((e.currentTarget as HTMLInputElement).value);
 						}}
-						class="w-16 rounded border border-gray-300 px-1 py-0.5 text-sm"
+						class="w-16 rounded border border-slate-300 px-1 py-0.5 text-sm"
 						aria-label="Border width"
 					/>
 				{/if}
@@ -263,7 +263,7 @@
 					<label class="flex items-center gap-2 text-sm">
 						Align
 						<select
-							class="rounded border border-gray-300 px-2 py-1 text-sm"
+							class="rounded border border-slate-300 px-2 py-1 text-sm"
 							value={field.align ?? 'left'}
 							onchange={(e) => {
 								const v = (e.currentTarget as HTMLSelectElement).value;
@@ -281,7 +281,7 @@
 						<input
 							type="number"
 							min="1"
-							class="w-20 rounded border border-gray-300 px-1 py-0.5 text-sm"
+							class="w-20 rounded border border-slate-300 px-1 py-0.5 text-sm"
 							value={field.fontSize ?? ''}
 							placeholder="12"
 							oninput={(e) => {
@@ -295,12 +295,12 @@
 			{/if}
 
 			{#if hasCheckStyle}
-				<label class="mt-3 mb-1 block text-sm font-medium text-gray-700" for="field-checkstyle">
+				<label class="mt-3 mb-1 block text-sm font-medium text-slate-700" for="field-checkstyle">
 					Mark style
 				</label>
 				<select
 					id="field-checkstyle"
-					class="rounded border border-gray-300 px-2 py-1 text-sm"
+					class="rounded border border-slate-300 px-2 py-1 text-sm"
 					value={field.checkStyle ?? (field.field === 'radio' ? 'circle' : 'check')}
 					onchange={(e) =>
 						(field.checkStyle = (e.currentTarget as HTMLSelectElement).value as CheckStyle)}
@@ -315,13 +315,13 @@
 			{/if}
 
 			{#if field.field === 'text'}
-				<label class="mt-3 mb-1 block text-sm font-medium text-gray-700" for="field-placeholder">
+				<label class="mt-3 mb-1 block text-sm font-medium text-slate-700" for="field-placeholder">
 					Placeholder
 				</label>
 				<input
 					id="field-placeholder"
 					type="text"
-					class="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+					class="w-full rounded border border-slate-300 px-2 py-1 text-sm"
 					bind:value={field.placeholder}
 				/>
 				<div class="mt-3 flex items-center gap-4">
@@ -330,7 +330,7 @@
 						<input
 							type="number"
 							min="0"
-							class="w-20 rounded border border-gray-300 px-1 py-0.5 text-sm"
+							class="w-20 rounded border border-slate-300 px-1 py-0.5 text-sm"
 							value={field.maxLength ?? ''}
 							oninput={(e) => {
 								const v = (e.currentTarget as HTMLInputElement).value;
@@ -353,7 +353,7 @@
 					<label
 						class="flex items-center gap-1.5 text-sm {field.maxLength === undefined ||
 						field.multiline
-							? 'text-gray-400'
+							? 'text-slate-500'
 							: ''}"
 						title="Splits the line into one cell per character. Needs a max length and can't be multiline."
 					>
@@ -368,13 +368,13 @@
 						/> Comb
 					</label>
 				</div>
-				<label class="mt-3 mb-1 block text-sm font-medium text-gray-700" for="field-default">
+				<label class="mt-3 mb-1 block text-sm font-medium text-slate-700" for="field-default">
 					Default value
 				</label>
 				<input
 					id="field-default"
 					type="text"
-					class="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+					class="w-full rounded border border-slate-300 px-2 py-1 text-sm"
 					bind:value={field.value}
 				/>
 			{/if}
@@ -382,9 +382,9 @@
 			{#if hasOptions}
 				<div class="mt-3">
 					<div class="mb-1 flex items-center justify-between">
-						<span class="text-sm font-medium text-gray-700">Options</span>
+						<span class="text-sm font-medium text-slate-700">Options</span>
 						<button
-							class="rounded bg-gray-100 px-2 py-0.5 text-xs hover:bg-gray-200"
+							class="rounded bg-slate-100 px-2 py-0.5 text-xs hover:bg-slate-200"
 							onclick={() => addOption(field)}
 						>
 							Add
@@ -395,17 +395,17 @@
 							<div class="flex items-center gap-1">
 								<input
 									type="text"
-									class="flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
+									class="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
 									value={opt}
 									oninput={(e) => setOption(field, i, (e.currentTarget as HTMLInputElement).value)}
 								/>
 								<button
-									class="rounded px-1.5 text-xs text-gray-500 hover:bg-gray-100"
+									class="rounded px-1.5 text-xs text-slate-500 hover:bg-slate-100"
 									aria-label="Move up"
 									onclick={() => moveOption(field, i, -1)}>↑</button
 								>
 								<button
-									class="rounded px-1.5 text-xs text-gray-500 hover:bg-gray-100"
+									class="rounded px-1.5 text-xs text-slate-500 hover:bg-slate-100"
 									aria-label="Move down"
 									onclick={() => moveOption(field, i, 1)}>↓</button
 								>
@@ -429,7 +429,7 @@
 				</button>
 				<div class="flex gap-2">
 					<button
-						class="rounded px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+						class="rounded px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
 						onclick={close}
 					>
 						Cancel

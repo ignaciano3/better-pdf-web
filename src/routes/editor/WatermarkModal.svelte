@@ -47,10 +47,10 @@
 		onclick={(e) => { if (e.target === e.currentTarget) close(); }}
 	>
 		<div class="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
-			<h2 class="mb-4 text-base font-semibold text-gray-900">Watermark</h2>
+			<h2 class="mb-4 text-base font-semibold text-slate-900">Watermark</h2>
 
 			{#if !editor.watermark}
-				<p class="mb-4 text-sm text-gray-600">No watermark on this document.</p>
+				<p class="mb-4 text-sm text-slate-600">No watermark on this document.</p>
 				<button
 					type="button"
 					class="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
@@ -62,19 +62,19 @@
 				{@const wm = editor.watermark}
 				<div class="flex flex-col gap-3">
 					<label class="flex flex-col gap-1">
-						<span class="text-xs font-medium text-gray-600">Text</span>
+						<span class="text-xs font-medium text-slate-600">Text</span>
 						<input
 							type="text"
-							class="rounded border border-gray-300 px-2 py-1.5 text-sm"
+							class="rounded border border-slate-300 px-2 py-1.5 text-sm"
 							value={wm.text}
 							oninput={(e) => (wm.text = (e.currentTarget as HTMLInputElement).value)}
 						/>
 					</label>
 					<div class="flex items-center gap-3">
 						<label class="flex flex-1 flex-col gap-1">
-							<span class="text-xs font-medium text-gray-600">Font</span>
+							<span class="text-xs font-medium text-slate-600">Font</span>
 							<select
-								class="rounded border border-gray-300 px-2 py-1.5 text-sm"
+								class="rounded border border-slate-300 px-2 py-1.5 text-sm"
 								value={wm.font ?? 'Helvetica-Bold'}
 								onchange={(e) => (wm.font = (e.currentTarget as HTMLSelectElement).value as StandardFontName)}
 							>
@@ -82,10 +82,10 @@
 							</select>
 						</label>
 						<label class="flex w-24 flex-col gap-1">
-							<span class="text-xs font-medium text-gray-600">Size</span>
+							<span class="text-xs font-medium text-slate-600">Size</span>
 							<input
 								type="number" min="6" max="300"
-								class="rounded border border-gray-300 px-2 py-1.5 text-sm"
+								class="rounded border border-slate-300 px-2 py-1.5 text-sm"
 								value={wm.size ?? 48}
 								oninput={(e) => (wm.size = Number((e.currentTarget as HTMLInputElement).value))}
 							/>
@@ -93,7 +93,7 @@
 					</div>
 					<div class="flex items-center gap-4">
 						<label class="flex items-center gap-2 text-sm">
-							<span class="text-xs font-medium text-gray-600">Color</span>
+							<span class="text-xs font-medium text-slate-600">Color</span>
 							<input
 								type="color"
 								value={toHex(wm.color)}
@@ -103,17 +103,17 @@
 							/>
 						</label>
 						<label class="flex w-28 flex-col gap-1">
-							<span class="text-xs font-medium text-gray-600">Rotation°</span>
+							<span class="text-xs font-medium text-slate-600">Rotation°</span>
 							<input
 								type="number" min="-180" max="180"
-								class="rounded border border-gray-300 px-2 py-1.5 text-sm"
+								class="rounded border border-slate-300 px-2 py-1.5 text-sm"
 								value={wm.rotation ?? 45}
 								oninput={(e) => (wm.rotation = Number((e.currentTarget as HTMLInputElement).value))}
 							/>
 						</label>
 					</div>
 					<label class="flex flex-col gap-1">
-						<span class="text-xs font-medium text-gray-600">Opacity {Math.round((wm.opacity ?? 0.3) * 100)}%</span>
+						<span class="text-xs font-medium text-slate-600">Opacity {Math.round((wm.opacity ?? 0.3) * 100)}%</span>
 						<input
 							type="range" min="0" max="1" step="0.05"
 							value={wm.opacity ?? 0.3}

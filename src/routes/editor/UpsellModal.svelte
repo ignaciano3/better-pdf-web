@@ -20,8 +20,8 @@
 		}}
 	>
 		<div class="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
-			<h2 class="text-lg font-semibold text-gray-900">Export limit reached</h2>
-			<p class="mt-2 text-sm text-gray-600">
+			<h2 class="text-lg font-semibold text-slate-900">Export limit reached</h2>
+			<p class="mt-2 text-sm text-slate-600">
 				You've used your {info.limit ?? ''} free export{info.limit === 1 ? '' : 's'} for the last
 				{minutes} minutes. Your edits are still here — try again later, or get more now.
 			</p>
@@ -43,7 +43,7 @@
 				{/if}
 				<button
 					onclick={() => editor.dismissUpsell()}
-					class="rounded px-3 py-2 text-center text-sm text-gray-600 hover:bg-gray-100"
+					class="rounded px-3 py-2 text-center text-sm text-slate-600 hover:bg-slate-100"
 				>
 					Keep editing
 				</button>

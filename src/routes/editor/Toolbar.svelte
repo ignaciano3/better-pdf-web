@@ -37,7 +37,7 @@
 		input.value = '';
 	}
 
-	const menuItem = 'block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100';
+	const menuItem = 'block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100';
 </script>
 
 <svelte:window onpointerdown={onWindowPointerDown} />
@@ -46,12 +46,12 @@
      and the insert-tool sections stack below it, never overlapping (#mobile). On
      `sm`+ it collapses back to one row: File | sections | Document/Export. -->
 <header
-	class="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-gray-200 bg-white px-3 py-2"
+	class="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-slate-200 bg-white px-3 py-2"
 >
 	<!-- Left: File (icons). Stacks New blank under Upload on narrow screens. -->
 	<div class="order-1 flex shrink-0 flex-col items-start gap-1 sm:flex-row sm:items-center">
 		<label
-			class="flex cursor-pointer items-center gap-1.5 rounded bg-gray-100 px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200"
+			class="flex cursor-pointer items-center gap-1.5 rounded bg-slate-100 px-2.5 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200"
 			title="Upload a PDF"
 		>
 			<!-- upload icon -->
@@ -81,7 +81,7 @@
 		{#if editor.sourceBytes}
 			<button
 				onclick={() => editor.clearSource()}
-				class="shrink-0 rounded px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+				class="shrink-0 rounded px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
 			>
 				New blank
 			</button>
@@ -104,7 +104,7 @@
 	<div class="order-2 ml-auto flex shrink-0 items-center gap-2 sm:order-3 sm:ml-0">
 		<div class="relative" data-menu="doc">
 			<button
-				class="rounded px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+				class="rounded px-2.5 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
 				aria-haspopup="menu"
 				aria-expanded={docMenuOpen}
 				onclick={() => (docMenuOpen = !docMenuOpen)}
@@ -113,7 +113,7 @@
 			</button>
 			{#if docMenuOpen}
 				<div
-					class="absolute top-full right-0 z-30 mt-1 max-h-96 w-52 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+					class="absolute top-full right-0 z-30 mt-1 max-h-96 w-52 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
 					role="menu"
 				>
 					<label class="{menuItem} block cursor-pointer">
@@ -157,8 +157,8 @@
 						Watermark…
 					</button>
 					{#if editor.pageOps.length > 0}
-						<div class="my-1 border-t border-gray-100"></div>
-						<p class="px-3 py-1 text-xs font-medium tracking-wide text-gray-400 uppercase">
+						<div class="my-1 border-t border-slate-100"></div>
+						<p class="px-3 py-1 text-xs font-medium tracking-wide text-slate-500 uppercase">
 							Page size
 						</p>
 						{#each NAMED_PAGE_SIZES as s (s.label)}

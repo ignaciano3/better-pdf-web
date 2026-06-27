@@ -55,7 +55,7 @@
 	}
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col bg-gray-100">
+<div class="flex min-h-0 flex-1 flex-col bg-slate-100">
 	<Toolbar {editor} onDrawSignature={() => (showSignaturePad = true)} />
 
 	{#if editor.errorMessage}
@@ -72,7 +72,7 @@
 				<!-- Collapsed Pages panel: a thin tab to bring it back. -->
 				<button
 					type="button"
-					class="flex shrink-0 items-center border-r border-gray-200 bg-white px-1.5 text-sm text-gray-500 hover:bg-gray-50"
+					class="flex shrink-0 items-center border-r border-slate-200 bg-white px-1.5 text-sm text-slate-500 hover:bg-slate-50"
 					title="Show pages panel"
 					aria-label="Show pages panel"
 					onclick={() => (editor.showPages = true)}
@@ -84,9 +84,9 @@
 		{#if showEmptyState}
 			<div class="flex flex-1 items-center justify-center">
 				<div
-					class="flex flex-col items-center gap-4 rounded-xl border border-dashed border-gray-300 bg-white px-12 py-16"
+					class="flex flex-col items-center gap-4 rounded-xl border border-dashed border-slate-300 bg-white px-12 py-16"
 				>
-					<p class="text-lg font-medium text-gray-700">Upload a PDF or start blank</p>
+					<p class="text-lg font-medium text-slate-700">Upload a PDF or start blank</p>
 					<div class="flex gap-3">
 						<label
 							class="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
@@ -102,7 +102,7 @@
 						</label>
 						<button
 							onclick={startBlank}
-							class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+							class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
 						>
 							Start blank
 						</button>

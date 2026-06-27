@@ -35,9 +35,9 @@
 </script>
 
 {#if editor.pages.length > 0}
-	<aside class="flex w-44 flex-col gap-3 overflow-y-auto border-r border-gray-200 bg-white p-3">
+	<aside class="flex w-44 flex-col gap-3 overflow-y-auto border-r border-slate-200 bg-white p-3">
 		<div class="flex items-center justify-between">
-			<h2 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Pages</h2>
+			<h2 class="text-xs font-semibold tracking-wide text-slate-500 uppercase">Pages</h2>
 			<div class="flex items-center gap-1">
 				<button
 					type="button"
@@ -49,7 +49,7 @@
 				</button>
 				<button
 					type="button"
-					class="rounded px-1.5 py-0.5 text-sm text-gray-500 hover:bg-gray-100"
+					class="rounded px-1.5 py-0.5 text-sm text-slate-500 hover:bg-slate-100"
 					title="Hide pages panel"
 					aria-label="Hide pages panel"
 					onclick={() => (editor.showPages = false)}
@@ -61,7 +61,7 @@
 
 		<!-- Size for newly inserted blank pages (#5). -->
 		<select
-			class="w-full rounded border border-gray-200 px-1 py-0.5 text-xs text-gray-600"
+			class="w-full rounded border border-slate-200 px-1 py-0.5 text-xs text-slate-600"
 			title="Size for new blank pages"
 			bind:value={newPageSizeIndex}
 		>
@@ -80,7 +80,7 @@
 				class="group flex flex-col items-center gap-1 rounded border p-2 transition-colors {dragIndex ===
 				i
 					? 'border-blue-400 bg-blue-50'
-					: 'border-gray-200'}"
+					: 'border-slate-200'}"
 				draggable="true"
 				ondragstart={() => onDragStart(i)}
 				ondragover={(e) => e.preventDefault()}
@@ -117,36 +117,36 @@
 						{/each}
 					</div>
 					{#if !render && els.length === 0}
-						<span class="text-[10px] text-gray-400">blank</span>
+						<span class="text-[10px] text-slate-500">blank</span>
 					{/if}
 				</div>
 
-				<div class="text-[11px] text-gray-500">Page {i + 1}</div>
+				<div class="text-[11px] text-slate-500">Page {i + 1}</div>
 
 				<div class="flex flex-wrap items-center justify-center gap-0.5">
 					<button
 						type="button"
-						class="rounded px-1 py-0.5 text-[11px] text-gray-600 hover:bg-gray-100 disabled:opacity-30"
+						class="rounded px-1 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100 disabled:opacity-30"
 						title="Move up"
 						disabled={i === 0}
 						onclick={() => editor.movePageUp(i)}>↑</button
 					>
 					<button
 						type="button"
-						class="rounded px-1 py-0.5 text-[11px] text-gray-600 hover:bg-gray-100 disabled:opacity-30"
+						class="rounded px-1 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100 disabled:opacity-30"
 						title="Move down"
 						disabled={i === editor.pages.length - 1}
 						onclick={() => editor.movePageDown(i)}>↓</button
 					>
 					<button
 						type="button"
-						class="rounded px-1 py-0.5 text-[11px] text-gray-600 hover:bg-gray-100"
+						class="rounded px-1 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
 						title="Rotate 90°"
 						onclick={() => editor.rotatePage(i)}>⟳</button
 					>
 					<button
 						type="button"
-						class="rounded px-1 py-0.5 text-[11px] text-gray-600 hover:bg-gray-100"
+						class="rounded px-1 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100"
 						title="Insert blank after"
 						onclick={() => insertBlank(i)}>＋</button
 					>

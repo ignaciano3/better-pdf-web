@@ -84,7 +84,7 @@
 			onpointerdown={(e) => editor.startRadioDrag(e, field, i)}
 		>
 			<span
-				class="flex items-center justify-center rounded-full border border-gray-400 leading-none"
+				class="flex items-center justify-center rounded-full border border-slate-400 leading-none"
 				style="width: {radioSize * SCALE}px; height: {radioSize * SCALE}px; {fieldStyle ||
 					'background:rgba(255,255,255,0.9);'} border-radius:9999px; font-size: {radioSize *
 					SCALE *
@@ -94,7 +94,7 @@
 			</span>
 			{#if selected}
 				<span
-					class="pointer-events-none ml-1 text-xs whitespace-nowrap text-gray-400 italic">{opt}</span>
+					class="pointer-events-none ml-1 text-xs whitespace-nowrap text-slate-500 italic">{opt}</span>
 			{/if}
 		</div>
 	{/each}
@@ -115,7 +115,7 @@
 		{#if field.field === 'text'}
 			{#if field.multiline}
 				<textarea
-					class="h-full w-full resize-none rounded border border-gray-300 bg-white/90 px-1 text-xs"
+					class="h-full w-full resize-none rounded border border-slate-300 bg-white/90 px-1 text-xs"
 					style={fieldStyle}
 					placeholder={field.placeholder ?? ''}
 					maxlength={field.maxLength}
@@ -125,7 +125,7 @@
 			{:else}
 				<input
 					type="text"
-					class="h-full w-full rounded border border-gray-300 bg-white/90 px-1 text-xs"
+					class="h-full w-full rounded border border-slate-300 bg-white/90 px-1 text-xs"
 					style={fieldStyle}
 					placeholder={field.placeholder ?? ''}
 					maxlength={field.maxLength}
@@ -139,7 +139,7 @@
 			     always draw a tick). Glyph sized to ~80% of the box height. -->
 			<button
 				type="button"
-				class="flex h-full w-full items-center justify-center border border-gray-300 bg-white/90 leading-none {field.readOnly
+				class="flex h-full w-full items-center justify-center border border-slate-300 bg-white/90 leading-none {field.readOnly
 					? 'cursor-default'
 					: 'cursor-pointer'}"
 				style="{fieldStyle} font-size: {h * 0.8}px;"
@@ -154,7 +154,7 @@
 			</button>
 		{:else if field.field === 'dropdown' || field.field === 'combo'}
 			<select
-				class="h-full w-full rounded border border-gray-300 bg-white/90 px-1 text-xs"
+				class="h-full w-full rounded border border-slate-300 bg-white/90 px-1 text-xs"
 				style={fieldStyle}
 				disabled={field.readOnly}
 				bind:value={field.value}
@@ -168,7 +168,7 @@
 		{:else if field.field === 'listbox'}
 			<select
 				multiple
-				class="h-full w-full rounded border border-gray-300 bg-white/90 px-1 text-xs"
+				class="h-full w-full rounded border border-slate-300 bg-white/90 px-1 text-xs"
 				style={fieldStyle}
 				disabled={field.readOnly}
 				onfocus={() => editor.select(el.id)}
@@ -186,7 +186,7 @@
 			</select>
 		{:else if field.field === 'signature'}
 			<label
-				class="flex h-full w-full cursor-pointer items-center justify-center rounded border border-dashed border-gray-400 bg-white/80 text-xs text-gray-500"
+				class="flex h-full w-full cursor-pointer items-center justify-center rounded border border-dashed border-slate-400 bg-white/80 text-xs text-slate-500"
 				style={fieldStyle}
 			>
 				{#if field.value}

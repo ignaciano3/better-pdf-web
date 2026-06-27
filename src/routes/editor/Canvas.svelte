@@ -153,7 +153,7 @@
 		<!-- Click-to-add-page zone below the last page (#15). -->
 		<button
 			type="button"
-			class="flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-white/50 py-6 text-sm font-medium text-gray-500 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600"
+			class="flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 bg-white/50 py-6 text-sm font-medium text-slate-500 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600"
 			style="width: {(editor.pages[0]?.width ?? 595) * SCALE}px;"
 			onclick={() => editor.insertBlankPage(editor.pages.length - 1)}
 		>

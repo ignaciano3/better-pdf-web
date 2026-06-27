@@ -85,7 +85,7 @@
 	     color-picker dialog opens magnified by the page zoom. `left`/`bottom` are
 	     multiplied by zoom so the bar's own zoom scales them back to the anchor. -->
 	<div
-		class="absolute z-20 flex w-max items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1 whitespace-nowrap shadow-lg"
+		class="absolute z-20 flex w-max items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1 whitespace-nowrap shadow-lg"
 		style="left: {pos.left * editor.zoom}px; bottom: {pos.bottom * editor.zoom}px; zoom: {1 /
 			editor.zoom};"
 	>
@@ -118,21 +118,21 @@
 			/>
 			{#if t.fontId}
 				<span
-					class="max-w-24 truncate text-xs text-gray-600"
+					class="max-w-24 truncate text-xs text-slate-600"
 					title={editor.embeddedFonts[t.fontId]?.name}
 				>
 					{editor.embeddedFonts[t.fontId]?.name ?? 'Custom font'}
 				</span>
 				<button
 					onclick={() => editor.clearCustomFont(t)}
-					class="rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+					class="rounded px-2 py-1 text-sm text-slate-700 hover:bg-slate-100"
 					title="Revert to a standard font"
 				>
 					Standard
 				</button>
 			{:else}
 				<label
-					class="cursor-pointer rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+					class="cursor-pointer rounded px-2 py-1 text-sm text-slate-700 hover:bg-slate-100"
 					title="Upload a .ttf or .otf font"
 				>
 					Upload font
@@ -382,7 +382,7 @@
 			{#if editor.selectedField.field === 'radio'}
 				<button
 					onclick={() => editor.addRadioOption(editor.selectedField!)}
-					class="rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+					class="rounded px-2 py-1 text-sm text-slate-700 hover:bg-slate-100"
 					title="Add another radio option"
 				>
 					+ Option
@@ -390,7 +390,7 @@
 			{/if}
 			<button
 				onclick={() => (editor.fieldModalOpen = true)}
-				class="rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+				class="rounded px-2 py-1 text-sm text-slate-700 hover:bg-slate-100"
 				aria-label="Field settings"
 				title="Field settings"
 			>
@@ -400,7 +400,7 @@
 
 		<button
 			onclick={() => editor.duplicateSelected()}
-			class="rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+			class="rounded px-2 py-1 text-sm text-slate-700 hover:bg-slate-100"
 		>
 			Duplicate
 		</button>
