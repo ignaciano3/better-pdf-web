@@ -4,6 +4,7 @@
 	import ContentSection from './toolbar/ContentSection.svelte';
 	import FieldsSection from './toolbar/FieldsSection.svelte';
 	import ShapesSection from './toolbar/ShapesSection.svelte';
+	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 
 	let {
 		editor,
@@ -12,6 +13,14 @@
 	}: { editor: EditorState; onDrawSignature: () => void; ready: boolean } = $props();
 
 	let docMenuOpen = $state(false);
+	let confirmNewBlank = $state(false);
+
+	// "New blank" discards the document and can't be undone. Confirm only when
+	// there's unsaved work to lose; otherwise clear straight away.
+	function newBlank() {
+		if (editor.hasUnsavedWork) confirmNewBlank = true;
+		else editor.clearSource();
+	}
 
 	// Close the Document dropdown when the user presses anywhere outside it.
 	function onWindowPointerDown(event: PointerEvent) {
@@ -88,7 +97,7 @@
 		</label>
 		{#if editor.sourceBytes}
 			<button
-				onclick={() => editor.clearSource()}
+				onclick={newBlank}
 				class="shrink-0 rounded px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
 			>
 				New blank
@@ -259,3 +268,13 @@
 		</div>
 	{/if}
 </header>
+
+<ConfirmDialog
+	bind:open={confirmNewBlank}
+	tone="danger"
+	title="Start a blank document?"
+	message="Your current changes will be discarded and can't be recovered. Export first if you want to keep them."
+	confirmLabel="Discard & start blank"
+	cancelLabel="Keep editing"
+	onconfirm={() => editor.clearSource()}
+/>
