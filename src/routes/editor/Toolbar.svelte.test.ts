@@ -13,7 +13,7 @@ describe('Toolbar', () => {
 	it('activates the Text tool when its button is clicked', async () => {
 		const user = userEvent.setup();
 		const editor = new EditorState();
-		render(Toolbar, { props: { editor, onDrawSignature: () => {} } });
+		render(Toolbar, { props: { editor, onDrawSignature: () => {}, ready: true } });
 
 		await user.click(screen.getByRole('button', { name: 'Text' }));
 		flushSync();
@@ -23,7 +23,7 @@ describe('Toolbar', () => {
 	it('activates the Rect shape tool', async () => {
 		const user = userEvent.setup();
 		const editor = new EditorState();
-		render(Toolbar, { props: { editor, onDrawSignature: () => {} } });
+		render(Toolbar, { props: { editor, onDrawSignature: () => {}, ready: true } });
 
 		await user.click(screen.getByRole('button', { name: 'Rectangle' }));
 		flushSync();
@@ -33,7 +33,7 @@ describe('Toolbar', () => {
 	it('activates a field tool from the inline Field section (#7)', async () => {
 		const user = userEvent.setup();
 		const editor = new EditorState();
-		render(Toolbar, { props: { editor, onDrawSignature: () => {} } });
+		render(Toolbar, { props: { editor, onDrawSignature: () => {}, ready: true } });
 
 		// No dropdown to open — the field buttons are visible by default.
 		await user.click(screen.getByRole('button', { name: 'Checkbox' }));
@@ -43,7 +43,7 @@ describe('Toolbar', () => {
 
 	it('shows the field tools without a dropdown toggle (#7)', () => {
 		const editor = new EditorState();
-		render(Toolbar, { props: { editor, onDrawSignature: () => {} } });
+		render(Toolbar, { props: { editor, onDrawSignature: () => {}, ready: true } });
 		expect(screen.queryByRole('button', { name: 'Field ▾' })).toBeNull();
 		for (const name of ['Text field', 'Checkbox', 'Radio group', 'Dropdown', 'Signature field']) {
 			expect(screen.getByRole('button', { name })).toBeTruthy();
@@ -53,7 +53,7 @@ describe('Toolbar', () => {
 	it('removes the Select button; an active tool toggles back to select (#16)', async () => {
 		const user = userEvent.setup();
 		const editor = new EditorState();
-		render(Toolbar, { props: { editor, onDrawSignature: () => {} } });
+		render(Toolbar, { props: { editor, onDrawSignature: () => {}, ready: true } });
 
 		expect(screen.queryByRole('button', { name: 'Select' })).toBeNull();
 		await user.click(screen.getByRole('button', { name: 'Line' }));
@@ -67,7 +67,7 @@ describe('Toolbar', () => {
 
 	it('labels each toolbar section (#16)', () => {
 		const editor = new EditorState();
-		render(Toolbar, { props: { editor, onDrawSignature: () => {} } });
+		render(Toolbar, { props: { editor, onDrawSignature: () => {}, ready: true } });
 		for (const label of ['Shapes', 'Content', 'Fields']) {
 			expect(screen.getByText(label)).toBeTruthy();
 		}
@@ -76,7 +76,7 @@ describe('Toolbar', () => {
 	it('closes the Document menu on an outside click (#7)', async () => {
 		const user = userEvent.setup();
 		const editor = new EditorState();
-		render(Toolbar, { props: { editor, onDrawSignature: () => {} } });
+		render(Toolbar, { props: { editor, onDrawSignature: () => {}, ready: true } });
 
 		await user.click(screen.getByRole('button', { name: 'Document ▾' }));
 		flushSync();
@@ -90,13 +90,13 @@ describe('Toolbar', () => {
 
 	it('drops the redundant "Upload sig" control (#11)', () => {
 		const editor = new EditorState();
-		render(Toolbar, { props: { editor, onDrawSignature: () => {} } });
+		render(Toolbar, { props: { editor, onDrawSignature: () => {}, ready: true } });
 		expect(screen.queryByText('Upload sig')).toBeNull();
 	});
 
 	it('groups insert tools into shape and content sections (#12)', () => {
 		const editor = new EditorState();
-		render(Toolbar, { props: { editor, onDrawSignature: () => {} } });
+		render(Toolbar, { props: { editor, onDrawSignature: () => {}, ready: true } });
 		for (const name of ['Line', 'Rectangle', 'Ellipse', 'Draw', 'Polygon', 'Link']) {
 			expect(screen.getByRole('button', { name })).toBeTruthy();
 		}
@@ -105,10 +105,22 @@ describe('Toolbar', () => {
 		expect(screen.getByRole('button', { name: 'Signature' })).toBeTruthy();
 	});
 
+	it('hides the editing controls until a document is ready, keeping only Upload', () => {
+		const editor = new EditorState();
+		render(Toolbar, { props: { editor, onDrawSignature: () => {}, ready: false } });
+		// Upload stays available so the user can get a document in.
+		expect(screen.getByText('Upload')).toBeTruthy();
+		// Insert tools, Document menu and undo/redo are gone — single focus.
+		expect(screen.queryByRole('button', { name: 'Text' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Document ▾' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull();
+		expect(screen.queryByText('Fields')).toBeNull();
+	});
+
 	it('opens the document-properties and outline modals from the Document menu', async () => {
 		const user = userEvent.setup();
 		const editor = new EditorState();
-		render(Toolbar, { props: { editor, onDrawSignature: () => {} } });
+		render(Toolbar, { props: { editor, onDrawSignature: () => {}, ready: true } });
 
 		await user.click(screen.getByRole('button', { name: 'Document ▾' }));
 		flushSync();

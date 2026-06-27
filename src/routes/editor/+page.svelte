@@ -76,7 +76,7 @@
 <svelte:window onkeydown={onKeydown} />
 
 <div class="flex min-h-0 flex-1 flex-col bg-slate-100">
-	<Toolbar {editor} onDrawSignature={() => (showSignaturePad = true)} />
+	<Toolbar {editor} ready={!showEmptyState} onDrawSignature={() => (showSignaturePad = true)} />
 
 	{#if editor.errorMessage}
 		<div class="border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700" role="alert">

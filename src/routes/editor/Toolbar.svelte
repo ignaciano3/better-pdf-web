@@ -5,7 +5,11 @@
 	import FieldsSection from './toolbar/FieldsSection.svelte';
 	import ShapesSection from './toolbar/ShapesSection.svelte';
 
-	let { editor, onDrawSignature }: { editor: EditorState; onDrawSignature: () => void } = $props();
+	let {
+		editor,
+		onDrawSignature,
+		ready
+	}: { editor: EditorState; onDrawSignature: () => void; ready: boolean } = $props();
 
 	let docMenuOpen = $state(false);
 
@@ -92,142 +96,155 @@
 		{/if}
 	</div>
 
-	<!-- Undo / redo. Disabled (not hidden) when there's nothing to step through, so
-	     the controls stay in a stable place. Keyboard: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z. -->
-	<div class="order-1 flex shrink-0 items-center gap-0.5 sm:order-2">
-		<div class="mr-1 hidden h-5 w-px bg-slate-200 sm:block"></div>
-		<button
-			onclick={() => editor.undo()}
-			disabled={!editor.canUndo}
-			class={iconBtn}
-			title="Undo (Ctrl+Z)"
-			aria-label="Undo"
-			aria-keyshortcuts="Control+Z"
-		>
-			<svg
-				class="h-4 w-4"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				aria-hidden="true"
+	<!-- Editing controls (undo/redo, insert tools, Document menu) appear only once
+	     there's a document to act on. Before that the empty state has a single
+	     focus: get a PDF in. Upload stays available above. -->
+	{#if ready}
+		<!-- Undo / redo. Disabled (not hidden) when there's nothing to step through,
+		     so the controls stay in a stable place. Keyboard: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z. -->
+		<div class="order-1 flex shrink-0 items-center gap-0.5 sm:order-2">
+			<div class="mr-1 hidden h-5 w-px bg-slate-200 sm:block"></div>
+			<button
+				onclick={() => editor.undo()}
+				disabled={!editor.canUndo}
+				class={iconBtn}
+				title="Undo (Ctrl+Z)"
+				aria-label="Undo"
+				aria-keyshortcuts="Control+Z"
 			>
-				<path d="M9 14 4 9l5-5" />
-				<path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
-			</svg>
-		</button>
-		<button
-			onclick={() => editor.redo()}
-			disabled={!editor.canRedo}
-			class={iconBtn}
-			title="Redo (Ctrl+Shift+Z)"
-			aria-label="Redo"
-			aria-keyshortcuts="Control+Shift+Z Control+Y"
-		>
-			<svg
-				class="h-4 w-4"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				aria-hidden="true"
+				<svg
+					class="h-4 w-4"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					aria-hidden="true"
+				>
+					<path d="M9 14 4 9l5-5" />
+					<path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+				</svg>
+			</button>
+			<button
+				onclick={() => editor.redo()}
+				disabled={!editor.canRedo}
+				class={iconBtn}
+				title="Redo (Ctrl+Shift+Z)"
+				aria-label="Redo"
+				aria-keyshortcuts="Control+Shift+Z Control+Y"
 			>
-				<path d="m15 14 5-5-5-5" />
-				<path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
-			</svg>
-		</button>
-	</div>
+				<svg
+					class="h-4 w-4"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					aria-hidden="true"
+				>
+					<path d="m15 14 5-5-5-5" />
+					<path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
+				</svg>
+			</button>
+		</div>
 
-	<!-- Center: Insert tools. Wraps onto more rows when the viewport is too narrow
+		<!-- Center: Insert tools. Wraps onto more rows when the viewport is too narrow
 	     to fit every section on one line (#3), so nothing is pushed off-screen. -->
-	<div
-		class="order-3 flex w-full min-w-0 flex-wrap items-center gap-x-4 gap-y-2 sm:order-2 sm:w-auto sm:flex-1"
-	>
-		<ContentSection {editor} {onDrawSignature} />
-		<FieldsSection {editor} />
-		<!-- Shapes kept last (#2). -->
-		<ShapesSection {editor} />
-	</div>
+		<div
+			class="order-3 flex w-full min-w-0 flex-wrap items-center gap-x-4 gap-y-2 sm:order-2 sm:w-auto sm:flex-1"
+		>
+			<ContentSection {editor} {onDrawSignature} />
+			<FieldsSection {editor} />
+			<!-- Shapes kept last (#2). -->
+			<ShapesSection {editor} />
+		</div>
 
-	<!-- Right: document menu. On mobile it shares the top row with File (ml-auto
+		<!-- Right: document menu. On mobile it shares the top row with File (ml-auto
 	     pushes it to the edge); on sm+ it sits at the far right as before. Export
 	     is the floating action button over the canvas (see +page.svelte), not here:
 	     one primary action, close to the work, clear of the header's Sign-up button. -->
-	<div class="order-2 ml-auto flex shrink-0 items-center gap-2 sm:order-3 sm:ml-0">
-		<div class="relative" data-menu="doc">
-			<button
-				class="rounded px-2.5 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
-				aria-haspopup="menu"
-				aria-expanded={docMenuOpen}
-				onclick={() => (docMenuOpen = !docMenuOpen)}
-			>
-				Document ▾
-			</button>
-			{#if docMenuOpen}
-				<div
-					class="absolute top-full right-0 z-30 mt-1 max-h-96 w-52 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
-					role="menu"
+		<div class="order-2 ml-auto flex shrink-0 items-center gap-2 sm:order-3 sm:ml-0">
+			<div class="relative" data-menu="doc">
+				<button
+					class="rounded px-2.5 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+					aria-haspopup="menu"
+					aria-expanded={docMenuOpen}
+					onclick={() => (docMenuOpen = !docMenuOpen)}
 				>
-					<label class="{menuItem} block cursor-pointer">
-						Merge / append PDF…
-						<input
-							type="file"
-							accept="application/pdf,.pdf"
-							class="hidden"
-							disabled={editor.loadingPdf}
-							onchange={onMergeChange}
-						/>
-					</label>
-					<button
-						class={menuItem}
-						role="menuitem"
-						onclick={() => {
-							editor.docPropsModalOpen = true;
-							docMenuOpen = false;
-						}}
+					Document ▾
+				</button>
+				{#if docMenuOpen}
+					<div
+						class="absolute top-full right-0 z-30 mt-1 max-h-96 w-52 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+						role="menu"
 					>
-						Properties…
-					</button>
-					<button
-						class={menuItem}
-						role="menuitem"
-						onclick={() => {
-							editor.outlineEditorOpen = true;
-							docMenuOpen = false;
-						}}
-					>
-						Outline / bookmarks…
-					</button>
-					<button
-						class={menuItem}
-						role="menuitem"
-						onclick={() => {
-							editor.watermarkModalOpen = true;
-							docMenuOpen = false;
-						}}
-					>
-						Watermark…
-					</button>
-					{#if editor.pageOps.length > 0}
-						<div class="my-1 border-t border-slate-100"></div>
-						<p class="px-3 py-1 text-xs font-medium tracking-wide text-slate-500 uppercase">
-							Page size
-						</p>
-						{#each NAMED_PAGE_SIZES as s (s.label)}
-							<button class={menuItem} role="menuitem" onclick={() => applyPageSize(s.size, false)}>
-								{s.label} portrait
-							</button>
-							<button class={menuItem} role="menuitem" onclick={() => applyPageSize(s.size, true)}>
-								{s.label} landscape
-							</button>
-						{/each}
-					{/if}
-				</div>
-			{/if}
+						<label class="{menuItem} block cursor-pointer">
+							Merge / append PDF…
+							<input
+								type="file"
+								accept="application/pdf,.pdf"
+								class="hidden"
+								disabled={editor.loadingPdf}
+								onchange={onMergeChange}
+							/>
+						</label>
+						<button
+							class={menuItem}
+							role="menuitem"
+							onclick={() => {
+								editor.docPropsModalOpen = true;
+								docMenuOpen = false;
+							}}
+						>
+							Properties…
+						</button>
+						<button
+							class={menuItem}
+							role="menuitem"
+							onclick={() => {
+								editor.outlineEditorOpen = true;
+								docMenuOpen = false;
+							}}
+						>
+							Outline / bookmarks…
+						</button>
+						<button
+							class={menuItem}
+							role="menuitem"
+							onclick={() => {
+								editor.watermarkModalOpen = true;
+								docMenuOpen = false;
+							}}
+						>
+							Watermark…
+						</button>
+						{#if editor.pageOps.length > 0}
+							<div class="my-1 border-t border-slate-100"></div>
+							<p class="px-3 py-1 text-xs font-medium tracking-wide text-slate-500 uppercase">
+								Page size
+							</p>
+							{#each NAMED_PAGE_SIZES as s (s.label)}
+								<button
+									class={menuItem}
+									role="menuitem"
+									onclick={() => applyPageSize(s.size, false)}
+								>
+									{s.label} portrait
+								</button>
+								<button
+									class={menuItem}
+									role="menuitem"
+									onclick={() => applyPageSize(s.size, true)}
+								>
+									{s.label} landscape
+								</button>
+							{/each}
+						{/if}
+					</div>
+				{/if}
+			</div>
 		</div>
-	</div>
+	{/if}
 </header>
