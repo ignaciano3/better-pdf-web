@@ -33,7 +33,9 @@ describe('PageManager accessibility', () => {
 	it('disables move-up and delete for a single page', () => {
 		const editor = new EditorState();
 		render(PageManager, { props: { editor } });
-		expect(screen.getByRole('button', { name: 'Move page 1 up' })).toBeDisabled();
-		expect(screen.getByRole('button', { name: 'Delete page 1' })).toBeDisabled();
+		const up = screen.getByRole('button', { name: 'Move page 1 up' }) as HTMLButtonElement;
+		const del = screen.getByRole('button', { name: 'Delete page 1' }) as HTMLButtonElement;
+		expect(up.disabled).toBe(true);
+		expect(del.disabled).toBe(true);
 	});
 });
