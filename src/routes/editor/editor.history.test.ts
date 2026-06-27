@@ -36,6 +36,32 @@ describe('EditorState undo/redo', () => {
 		expect(e.canRedo).toBe(false);
 	});
 
+	it('removeSelected deletes the selected element and is undoable (Backspace path)', () => {
+		const e = makeEditor();
+		e.addTextAt(10, 10, 0);
+		e.flushHistory();
+		e.select(e.elements[0]!.id);
+		expect(e.selectedId).not.toBeNull();
+
+		e.removeSelected();
+		expect(e.elements).toHaveLength(0);
+		expect(e.selectedId).toBeNull();
+
+		// The deletion is a normal edit, so undo brings the element back.
+		e.flushHistory();
+		e.undo();
+		expect(e.elements).toHaveLength(1);
+	});
+
+	it('removeSelected is a no-op when nothing is selected', () => {
+		const e = makeEditor();
+		e.addTextAt(10, 10, 0);
+		e.flushHistory();
+		e.select(null);
+		e.removeSelected();
+		expect(e.elements).toHaveLength(1);
+	});
+
 	it('records an edit and undoes/redoes it', () => {
 		const e = makeEditor();
 		e.addTextAt(10, 10, 0);

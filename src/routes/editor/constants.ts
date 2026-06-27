@@ -97,6 +97,29 @@ export type Tool =
 /** The idle tool: clicks select/deselect, never create. */
 export const SELECT_TOOL: Tool = { type: 'select' };
 
+/** Single-key accelerators for the draw tools (no modifier). Power users hit the
+ * letter to switch tools instead of mousing to the toolbar; the same letters are
+ * surfaced in each button's tooltip. `image` is intentionally absent — it opens a
+ * file picker, which we keep behind an explicit click. `v` resets to select. */
+export const DRAW_SHORTCUTS: Partial<Record<DrawKind, string>> = {
+	text: 't',
+	line: 'l',
+	rectangle: 'r',
+	ellipse: 'e',
+	polygon: 'p',
+	path: 'd',
+	link: 'k',
+	signature: 's'
+};
+
+/** Reverse lookup (key → draw kind) for the keyboard handler. */
+export const SHORTCUT_TO_DRAW: Record<string, DrawKind> = Object.fromEntries(
+	Object.entries(DRAW_SHORTCUTS).map(([kind, key]) => [key, kind as DrawKind])
+);
+
+/** Key that returns to the select tool. */
+export const SELECT_SHORTCUT = 'v';
+
 /** Default widget size per field kind, in PDF points (top-left box). */
 export const FIELD_DEFAULT_SIZE: Record<FieldKind, { width: number; height: number }> = {
 	text: { width: 160, height: 24 },

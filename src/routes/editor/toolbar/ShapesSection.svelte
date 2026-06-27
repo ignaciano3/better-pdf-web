@@ -1,7 +1,14 @@
 <script lang="ts">
 	import type { EditorState } from '../editor.svelte';
 	import type { DrawKind } from '../constants';
+	import { DRAW_SHORTCUTS } from '../constants';
 	import { sectionLabel, sectionGroup, toolClass } from './styles';
+
+	/** Tooltip text with the tool's single-key accelerator, when it has one. */
+	function tip(label: string, kind: DrawKind): string {
+		const key = DRAW_SHORTCUTS[kind];
+		return key ? `${label} (${key.toUpperCase()})` : label;
+	}
 
 	let { editor }: { editor: EditorState } = $props();
 
@@ -27,6 +34,8 @@
 		{#each shapeTools as t (t.kind)}
 			<button
 				class={toolClass(editor.activeDrawKind === t.kind)}
+				aria-pressed={editor.activeDrawKind === t.kind}
+				title={tip(t.label, t.kind)}
 				onclick={() => toggleDraw(t.kind)}
 			>
 				{t.label}

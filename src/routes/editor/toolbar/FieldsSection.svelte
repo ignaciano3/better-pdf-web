@@ -28,6 +28,7 @@
 		{#each fieldTools as f (f.kind)}
 			<button
 				class={toolClass(editor.activeFieldKind === f.kind)}
+				aria-pressed={editor.activeFieldKind === f.kind}
 				onclick={() => toggleField(f.kind)}
 			>
 				{f.label}

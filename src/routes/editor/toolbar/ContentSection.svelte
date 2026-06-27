@@ -1,7 +1,14 @@
 <script lang="ts">
 	import type { EditorState } from '../editor.svelte';
 	import type { DrawKind } from '../constants';
+	import { DRAW_SHORTCUTS } from '../constants';
 	import { sectionLabel, sectionGroup, toolClass } from './styles';
+
+	/** Tooltip text with the tool's single-key accelerator, when it has one. */
+	function tip(label: string, kind: DrawKind): string {
+		const key = DRAW_SHORTCUTS[kind];
+		return key ? `${label} (${key.toUpperCase()})` : label;
+	}
 
 	let { editor, onDrawSignature }: { editor: EditorState; onDrawSignature: () => void } = $props();
 
@@ -28,10 +35,15 @@
 <div class="flex min-w-0 items-center gap-1.5">
 	<span class={sectionLabel}>Content</span>
 	<div class={sectionGroup}>
-		<button class={toolClass(editor.activeDrawKind === 'text')} onclick={() => toggleDraw('text')}>
+		<button
+			class={toolClass(editor.activeDrawKind === 'text')}
+			aria-pressed={editor.activeDrawKind === 'text'}
+			title={tip('Text', 'text')}
+			onclick={() => toggleDraw('text')}
+		>
 			Text
 		</button>
-		<label class={toolClass(editor.activeDrawKind === 'image') + ' cursor-pointer'}>
+		<label class={toolClass(editor.activeDrawKind === 'image') + ' cursor-pointer'} title="Image">
 			Image
 			<input
 				type="file"
@@ -40,10 +52,20 @@
 				onchange={onImageUpload}
 			/>
 		</label>
-		<button class={toolClass(editor.activeDrawKind === 'signature')} onclick={onDrawSignature}>
+		<button
+			class={toolClass(editor.activeDrawKind === 'signature')}
+			aria-pressed={editor.activeDrawKind === 'signature'}
+			title={tip('Signature', 'signature')}
+			onclick={onDrawSignature}
+		>
 			Signature
 		</button>
-		<button class={toolClass(editor.activeDrawKind === 'link')} onclick={() => toggleDraw('link')}>
+		<button
+			class={toolClass(editor.activeDrawKind === 'link')}
+			aria-pressed={editor.activeDrawKind === 'link'}
+			title={tip('Link', 'link')}
+			onclick={() => toggleDraw('link')}
+		>
 			Link
 		</button>
 	</div>

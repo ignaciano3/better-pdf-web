@@ -12,6 +12,7 @@
 	import OutlineEditor from './OutlineEditor.svelte';
 	import WatermarkModal from './WatermarkModal.svelte';
 	import UpsellModal from './UpsellModal.svelte';
+	import { SHORTCUT_TO_DRAW, SELECT_SHORTCUT } from './constants';
 
 	const editor = new EditorState();
 	// Free pdf.js worker memory (cached source documents) when leaving the editor.
@@ -59,16 +60,67 @@
 	// still works there; our contenteditable text elements are document state, so
 	// those fall through to document-level undo.
 	function onKeydown(event: KeyboardEvent) {
-		if (!(event.metaKey || event.ctrlKey)) return;
-		const tag = (event.target as HTMLElement | null)?.tagName;
-		if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+		// Never steal keys while the user is typing into a control or a
+		// contenteditable text element.
+		const target = event.target as HTMLElement | null;
+		const tag = target?.tagName;
+		if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+
+		// Esc puts the pen down (same as V) and clears any current selection. While a
+		// polygon is being drawn, Esc is owned by the canvas (it cancels that
+		// in-progress shape and keeps the tool), so leave it alone. No preventDefault,
+		// so modals that also listen for Esc still get it.
+		if (event.key === 'Escape') {
+			if (!editor.polygonDraftId) {
+				editor.resetTool();
+				editor.select(null);
+			}
+			return;
+		}
+
+		if (event.metaKey || event.ctrlKey) {
+			const key = event.key.toLowerCase();
+			if (key === 'z' && !event.shiftKey) {
+				event.preventDefault();
+				editor.undo();
+			} else if ((key === 'z' && event.shiftKey) || key === 'y') {
+				event.preventDefault();
+				editor.redo();
+			}
+			return;
+		}
+
+		// Backspace / Delete removes the selected element. The typing guard above
+		// already exempts inputs, textareas and contenteditable text, so this never
+		// fights the user's text editing.
+		if (event.key === 'Backspace' || event.key === 'Delete') {
+			if (editor.selectedId) {
+				event.preventDefault();
+				editor.removeSelected();
+			}
+			return;
+		}
+
+		// Plain single-key tool accelerators — only once a document is loaded, and
+		// never with other modifiers held.
+		if (event.altKey || event.shiftKey || showEmptyState) return;
 		const key = event.key.toLowerCase();
-		if (key === 'z' && !event.shiftKey) {
+		if (key === SELECT_SHORTCUT) {
 			event.preventDefault();
-			editor.undo();
-		} else if ((key === 'z' && event.shiftKey) || key === 'y') {
-			event.preventDefault();
-			editor.redo();
+			editor.resetTool();
+			return;
+		}
+		const kind = SHORTCUT_TO_DRAW[key];
+		if (!kind) return;
+		event.preventDefault();
+		// Signature opens the draw pad (it needs the user to draw first), the rest
+		// activate their tool directly; toggling the active tool returns to select.
+		if (kind === 'signature') {
+			showSignaturePad = true;
+		} else if (editor.activeDrawKind === kind) {
+			editor.resetTool();
+		} else {
+			editor.setTool({ type: 'draw', kind });
 		}
 	}
 
@@ -136,6 +188,12 @@
 							Start blank
 						</button>
 					</div>
+					<!-- Close the trust loop up front: editing is local; export builds the
+					     PDF on the server in memory and streams it back — nothing is stored. -->
+					<p class="max-w-xs text-center text-xs text-slate-500">
+						Your file stays in this browser while you edit. Exporting builds the PDF on our
+						server and sends it straight back — your document isn’t stored.
+					</p>
 				</div>
 			</div>
 		{:else}

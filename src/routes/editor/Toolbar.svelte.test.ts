@@ -20,6 +20,27 @@ describe('Toolbar', () => {
 		expect(editor.activeDrawKind).toBe('text');
 	});
 
+	it('marks the active tool with aria-pressed (non-color cue, #a11y)', async () => {
+		const user = userEvent.setup();
+		const editor = new EditorState();
+		render(Toolbar, { props: { editor, onDrawSignature: () => {}, ready: true } });
+
+		const text = screen.getByRole('button', { name: 'Text' });
+		expect(text.getAttribute('aria-pressed')).toBe('false');
+		await user.click(text);
+		flushSync();
+		expect(text.getAttribute('aria-pressed')).toBe('true');
+	});
+
+	it('exposes single-key tool shortcuts in tooltips', () => {
+		const editor = new EditorState();
+		render(Toolbar, { props: { editor, onDrawSignature: () => {}, ready: true } });
+		expect(screen.getByRole('button', { name: 'Text' }).getAttribute('title')).toBe('Text (T)');
+		expect(screen.getByRole('button', { name: 'Rectangle' }).getAttribute('title')).toBe(
+			'Rectangle (R)'
+		);
+	});
+
 	it('activates the Rect shape tool', async () => {
 		const user = userEvent.setup();
 		const editor = new EditorState();
