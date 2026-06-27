@@ -74,6 +74,12 @@ export const ZOOM_MAX = 4;
 /** Zoom step for the −/+ buttons. */
 export const ZOOM_STEP = 0.25;
 
+/** Max undo/redo steps retained; older entries are dropped from the bottom. */
+export const HISTORY_LIMIT = 100;
+/** Idle gap (ms) before edits are committed as one undo step, so a drag or a
+ * burst of typing coalesces into a single entry instead of one per frame/key. */
+export const HISTORY_DEBOUNCE_MS = 350;
+
 /** Named output page sizes (PDF points) the page-size dropdown offers. */
 export const NAMED_PAGE_SIZES: { label: string; size: [number, number] }[] = [
 	{ label: 'A4', size: [595.28, 841.89] },

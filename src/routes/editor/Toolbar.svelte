@@ -38,6 +38,10 @@
 	}
 
 	const menuItem = 'block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100';
+
+	// Icon button shared by undo/redo: muted at rest, greyed and inert when disabled.
+	const iconBtn =
+		'flex h-8 w-8 items-center justify-center rounded text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent';
 </script>
 
 <svelte:window onpointerdown={onWindowPointerDown} />
@@ -86,6 +90,56 @@
 				New blank
 			</button>
 		{/if}
+	</div>
+
+	<!-- Undo / redo. Disabled (not hidden) when there's nothing to step through, so
+	     the controls stay in a stable place. Keyboard: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z. -->
+	<div class="order-1 flex shrink-0 items-center gap-0.5 sm:order-2">
+		<div class="mr-1 hidden h-5 w-px bg-slate-200 sm:block"></div>
+		<button
+			onclick={() => editor.undo()}
+			disabled={!editor.canUndo}
+			class={iconBtn}
+			title="Undo (Ctrl+Z)"
+			aria-label="Undo"
+			aria-keyshortcuts="Control+Z"
+		>
+			<svg
+				class="h-4 w-4"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				aria-hidden="true"
+			>
+				<path d="M9 14 4 9l5-5" />
+				<path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+			</svg>
+		</button>
+		<button
+			onclick={() => editor.redo()}
+			disabled={!editor.canRedo}
+			class={iconBtn}
+			title="Redo (Ctrl+Shift+Z)"
+			aria-label="Redo"
+			aria-keyshortcuts="Control+Shift+Z Control+Y"
+		>
+			<svg
+				class="h-4 w-4"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				aria-hidden="true"
+			>
+				<path d="m15 14 5-5-5-5" />
+				<path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
+			</svg>
+		</button>
 	</div>
 
 	<!-- Center: Insert tools. Wraps onto more rows when the viewport is too narrow

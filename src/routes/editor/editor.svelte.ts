@@ -16,6 +16,7 @@ import type {
 	TextElement,
 	Watermark
 } from '$lib/pdf/types';
+import { flushSync } from 'svelte';
 import { renderSourcePdf, type RenderedPage, PdfRenderError } from '$lib/pdf/render';
 import { PdfDocStore } from '$lib/pdf/pdf-doc-store';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
@@ -39,6 +40,8 @@ import {
 	ZOOM_MIN,
 	ZOOM_MAX,
 	ZOOM_STEP,
+	HISTORY_LIMIT,
+	HISTORY_DEBOUNCE_MS,
 	type Tool,
 	type DrawKind,
 	type PageInfo,
@@ -62,6 +65,24 @@ export interface UpsellInfo {
 	limit?: number;
 	window?: number;
 	upgradeUrl?: string;
+}
+
+/**
+ * A point-in-time copy of the editable document, used for undo/redo. Holds only
+ * the user-authored state (not transient UI, derived geometry, or the heavy
+ * source renders); restoring it reproduces the document exactly. Selection is
+ * carried so an undo also restores what was selected, but selection changes on
+ * their own never create a history step.
+ */
+interface DocSnapshot {
+	elements: EditElement[];
+	pageOps: PageOp[];
+	metadata: DocumentMetadataInput;
+	outline: OutlineItem[];
+	flatten: boolean;
+	watermark: Watermark | null;
+	embeddedFonts: Record<string, EmbeddedFontAsset>;
+	selectedId: string | null;
 }
 
 /**
@@ -214,6 +235,169 @@ export class EditorState {
 	 * Referenced by {@link TextElement.fontId}; included in the export state.
 	 */
 	embeddedFonts = $state<Record<string, EmbeddedFontAsset>>({});
+
+	// --- undo / redo ---------------------------------------------------------
+	// History is captured reactively: one effect deep-reads every authored field,
+	// so any mutation anywhere (a method, a modal, a drag handler) is recorded
+	// without each call site having to opt in. Commits are debounced so a drag or
+	// a burst of typing collapses into a single step. #committed is the document
+	// as it currently sits on the timeline; flushHistory() moves a pending edit
+	// onto the undo stack.
+	#undo: DocSnapshot[] = [];
+	#redo: DocSnapshot[] = [];
+	#committed: DocSnapshot;
+	/** True while applying a snapshot, so the tracking effect ignores its writes. */
+	#applying = false;
+	#commitTimer: ReturnType<typeof setTimeout> | null = null;
+	#historyCleanup: (() => void) | null = null;
+	/** Reactive sizes of the stacks, so toolbar buttons enable/disable live. */
+	undoDepth = $state(0);
+	redoDepth = $state(0);
+	canUndo = $derived(this.undoDepth > 0);
+	canRedo = $derived(this.redoDepth > 0);
+
+	constructor() {
+		this.#committed = this.#takeSnapshot();
+		// Run the tracking effect in its own root so it lives for the editor's
+		// lifetime (not a component's); dispose() tears it down.
+		this.#historyCleanup = $effect.root(() => {
+			$effect(() => {
+				// Deep-read every authored field to subscribe to nested mutations
+				// (drag moves a coord, typing edits text, a modal sets a prop).
+				// Selection is intentionally NOT read: selecting must not record a step.
+				this.#track(this.elements);
+				this.#track(this.pageOps);
+				this.#track(this.metadata);
+				this.#track(this.outline);
+				this.#track(this.watermark);
+				this.#track(this.embeddedFonts);
+				void this.flatten;
+				if (this.#applying) return;
+				this.#scheduleCommit();
+			});
+		});
+	}
+
+	/**
+	 * Subscribe an effect to every reactive leaf under `v` without cloning. For
+	 * binary blobs we read only `.length` (enough to notice a replacement) so we
+	 * never copy megabytes of image/font bytes on every keystroke or drag frame.
+	 */
+	#track(v: unknown): void {
+		if (v == null) return;
+		if (v instanceof Uint8Array) {
+			void v.length;
+			return;
+		}
+		if (Array.isArray(v)) {
+			for (const item of v) this.#track(item);
+			return;
+		}
+		if (typeof v === 'object') {
+			for (const key in v) this.#track((v as Record<string, unknown>)[key]);
+		}
+	}
+
+	#takeSnapshot(): DocSnapshot {
+		return $state.snapshot({
+			elements: this.elements,
+			pageOps: this.pageOps,
+			metadata: this.metadata,
+			outline: this.outline,
+			flatten: this.flatten,
+			watermark: this.watermark,
+			embeddedFonts: this.embeddedFonts,
+			selectedId: this.selectedId
+		}) as DocSnapshot;
+	}
+
+	/** Stable serialization for change detection. `selectedId` is excluded so a
+	 * pure selection change is never a recordable edit (it's still carried in the
+	 * snapshot, so undo restores it). Uint8Array can't round-trip through JSON, so
+	 * collapse it to a length tag — paired with the scalar fields that always
+	 * change alongside binary, this reliably flags real edits. */
+	#serialize(s: DocSnapshot): string {
+		return JSON.stringify(s, (key, value) => {
+			if (key === 'selectedId') return undefined;
+			return value instanceof Uint8Array ? `u8:${value.byteLength}` : value;
+		});
+	}
+
+	#scheduleCommit(): void {
+		if (this.#commitTimer) clearTimeout(this.#commitTimer);
+		this.#commitTimer = setTimeout(() => this.flushHistory(), HISTORY_DEBOUNCE_MS);
+	}
+
+	/** Commit any pending edit as a single undo step. Called on the debounce, and
+	 * synchronously before undo/redo so an in-flight edit becomes its own step. */
+	flushHistory(): void {
+		if (this.#commitTimer) {
+			clearTimeout(this.#commitTimer);
+			this.#commitTimer = null;
+		}
+		const current = this.#takeSnapshot();
+		if (this.#serialize(current) === this.#serialize(this.#committed)) return;
+		this.#undo.push(this.#committed);
+		if (this.#undo.length > HISTORY_LIMIT) this.#undo.shift();
+		this.#redo = [];
+		this.#committed = current;
+		this.#syncDepths();
+	}
+
+	#applySnapshot(snap: DocSnapshot): void {
+		this.#applying = true;
+		// Clone so later edits don't mutate the copy still held on a stack.
+		const c = structuredClone(snap);
+		this.elements = c.elements;
+		this.pageOps = c.pageOps;
+		this.metadata = c.metadata;
+		this.outline = c.outline;
+		this.flatten = c.flatten;
+		this.watermark = c.watermark;
+		this.embeddedFonts = c.embeddedFonts;
+		this.selectedId = c.selectedId;
+		// Run the tracking effect now, while #applying suppresses it, so the
+		// restore itself doesn't schedule a bogus commit.
+		flushSync();
+		this.#applying = false;
+		this.#committed = snap;
+	}
+
+	#syncDepths(): void {
+		this.undoDepth = this.#undo.length;
+		this.redoDepth = this.#redo.length;
+	}
+
+	/** Reset the timeline to the current document as a fresh baseline. Used when a
+	 * whole new document is loaded/cleared, so undo doesn't cross that boundary. */
+	#resetHistory(): void {
+		if (this.#commitTimer) {
+			clearTimeout(this.#commitTimer);
+			this.#commitTimer = null;
+		}
+		this.#undo = [];
+		this.#redo = [];
+		this.#committed = this.#takeSnapshot();
+		this.#syncDepths();
+	}
+
+	undo(): void {
+		this.flushHistory();
+		const prev = this.#undo.pop();
+		if (prev === undefined) return;
+		this.#redo.push(this.#committed);
+		this.#applySnapshot(prev);
+		this.#syncDepths();
+	}
+
+	redo(): void {
+		this.flushHistory();
+		const next = this.#redo.pop();
+		if (next === undefined) return;
+		this.#undo.push(this.#committed);
+		this.#applySnapshot(next);
+		this.#syncDepths();
+	}
 
 	selected = $derived(this.elements.find((e) => e.id === this.selectedId) ?? null);
 	selectedText = $derived(this.selected?.type === 'text' ? this.selected : null);
@@ -1032,6 +1216,9 @@ export class EditorState {
 				detected = [];
 			}
 			this.elements = detected;
+			// A freshly loaded document is a new baseline: undo shouldn't reach back
+			// into whatever was open before (and across stale source references).
+			this.#resetHistory();
 		} catch (e) {
 			this.errorMessage =
 				e instanceof PdfRenderError
@@ -1055,6 +1242,8 @@ export class EditorState {
 		this.polygonDraftId = null;
 		this.metadata = {};
 		this.outline = [];
+		this.embeddedFonts = {};
+		this.#resetHistory();
 	}
 
 	/**
@@ -1123,6 +1312,9 @@ export class EditorState {
 	/** Destroy every cached pdf.js document. Call on editor teardown. */
 	dispose() {
 		void this.#docStore.destroyAll();
+		if (this.#commitTimer) clearTimeout(this.#commitTimer);
+		this.#historyCleanup?.();
+		this.#historyCleanup = null;
 	}
 
 	// --- zoom ----------------------------------------------------------------

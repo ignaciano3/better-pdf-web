@@ -53,7 +53,27 @@
 		editor.setTool({ type: 'draw', kind: 'signature' });
 		showSignaturePad = false;
 	}
+
+	// Undo/redo shortcuts: Cmd/Ctrl+Z, and Cmd/Ctrl+Shift+Z or Ctrl+Y to redo.
+	// Skip when typing in a real form control so the browser's native text undo
+	// still works there; our contenteditable text elements are document state, so
+	// those fall through to document-level undo.
+	function onKeydown(event: KeyboardEvent) {
+		if (!(event.metaKey || event.ctrlKey)) return;
+		const tag = (event.target as HTMLElement | null)?.tagName;
+		if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+		const key = event.key.toLowerCase();
+		if (key === 'z' && !event.shiftKey) {
+			event.preventDefault();
+			editor.undo();
+		} else if ((key === 'z' && event.shiftKey) || key === 'y') {
+			event.preventDefault();
+			editor.redo();
+		}
+	}
 </script>
+
+<svelte:window onkeydown={onKeydown} />
 
 <div class="flex min-h-0 flex-1 flex-col bg-slate-100">
 	<Toolbar {editor} onDrawSignature={() => (showSignaturePad = true)} />
