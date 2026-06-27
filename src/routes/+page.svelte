@@ -6,34 +6,28 @@
 
 	const features = [
 		{
-			n: '01',
 			title: 'Fill AcroForm fields',
 			body: 'Complete interactive form fields — text, checkboxes, radios and dropdowns — directly on the page.'
 		},
 		{
-			n: '02',
 			title: 'Add text & images',
 			body: 'Place new text blocks and drop in images anywhere, with full control over size and position.'
 		},
 		{
-			n: '03',
 			title: 'Draw & sign',
 			body: 'Annotate freehand and add real signatures for approvals, reviews and markups.'
 		},
 		{
-			n: '04',
 			title: 'Merge, split & reorder',
 			body: 'Combine files, pull pages apart, and drag pages into exactly the order you want.'
 		},
 		{
-			n: '05',
-			title: 'Custom fonts (Unicode / CJK)',
-			body: 'Embed your own fonts with full Unicode coverage, including CJK scripts and symbols.'
+			title: 'Embed custom fonts',
+			body: 'Bring your own fonts with full Unicode coverage, including CJK scripts and symbols.'
 		},
 		{
-			n: '06',
-			title: 'Links & bookmarks',
-			body: 'Add clickable links and a navigable bookmark outline to your finished documents.'
+			title: 'Add links & bookmarks',
+			body: 'Place clickable links and a navigable bookmark outline in your finished documents.'
 		}
 	];
 </script>
@@ -251,29 +245,29 @@
 
 	<!-- FEATURES -->
 	<section class="mx-auto max-w-6xl px-6 pt-22 pb-23">
-		<div class="max-w-xl">
-			<div class="font-mono text-xs font-medium tracking-[0.1em] text-blue-600">FEATURES</div>
-			<h2
-				class="font-display mt-3 text-[clamp(1.75rem,3.4vw,2.5rem)] leading-tight font-bold tracking-tight"
-			>
-				Everything you need to work with PDFs
-			</h2>
-			<p class="mt-4 text-base leading-relaxed text-slate-500">
-				A full editing toolkit that runs in your browser. Your files are only sent to build the export
-				— never stored on our servers.
-			</p>
-		</div>
-
-		<div class="mt-11 grid grid-cols-1 gap-4.5 sm:grid-cols-2 lg:grid-cols-3">
-			{#each features as f (f.n)}
-				<div
-					class="rounded-2xl border border-slate-200 bg-white p-7 transition hover:-translate-y-1 hover:border-blue-600/35 hover:shadow-xl hover:shadow-slate-900/10"
+		<div class="grid gap-x-12 gap-y-9 md:grid-cols-[5fr_7fr]">
+			<div class="md:max-w-sm">
+				<h2
+					class="font-display text-[clamp(1.75rem,3.4vw,2.5rem)] leading-tight font-bold tracking-tight text-balance"
 				>
-					<div class="font-mono text-xs font-medium tracking-wide text-blue-600">{f.n}</div>
-					<h3 class="font-display mt-3.5 text-lg font-semibold">{f.title}</h3>
-					<p class="mt-2 text-sm leading-relaxed text-slate-500">{f.body}</p>
-				</div>
-			{/each}
+					Everything you need to work with PDFs
+				</h2>
+				<p class="mt-4 text-base leading-relaxed text-slate-600">
+					A full editing toolkit that runs in your browser. Your files are only sent to build the
+					export — never stored on our servers.
+				</p>
+			</div>
+
+			<dl class="border-t border-slate-200">
+				{#each features as f (f.title)}
+					<div
+						class="grid gap-1.5 border-b border-slate-200 py-5 transition-colors hover:bg-slate-50/70 sm:grid-cols-[minmax(0,13rem)_1fr] sm:gap-8 sm:py-6"
+					>
+						<dt class="font-display text-lg font-semibold text-slate-900">{f.title}</dt>
+						<dd class="text-[15px] leading-relaxed text-slate-600">{f.body}</dd>
+					</div>
+				{/each}
+			</dl>
 		</div>
 	</section>
 
