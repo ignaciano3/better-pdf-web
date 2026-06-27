@@ -46,6 +46,17 @@
 		if (font.startsWith('Courier')) return '"Courier New", Courier, monospace';
 		return 'Helvetica, Arial, sans-serif';
 	}
+
+	// Standard PDF font names carry weight/style in their suffix
+	// (e.g. Helvetica-BoldOblique, Times-BoldItalic). Mirror those on the
+	// canvas preview so picking Bold/Italic actually changes how text looks.
+	// Custom embedded fonts have no such suffix, so they stay regular here.
+	function fontWeight(font: string | undefined): number {
+		return font?.includes('Bold') ? 700 : 400;
+	}
+	function fontStyle(font: string | undefined): string {
+		return font && (font.includes('Italic') || font.includes('Oblique')) ? 'italic' : 'normal';
+	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -56,7 +67,9 @@
 	style="left: {text.x * SCALE}px; top: {text.y * SCALE}px; font-size: {text.size *
 		SCALE}px; line-height: {text.lineHeight
 		? text.lineHeight / text.size
-		: 1}; font-family: {fontCss(text.font)}; color: {text.color
+		: 1}; font-family: {fontCss(text.font)}; font-weight: {fontWeight(
+			text.font
+		)}; font-style: {fontStyle(text.font)}; color: {text.color
 		? `rgb(${text.color.r * 255} ${text.color.g * 255} ${text.color.b * 255})`
 		: 'black'}; opacity: {text.opacity ?? 1}; transform: rotate({text.rotation ??
 		0}deg); transform-origin: top left;"
