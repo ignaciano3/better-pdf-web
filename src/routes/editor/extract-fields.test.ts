@@ -71,6 +71,35 @@ describe('extract-fields mapper', () => {
 		expect(dd!.maxLength).toBeUndefined();
 	});
 
+	it('loads a radio group: options from states, per-widget radioLayout', () => {
+		const el = fieldInfoToElement(
+			info({
+				name: 'diabetes.tipo',
+				type: 'radio',
+				value: 'Off',
+				states: ['1', '2'],
+				options: [],
+				widgets: [
+					{ page: 0, rect: [130.3, 613.7, 139.3, 622.7] },
+					{ page: 0, rect: [203.1, 613.7, 212.1, 622.7] }
+				]
+			}),
+			pageHeights,
+			'field0'
+		);
+		expect(el).not.toBeNull();
+		expect(el!.field).toBe('radio');
+		// Options come from `states` (radio leaves `options` empty).
+		expect(el!.options).toEqual(['1', '2']);
+		// One radioLayout entry per widget, top-left flipped, index-aligned.
+		expect(el!.radioLayout).toEqual([
+			{ x: 130.3, y: 400 - 622.7 },
+			{ x: 203.1, y: 400 - 622.7 }
+		]);
+		// "Off" is the unselected sentinel, not a real selection.
+		expect(el!.value).toBeUndefined();
+	});
+
 	it('skips pushbutton and unknown types', () => {
 		expect(fieldInfoToElement(info({ type: 'pushbutton' }), pageHeights, 'field0')).toBeNull();
 		expect(fieldInfoToElement(info({ type: 'unknown' }), pageHeights, 'field0')).toBeNull();

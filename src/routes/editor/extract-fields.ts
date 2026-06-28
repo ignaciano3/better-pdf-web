@@ -81,8 +81,24 @@ export function fieldInfoToElement(
 	};
 	if (info.required) element.required = true;
 	if (info.readOnly) element.readOnly = true;
-	if (info.value != null && info.value !== '') element.value = info.value;
-	if (info.options.length > 0) element.options = [...info.options];
+	if (kind === 'radio') {
+		// Radio options live in `states` (the on-state export values); `options`
+		// is empty for radios. Each button is its own widget, so build a
+		// `radioLayout` of per-option top-left positions index-aligned with the
+		// options. Without this the overlay renders no buttons (empty options) and
+		// would stack them at the anchor (no layout).
+		if (info.states.length > 0) element.options = [...info.states];
+		const layout = info.widgets.map((w) => {
+			const h = pageHeights[w.page] ?? 0;
+			const b = rectToTopLeft(w.rect, h);
+			return { x: b.x, y: b.y };
+		});
+		if (layout.length > 0) element.radioLayout = layout;
+	} else if (info.options.length > 0) {
+		element.options = [...info.options];
+	}
+	// "Off" is the AcroForm unselected sentinel for checkbox/radio, not a value.
+	if (info.value != null && info.value !== '' && info.value !== 'Off') element.value = info.value;
 	if (kind === 'text' && info.maxLength != null) element.maxLength = info.maxLength;
 	return element;
 }
