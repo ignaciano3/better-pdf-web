@@ -367,16 +367,65 @@
 							}}
 						/> Comb
 					</label>
+					<label class="flex items-center gap-1.5 text-sm">
+						<input
+							type="checkbox"
+							checked={field.password ?? false}
+							onchange={(e) => {
+								if ((e.currentTarget as HTMLInputElement).checked) field.password = true;
+								else delete field.password;
+							}}
+						/> Password
+					</label>
 				</div>
+				<label class="mt-3 mb-1 block text-sm font-medium text-slate-700" for="field-initial">
+					Initial value
+				</label>
+				<input
+					id="field-initial"
+					type="text"
+					class="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+					bind:value={field.value}
+				/>
 				<label class="mt-3 mb-1 block text-sm font-medium text-slate-700" for="field-default">
-					Default value
+					Reset default
 				</label>
 				<input
 					id="field-default"
 					type="text"
 					class="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-					bind:value={field.value}
+					value={field.defaultValue ?? ''}
+					oninput={(e) => {
+						const v = (e.currentTarget as HTMLInputElement).value;
+						if (v === '') delete field.defaultValue;
+						else field.defaultValue = v;
+					}}
 				/>
+			{/if}
+
+			{#if field.field === 'checkbox'}
+				<div class="mt-3 flex gap-4">
+					<label class="flex items-center gap-1.5 text-sm">
+						<input
+							type="checkbox"
+							checked={!!field.value}
+							onchange={(e) => {
+								if ((e.currentTarget as HTMLInputElement).checked) field.value = 'Yes';
+								else delete field.value;
+							}}
+						/> Checked initially
+					</label>
+					<label class="flex items-center gap-1.5 text-sm">
+						<input
+							type="checkbox"
+							checked={field.defaultChecked ?? false}
+							onchange={(e) => {
+								if ((e.currentTarget as HTMLInputElement).checked) field.defaultChecked = true;
+								else delete field.defaultChecked;
+							}}
+						/> Checked by default
+					</label>
+				</div>
 			{/if}
 
 			{#if hasOptions}
@@ -417,6 +466,45 @@
 							</div>
 						{/each}
 					</div>
+				</div>
+			{/if}
+
+			{#if hasOptions}
+				<div class="mt-3 flex items-center gap-4">
+					<label class="flex items-center gap-2 text-sm">
+						Initial
+						<select
+							class="rounded border border-slate-300 px-2 py-1 text-sm"
+							value={field.value ?? ''}
+							onchange={(e) => {
+								const v = (e.currentTarget as HTMLSelectElement).value;
+								if (v === '') delete field.value;
+								else field.value = v;
+							}}
+						>
+							<option value="">— none —</option>
+							{#each field.options ?? [] as opt (opt)}
+								<option value={opt}>{opt}</option>
+							{/each}
+						</select>
+					</label>
+					<label class="flex items-center gap-2 text-sm">
+						Reset default
+						<select
+							class="rounded border border-slate-300 px-2 py-1 text-sm"
+							value={field.defaultSelected ?? ''}
+							onchange={(e) => {
+								const v = (e.currentTarget as HTMLSelectElement).value;
+								if (v === '') delete field.defaultSelected;
+								else field.defaultSelected = v;
+							}}
+						>
+							<option value="">— none —</option>
+							{#each field.options ?? [] as opt (opt)}
+								<option value={opt}>{opt}</option>
+							{/each}
+						</select>
+					</label>
 				</div>
 			{/if}
 

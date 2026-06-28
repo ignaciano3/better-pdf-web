@@ -25,7 +25,7 @@ function fakePage(): HTMLElement {
 	} as unknown as HTMLElement;
 }
 
-function withField(kind: 'text' | 'dropdown') {
+function withField(kind: 'text' | 'dropdown' | 'checkbox') {
 	const editor = new EditorState();
 	editor.setTool({ type: 'field', kind });
 	editor.placeAtClient(20, 20, fakePage(), 0);
@@ -103,5 +103,34 @@ describe('FieldPropertiesModal', () => {
 		await user.click(screen.getByRole('button', { name: 'Delete field' }));
 		flushSync();
 		expect(editor.elements.length).toBe(0);
+	});
+
+	it('toggles password for a text field', async () => {
+		const user = userEvent.setup();
+		const editor = withField('text');
+		render(FieldPropertiesModal, { props: { editor } });
+		await user.click(screen.getByLabelText('Password'));
+		flushSync();
+		expect(editor.selectedField?.password).toBe(true);
+	});
+
+	it('sets a text reset default distinct from the initial value', async () => {
+		const user = userEvent.setup();
+		const editor = withField('text');
+		render(FieldPropertiesModal, { props: { editor } });
+		await user.type(screen.getByLabelText('Initial value'), 'hi');
+		await user.type(screen.getByLabelText('Reset default'), 'bye');
+		flushSync();
+		expect(editor.selectedField?.value).toBe('hi');
+		expect(editor.selectedField?.defaultValue).toBe('bye');
+	});
+
+	it('sets defaultChecked for a checkbox', async () => {
+		const user = userEvent.setup();
+		const editor = withField('checkbox');
+		render(FieldPropertiesModal, { props: { editor } });
+		await user.click(screen.getByLabelText('Checked by default'));
+		flushSync();
+		expect(editor.selectedField?.defaultChecked).toBe(true);
 	});
 });
