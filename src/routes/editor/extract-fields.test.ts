@@ -13,6 +13,14 @@ function info(over: Partial<FieldInfoLike>): FieldInfoLike {
 		maxLength: null,
 		multiSelect: false,
 		widgets: [{ page: 0, rect: [10, 10, 110, 30] }],
+		defaultValue: null,
+		password: false,
+		multiline: false,
+		comb: false,
+		editable: false,
+		align: 'left',
+		tooltip: null,
+		fontSize: null,
 		...over
 	};
 }
@@ -116,5 +124,84 @@ describe('extract-fields mapper', () => {
 		);
 		expect(els.map((e) => e.name)).toEqual(['a', 'b']);
 		expect(els.map((e) => e.id)).toEqual(['field0', 'field1']);
+	});
+
+	it('carries tooltip, align, fontSize, and text flags on import', () => {
+		const el = fieldInfoToElement(
+			info({
+				name: 'notes',
+				type: 'text',
+				maxLength: 6,
+				multiline: true,
+				comb: false,
+				password: true,
+				align: 'center',
+				fontSize: 14,
+				tooltip: 'help'
+			}),
+			pageHeights,
+			'field0'
+		);
+		expect(el!.tooltip).toBe('help');
+		expect(el!.align).toBe('center');
+		expect(el!.fontSize).toBe(14);
+		expect(el!.multiline).toBe(true);
+		expect(el!.password).toBe(true);
+	});
+
+	it('maps an editable dropdown to a combo field', () => {
+		const el = fieldInfoToElement(
+			info({ name: 'city', type: 'dropdown', editable: true, options: ['BA', 'NY'] }),
+			pageHeights,
+			'field0'
+		);
+		expect(el!.field).toBe('combo');
+	});
+
+	it('imports /DV defaults per field type', () => {
+		const text = fieldInfoToElement(
+			info({ name: 't', type: 'text', defaultValue: 'hi' }),
+			pageHeights,
+			'field0'
+		);
+		expect(text!.defaultValue).toBe('hi');
+		const dd = fieldInfoToElement(
+			info({ name: 'd', type: 'dropdown', options: ['a', 'b'], defaultValue: 'b' }),
+			pageHeights,
+			'field0'
+		);
+		expect(dd!.defaultSelected).toBe('b');
+		const cb = fieldInfoToElement(
+			info({ name: 'c', type: 'checkbox', defaultValue: 'Yes' }),
+			pageHeights,
+			'field0'
+		);
+		expect(cb!.defaultChecked).toBe(true);
+	});
+
+	it('ignores a /DV default-selected that is not an option', () => {
+		const dd = fieldInfoToElement(
+			info({ name: 'd', type: 'dropdown', options: ['a'], defaultValue: 'zzz' }),
+			pageHeights,
+			'field0'
+		);
+		expect(dd!.defaultSelected).toBeUndefined();
+	});
+
+	it('skips fields whose first widget is hidden or no-view', () => {
+		expect(
+			fieldInfoToElement(
+				info({ widgets: [{ page: 0, rect: [10, 10, 110, 30], hidden: true }] }),
+				pageHeights,
+				'field0'
+			)
+		).toBeNull();
+		expect(
+			fieldInfoToElement(
+				info({ widgets: [{ page: 0, rect: [10, 10, 110, 30], noView: true }] }),
+				pageHeights,
+				'field0'
+			)
+		).toBeNull();
 	});
 });

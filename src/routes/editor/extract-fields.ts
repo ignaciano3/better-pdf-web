@@ -10,6 +10,9 @@ import { rectToTopLeft, type PdfRect } from '$lib/pdf/coords';
 export interface FieldWidgetInfo {
 	page: number;
 	rect: PdfRect;
+	hidden?: boolean;
+	print?: boolean;
+	noView?: boolean;
 }
 export interface FieldInfoLike {
 	name: string;
@@ -30,6 +33,14 @@ export interface FieldInfoLike {
 	maxLength: number | null;
 	multiSelect: boolean;
 	widgets: FieldWidgetInfo[];
+	defaultValue?: string | null;
+	password?: boolean;
+	multiline?: boolean;
+	comb?: boolean;
+	editable?: boolean;
+	align?: 'left' | 'center' | 'right';
+	tooltip?: string | null;
+	fontSize?: number | null;
 }
 
 /** Map a detected field type to our {@link FieldKind}, or null to skip it. */
@@ -61,10 +72,15 @@ export function fieldInfoToElement(
 	pageHeights: number[],
 	id: string
 ): FieldElement | null {
-	const kind = toFieldKind(info.type);
+	let kind = toFieldKind(info.type);
 	if (!kind) return null;
 	const widget = info.widgets[0];
 	if (!widget) return null;
+	// Hidden / no-view widgets can't be re-authored hidden by the builder; the
+	// rebuild would turn them visible, so skip them on import.
+	if (widget.hidden || widget.noView) return null;
+	// An editable dropdown is our `combo` kind.
+	if (kind === 'dropdown' && info.editable) kind = 'combo';
 	const pageHeight = pageHeights[widget.page] ?? 0;
 	const box = rectToTopLeft(widget.rect, pageHeight);
 
@@ -100,6 +116,29 @@ export function fieldInfoToElement(
 	// "Off" is the AcroForm unselected sentinel for checkbox/radio, not a value.
 	if (info.value != null && info.value !== '' && info.value !== 'Off') element.value = info.value;
 	if (kind === 'text' && info.maxLength != null) element.maxLength = info.maxLength;
+	if (info.tooltip) element.tooltip = info.tooltip;
+	const isValueText =
+		kind === 'text' || kind === 'dropdown' || kind === 'combo' || kind === 'listbox';
+	if (isValueText) {
+		if (info.align && info.align !== 'left') element.align = info.align;
+		if (info.fontSize != null && info.fontSize > 0) element.fontSize = info.fontSize;
+	}
+	if (kind === 'text') {
+		if (info.multiline) element.multiline = true;
+		if (info.password) element.password = true;
+		if (info.comb && info.maxLength != null) element.comb = true;
+	}
+	// Reset default (/DV) → per-kind default property. "Off"/empty are sentinels.
+	const dv = info.defaultValue;
+	if (dv != null && dv !== '' && dv !== 'Off') {
+		if (kind === 'text') element.defaultValue = dv;
+		else if (kind === 'checkbox') element.defaultChecked = true;
+		else if (kind === 'radio') {
+			if (info.states.includes(dv)) element.defaultSelected = dv;
+		} else if (kind === 'dropdown' || kind === 'combo' || kind === 'listbox') {
+			if (info.options.includes(dv)) element.defaultSelected = dv;
+		}
+	}
 	return element;
 }
 
