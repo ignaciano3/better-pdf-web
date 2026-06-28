@@ -5,7 +5,7 @@
     "": {
       "name": "better-pdf-web",
       "dependencies": {
-        "@ignaciano3/better-pdf": "^1.3.0",
+        "@ignaciano3/better-pdf": "^1.4.0",
         "better-auth": "^1.6.20",
         "drizzle-orm": "^0.45.2",
         "pdfjs-dist": "^6.0.227",
@@ -187,7 +187,7 @@
 
     "@iarna/toml": ["@iarna/toml@2.2.5", "", {}, "sha512-trnsAYxU3xnS1gPHPyU961coFyLkh4gAD/0zQ5mymY4yOZ+CYvsPqUbOFSw0aDM4y0tV7tiFxL/1XfXPNC6IPg=="],
 
-    "@ignaciano3/better-pdf": ["@ignaciano3/better-pdf@1.3.0", "", { "bin": { "better-pdf-generate-types": "dist/bin/generate-types.js" } }, "sha512-IMdQlO5/zQXWiCwW9UTPD5wcTTRn2ob7dYbA2ToQqRsQyOF8GmU6oyKYuyQuocR7cyWw/DIg/xnGM/0Qd660FQ=="],
+    "@ignaciano3/better-pdf": ["@ignaciano3/better-pdf@1.4.0", "", { "bin": { "better-pdf-generate-types": "dist/bin/generate-types.js" } }, "sha512-oNo7HObgUOQeMwvs+7RdWJxEtCIgRPlsU/rUSuhlsQVkT59YhYhdiCcIteSEkN2k3D4g2FnOOreSsfafUVhmXA=="],
 
     "@jridgewell/gen-mapping": ["@jridgewell/gen-mapping@0.3.13", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.0", "@jridgewell/trace-mapping": "^0.3.24" } }, "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA=="],
 
