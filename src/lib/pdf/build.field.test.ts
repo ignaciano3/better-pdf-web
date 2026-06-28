@@ -210,4 +210,70 @@ describe('buildPdf field authoring (D3 rebuild)', () => {
 		expect(radio?.widgets).toHaveLength(2);
 		expect(radio?.states).toEqual(expect.arrayContaining(['a', 'b']));
 	});
+
+	it('authors password + reset defaults that round-trip on re-load', async () => {
+		const state: EditState = {
+			pageSize: [400, 500],
+			elements: [
+				field({
+					field: 'text',
+					name: 'pin',
+					password: true,
+					maxLength: 4,
+					value: '1234',
+					defaultValue: '0000'
+				}),
+				field({ field: 'checkbox', name: 'agree', x: 20, y: 60, defaultChecked: true }),
+				field({
+					field: 'dropdown',
+					name: 'country',
+					x: 20,
+					y: 100,
+					options: ['AR', 'US'],
+					defaultSelected: 'AR'
+				})
+			]
+		};
+		const bytes = await buildPdf(state);
+		const doc = await PdfDocument.load(bytes);
+		const byName = Object.fromEntries(
+			doc
+				.getForm()
+				.getFields()
+				.map((f) => [f.name, f])
+		);
+		expect(byName['pin']?.password).toBe(true);
+		expect(byName['pin']?.defaultValue).toBe('0000');
+		expect(byName['country']?.defaultValue).toBe('AR');
+		// checkbox /DV is an on-state string (non-null) when defaultChecked.
+		expect(byName['agree']?.defaultValue).not.toBeNull();
+	});
+
+	it('drops an over-long text default and a default-selected not in options', async () => {
+		const state: EditState = {
+			pageSize: [400, 500],
+			elements: [
+				field({ field: 'text', name: 'short', maxLength: 2, defaultValue: 'toolong' }),
+				field({
+					field: 'dropdown',
+					name: 'pick',
+					x: 20,
+					y: 80,
+					options: ['a', 'b'],
+					defaultSelected: 'zzz'
+				})
+			]
+		};
+		// Must not throw, and the invalid defaults must be absent.
+		const bytes = await buildPdf(state);
+		const doc = await PdfDocument.load(bytes);
+		const byName = Object.fromEntries(
+			doc
+				.getForm()
+				.getFields()
+				.map((f) => [f.name, f])
+		);
+		expect(byName['short']?.defaultValue).toBeNull();
+		expect(byName['pick']?.defaultValue).toBeNull();
+	});
 });

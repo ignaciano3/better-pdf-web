@@ -527,6 +527,29 @@ export interface FieldElement {
 	 * Defaults to `check` (checkbox) / `circle` (radio) when unset.
 	 */
 	checkStyle?: CheckStyle;
+	/**
+	 * Mask the displayed value (text fields only). Maps to the lib's `password`
+	 * option (`/Ff` Password flag). Display masking only — not encryption, and
+	 * independent of the field's value.
+	 */
+	password?: boolean;
+	/**
+	 * Reset default for a text field (the `/DV` value). Distinct from {@link value}
+	 * (the initial `/V`): a viewer's "Reset form" restores this. Within `maxLength`
+	 * when set. Maps to the lib's `defaultValue` option.
+	 */
+	defaultValue?: string;
+	/**
+	 * Reset default for a checkbox: whether "Reset form" restores it to checked.
+	 * Maps to the lib's `defaultChecked` option (`/DV`).
+	 */
+	defaultChecked?: boolean;
+	/**
+	 * Reset default selection for radio / dropdown / combo / listbox fields: the
+	 * option value "Reset form" restores. Must be one of {@link options} (or radio
+	 * states). Maps to the lib's `defaultSelected` option (`/DV`).
+	 */
+	defaultSelected?: string;
 }
 
 /** Discriminated union of everything the editor can stamp onto a page. */

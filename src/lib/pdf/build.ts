@@ -408,7 +408,11 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 				// `multiline` (lib throws otherwise) — only pass it when valid.
 				...(f.comb && f.maxLength !== undefined && !f.multiline ? { comb: true } : {}),
 				...(f.align ? { align: f.align } : {}),
-				...(f.fontSize !== undefined ? { fontSize: f.fontSize } : {})
+				...(f.fontSize !== undefined ? { fontSize: f.fontSize } : {}),
+				...(f.password ? { password: true } : {}),
+				...(f.defaultValue && (f.maxLength === undefined || f.defaultValue.length <= f.maxLength)
+					? { defaultValue: f.defaultValue }
+					: {})
 			});
 			break;
 		case 'checkbox':
@@ -416,7 +420,8 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 				...base,
 				size: Math.min(f.width, f.height),
 				...(f.value ? { checked: true } : {}),
-				...(f.checkStyle ? { checkStyle: f.checkStyle } : {})
+				...(f.checkStyle ? { checkStyle: f.checkStyle } : {}),
+				...(f.defaultChecked ? { defaultChecked: true } : {})
 			});
 			break;
 		case 'radio': {
@@ -440,6 +445,9 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 				...(f.background ? { background: toColor(f.background) } : {}),
 				...(f.value ? { selected: f.value } : {}),
 				...(f.checkStyle ? { checkStyle: f.checkStyle } : {}),
+				...(f.defaultSelected && options.includes(f.defaultSelected)
+					? { defaultSelected: f.defaultSelected }
+					: {}),
 				options: options.map((value, i) => {
 					const slot = f.radioLayout?.[i];
 					const ox = slot?.x ?? f.x;
@@ -461,7 +469,10 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 				...(f.field === 'combo' ? { editable: true } : {}),
 				...(f.value ? { selected: f.value } : {}),
 				...(f.align ? { align: f.align } : {}),
-				...(f.fontSize !== undefined ? { fontSize: f.fontSize } : {})
+				...(f.fontSize !== undefined ? { fontSize: f.fontSize } : {}),
+				...(f.defaultSelected && (f.options ?? []).includes(f.defaultSelected)
+					? { defaultSelected: f.defaultSelected }
+					: {})
 			});
 			break;
 		case 'listbox':
@@ -472,7 +483,10 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 				options: f.options ?? [],
 				...(f.value ? { selected: f.value } : {}),
 				...(f.align ? { align: f.align } : {}),
-				...(f.fontSize !== undefined ? { fontSize: f.fontSize } : {})
+				...(f.fontSize !== undefined ? { fontSize: f.fontSize } : {}),
+				...(f.defaultSelected && (f.options ?? []).includes(f.defaultSelected)
+					? { defaultSelected: f.defaultSelected }
+					: {})
 			});
 			break;
 		case 'signature':
