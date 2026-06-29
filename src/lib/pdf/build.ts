@@ -303,6 +303,47 @@ function dataUrlToBytes(value: string | undefined): Uint8Array | null {
 	}
 }
 
+/**
+ * Add a blank output page whose un-rotated content box is `size` (PDF points),
+ * applying `rotation` to the page. Records the content box into `pageWidths`/
+ * `pageHeights` un-rotated, since stamp/field coords are authored against it
+ * (the top-left → bottom-left Y flip uses these heights).
+ */
+function addBlankPage(
+	doc: PdfDocument,
+	size: [number, number],
+	rotation: number,
+	pageWidths: number[],
+	pageHeights: number[]
+): void {
+	const rotated = normalizeRotation(rotation) % 180 !== 0;
+	const [w, h] = rotated ? [size[1], size[0]] : size;
+	const page = doc.addPage([w, h]);
+	if (rotation) page.setRotation(normalizeRotation(rotation));
+	pageWidths.push(size[0]);
+	pageHeights.push(size[1]);
+}
+
+/**
+ * Shared export tail for both rebuild paths: embed fonts, stamp non-field and
+ * field elements, draw the watermark, apply metadata/outline, and serialize.
+ * `pageWidths[i]`/`pageHeights[i]` are the un-rotated content box of output
+ * page `i`. Keeping this in one place stops the two builders' element/watermark/
+ * metadata ordering from drifting apart.
+ */
+async function finishDoc(
+	doc: PdfDocument,
+	state: EditState,
+	pageWidths: number[],
+	pageHeights: number[]
+): Promise<Uint8Array> {
+	const fonts = await embedFonts(doc, state.fonts);
+	await stampAndAuthor(doc, state.elements, pageHeights, fonts);
+	if (state.watermark) await drawWatermark(doc, pageWidths, pageHeights, state.watermark);
+	applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
+	return doc.save();
+}
+
 /** Build a fresh single (or page-ops driven) blank document with stamps + fields. */
 async function buildBlankRebuild(state: EditState): Promise<Uint8Array> {
 	const doc = await PdfDocument.create();
@@ -312,24 +353,13 @@ async function buildBlankRebuild(state: EditState): Promise<Uint8Array> {
 	if (state.pageOps && state.pageOps.length > 0) {
 		for (const op of state.pageOps) {
 			const size = op.kind === 'blank' ? op.size : state.pageSize;
-			const rotated = normalizeRotation(op.rotation) % 180 !== 0;
-			const [w, h] = rotated ? [size[1], size[0]] : size;
-			const page = doc.addPage([w, h]);
-			if (op.rotation) page.setRotation(normalizeRotation(op.rotation));
-			pageHeights.push(h);
-			pageWidths.push(w);
+			addBlankPage(doc, size, op.rotation, pageWidths, pageHeights);
 		}
 	} else {
-		doc.addPage(state.pageSize);
-		pageHeights.push(state.pageSize[1]);
-		pageWidths.push(state.pageSize[0]);
+		addBlankPage(doc, state.pageSize, 0, pageWidths, pageHeights);
 	}
 
-	const fonts = await embedFonts(doc, state.fonts);
-	await stampAndAuthor(doc, state.elements, pageHeights, fonts);
-	if (state.watermark) await drawWatermark(doc, pageWidths, pageHeights, state.watermark);
-	applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
-	return doc.save();
+	return finishDoc(doc, state, pageWidths, pageHeights);
 }
 
 /** Build a fresh document from one or more embedded source PDFs with stamps + fields (D3). */
@@ -371,20 +401,11 @@ async function buildSourceRebuild(state: EditState, sources: Uint8Array[]): Prom
 				pageHeights.push(boxH);
 				pageWidths.push(boxW);
 			} else {
-				const rotated = normalizeRotation(op.rotation) % 180 !== 0;
-				const [w, h] = rotated ? [op.size[1], op.size[0]] : op.size;
-				const page = doc.addPage([w, h]);
-				if (op.rotation) page.setRotation(normalizeRotation(op.rotation));
-				pageHeights.push(op.size[1]);
-				pageWidths.push(op.size[0]);
+				addBlankPage(doc, op.size, op.rotation, pageWidths, pageHeights);
 			}
 		}
 
-		const fonts = await embedFonts(doc, state.fonts);
-		await stampAndAuthor(doc, state.elements, pageHeights, fonts);
-		if (state.watermark) await drawWatermark(doc, pageWidths, pageHeights, state.watermark);
-		applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
-		return await doc.save();
+		return await finishDoc(doc, state, pageWidths, pageHeights);
 	} catch (cause) {
 		if (cause instanceof PdfBuildError) throw cause;
 		const detail = cause instanceof PdfError ? cause.message : '';

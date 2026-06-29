@@ -124,4 +124,22 @@ describe('buildPdf — page operations', () => {
 		expect(pdfHeader(bytes)).toBe('%PDF-');
 		expect(await pageCount(bytes)).toBe(2);
 	});
+
+	// Blank-mode (no sources) shares the same page-creation + stamp path as the
+	// source rebuild. A 90°-rotated blank page swaps its box, and stamping onto
+	// it must not throw — the stamp Y-flip uses the un-rotated content box.
+	it('stamps onto a rotated blank page in blank mode', async () => {
+		const state: EditState = {
+			pageSize: A4,
+			pageOps: [{ kind: 'blank', size: A4, rotation: 90 }],
+			elements: [{ type: 'text', id: 'a', text: 'rotated blank', x: 40, y: 60, size: 18, page: 0 }]
+		};
+		const bytes = await buildPdf(state);
+		expect(pdfHeader(bytes)).toBe('%PDF-');
+		const doc = await PdfDocument.load(bytes);
+		const page = doc.getPage(0);
+		// 90° rotation swaps the page box: width←height, height←width.
+		expect(Math.round(page.width)).toBe(Math.round(A4[1]));
+		expect(Math.round(page.height)).toBe(Math.round(A4[0]));
+	});
 });
