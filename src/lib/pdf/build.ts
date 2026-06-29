@@ -185,12 +185,17 @@ function toColor(c: { r: number; g: number; b: number }): Color {
  *   anchor = pageCentre − R(-θ)·u
  * (capH ≈ 0.7·size approximates the cap height so the box centres vertically.)
  */
-function drawWatermark(
+async function drawWatermark(
 	doc: PdfDocument,
 	pageWidths: number[],
 	pageHeights: number[],
 	wm: import('./types').Watermark
-): void {
+): Promise<void> {
+	// An image watermark takes precedence over text when present.
+	if (wm.image && wm.image.byteLength > 0) {
+		await drawImageWatermark(doc, pageWidths, pageHeights, wm);
+		return;
+	}
 	const text = wm.text.trim();
 	if (text.length === 0) return;
 	const size = wm.size ?? 48;
@@ -213,6 +218,47 @@ function drawWatermark(
 		const x = (pageWidths[i] as number) / 2 - dx;
 		const y = (pageHeights[i] as number) / 2 - dy;
 		page.drawText(text, { x, y, size, font, color, opacity, rotate });
+	}
+}
+
+/**
+ * Stamp an image watermark centered, rotated, and semi-transparent on every
+ * page. `drawImage` rotates CCW about its anchor `(x, y)` (the un-rotated
+ * bottom-left corner), so to land the image's center on the page center we set
+ *   anchor = pageCenter − R(θ)·(w/2, h/2)
+ * where θ is the applied CCW angle. A decode failure skips silently so a bad
+ * image never fails the whole export.
+ */
+async function drawImageWatermark(
+	doc: PdfDocument,
+	pageWidths: number[],
+	pageHeights: number[],
+	wm: import('./types').Watermark
+): Promise<void> {
+	const bytes = wm.image;
+	if (!bytes || bytes.byteLength === 0) return;
+	let img;
+	try {
+		img = wm.format === 'jpg' ? await doc.embedJpg(bytes) : await doc.embedPng(bytes);
+	} catch {
+		return; // Undecodable watermark image — skip; export still succeeds.
+	}
+	const w = wm.imageWidth ?? img.width;
+	const h = wm.imageHeight ?? img.height;
+	const opacity = wm.opacity ?? 0.3;
+	const angle = wm.rotation ?? 45;
+	const rotate = -angle; // drawImage rotate is CCW; editor angle is CW
+	const theta = (rotate * Math.PI) / 180;
+	const cos = Math.cos(theta);
+	const sin = Math.sin(theta);
+	// Center→anchor offset, rotated by the lib's applied rotation R(θ).
+	const ox = (w / 2) * cos - (h / 2) * sin;
+	const oy = (w / 2) * sin + (h / 2) * cos;
+	for (let i = 0; i < pageHeights.length; i++) {
+		const page = doc.getPage(i);
+		const x = (pageWidths[i] as number) / 2 - ox;
+		const y = (pageHeights[i] as number) / 2 - oy;
+		page.drawImage(img, { x, y, width: w, height: h, opacity, rotate });
 	}
 }
 
@@ -281,7 +327,7 @@ async function buildBlankRebuild(state: EditState): Promise<Uint8Array> {
 
 	const fonts = await embedFonts(doc, state.fonts);
 	await stampAndAuthor(doc, state.elements, pageHeights, fonts);
-	if (state.watermark) drawWatermark(doc, pageWidths, pageHeights, state.watermark);
+	if (state.watermark) await drawWatermark(doc, pageWidths, pageHeights, state.watermark);
 	applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
 	return doc.save();
 }
@@ -336,7 +382,7 @@ async function buildSourceRebuild(state: EditState, sources: Uint8Array[]): Prom
 
 		const fonts = await embedFonts(doc, state.fonts);
 		await stampAndAuthor(doc, state.elements, pageHeights, fonts);
-		if (state.watermark) drawWatermark(doc, pageWidths, pageHeights, state.watermark);
+		if (state.watermark) await drawWatermark(doc, pageWidths, pageHeights, state.watermark);
 		applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
 		return await doc.save();
 	} catch (cause) {

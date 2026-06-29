@@ -213,7 +213,7 @@ function validateMetadata(meta: unknown): void {
 	}
 }
 
-/** Validate the optional text watermark: capped string + bounded numerics. */
+/** Validate the optional watermark: text or image kind, capped + bounded. */
 function validateWatermark(wm: unknown): void {
 	if (!wm || typeof wm !== 'object') error(422, 'Invalid watermark');
 	const w = wm as {
@@ -223,9 +223,26 @@ function validateWatermark(wm: unknown): void {
 		color?: unknown;
 		opacity?: unknown;
 		rotation?: unknown;
+		image?: unknown;
+		format?: unknown;
+		imageWidth?: unknown;
+		imageHeight?: unknown;
 	};
 	if (typeof w.text !== 'string') error(422, 'Invalid watermark text');
 	if ((w.text as string).length > MAX_TEXT_LEN) error(422, 'Watermark text too large');
+	if (w.image !== undefined) {
+		if (!(w.image instanceof Uint8Array)) error(422, 'Invalid watermark image');
+		if ((w.image as Uint8Array).byteLength > MAX_IMAGE_BYTES) {
+			error(413, 'Watermark image too large');
+		}
+		if (w.format !== 'png' && w.format !== 'jpg') error(422, 'Invalid watermark image format');
+		if (w.imageWidth !== undefined && !isFiniteNumber(w.imageWidth)) {
+			error(422, 'Invalid watermark image width');
+		}
+		if (w.imageHeight !== undefined && !isFiniteNumber(w.imageHeight)) {
+			error(422, 'Invalid watermark image height');
+		}
+	}
 	if (w.font !== undefined && !STANDARD_FONTS.includes(w.font as string)) {
 		error(422, 'Invalid watermark font');
 	}

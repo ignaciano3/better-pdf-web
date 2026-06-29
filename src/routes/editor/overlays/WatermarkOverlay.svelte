@@ -18,6 +18,27 @@
 	const opacity = $derived(watermark.opacity ?? 0.3);
 	const rotation = $derived(watermark.rotation ?? 45);
 
+	// Object URL for an image watermark, revoked when the bytes change/unmount.
+	let imageUrl = $state<string | null>(null);
+	$effect(() => {
+		if (!watermark.image || watermark.image.byteLength === 0) {
+			imageUrl = null;
+			return;
+		}
+		// Copy into a fresh ArrayBuffer so the Blob part type is satisfied (the
+		// wire value may be backed by a non-ArrayBuffer buffer).
+		const buf = new ArrayBuffer(watermark.image.byteLength);
+		new Uint8Array(buf).set(watermark.image);
+		const blob = new Blob([buf], {
+			type: watermark.format === 'jpg' ? 'image/jpeg' : 'image/png'
+		});
+		const url = URL.createObjectURL(blob);
+		imageUrl = url;
+		return () => URL.revokeObjectURL(url);
+	});
+	const imgWidthPx = $derived((watermark.imageWidth ?? 240) * SCALE);
+	const imgHeightPx = $derived((watermark.imageHeight ?? 240) * SCALE);
+
 	function rgbCss(c: { r: number; g: number; b: number } | undefined): string {
 		const v = c ?? { r: 0.5, g: 0.5, b: 0.5 };
 		const n = (x: number) => Math.round(Math.max(0, Math.min(1, x)) * 255);
@@ -31,7 +52,16 @@
 	const weight = $derived(watermark.font?.includes('Bold') ? 700 : 400);
 </script>
 
-{#if text.length > 0}
+{#if imageUrl}
+	<img
+		src={imageUrl}
+		alt="Watermark"
+		class="pointer-events-none absolute top-1/2 left-1/2 max-w-none select-none"
+		style="width: {imgWidthPx}px; height: {imgHeightPx}px; opacity: {opacity};
+			transform: translate(-50%, -50%) rotate({rotation}deg);"
+		draggable="false"
+	/>
+{:else if text.length > 0}
 	<div
 		class="pointer-events-none absolute top-1/2 left-1/2 select-none whitespace-nowrap"
 		style="transform: translate(-50%, -50%) rotate({rotation}deg);

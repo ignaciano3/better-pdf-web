@@ -51,6 +51,46 @@
 		editor.watermark = null;
 		editor.watermarkModalOpen = false;
 	}
+
+	// Which mode the current watermark is in (image takes precedence in the build).
+	const isImage = $derived(!!editor.watermark?.image);
+
+	/** Switch back to a text watermark, dropping any image fields. */
+	function useText() {
+		const wm = editor.watermark;
+		if (!wm) return;
+		delete wm.image;
+		delete wm.format;
+		delete wm.imageWidth;
+		delete wm.imageHeight;
+		if (!wm.text.trim()) wm.text = 'DRAFT';
+	}
+
+	/** Read a chosen PNG/JPG into the watermark, sized to a sensible default. */
+	async function onImageUpload(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		input.value = '';
+		if (!file) return;
+		const pending = await editor.readRaster(file);
+		const wm = editor.watermark;
+		if (!pending || !wm) return;
+		const width = wm.imageWidth ?? 240;
+		wm.image = pending.image;
+		wm.format = pending.format;
+		wm.imageWidth = width;
+		wm.imageHeight = width / pending.aspect;
+		wm.text = ''; // image takes over; clear text so the build draws the image
+	}
+
+	/** Resize the image watermark, preserving its aspect ratio. */
+	function setImageWidth(width: number) {
+		const wm = editor.watermark;
+		if (!wm || !wm.imageWidth || !wm.imageHeight) return;
+		const aspect = wm.imageWidth / wm.imageHeight;
+		wm.imageWidth = width;
+		wm.imageHeight = width / aspect;
+	}
 </script>
 
 {#if open}
@@ -76,48 +116,49 @@
 			{:else}
 				{@const wm = editor.watermark}
 				<div class="flex flex-col gap-3">
-					<label class="flex flex-col gap-1">
-						<span class="text-xs font-medium text-slate-600">Text</span>
-						<input
-							type="text"
-							class="rounded border border-slate-300 px-2 py-1.5 text-sm"
-							value={wm.text}
-							oninput={(e) => (wm.text = (e.currentTarget as HTMLInputElement).value)}
-						/>
-					</label>
-					<div class="flex items-center gap-3">
-						<label class="flex flex-1 flex-col gap-1">
-							<span class="text-xs font-medium text-slate-600">Font</span>
-							<select
-								class="rounded border border-slate-300 px-2 py-1.5 text-sm"
-								value={wm.font ?? 'Helvetica-Bold'}
-								onchange={(e) =>
-									(wm.font = (e.currentTarget as HTMLSelectElement).value as StandardFontName)}
-							>
-								{#each fonts as f (f)}<option value={f}>{f}</option>{/each}
-							</select>
-						</label>
-						<label class="flex w-24 flex-col gap-1">
-							<span class="text-xs font-medium text-slate-600">Size</span>
+					<!-- Text / image mode toggle. Image takes precedence in the export. -->
+					<div class="flex gap-1 rounded-lg bg-slate-100 p-0.5" role="group" aria-label="Watermark type">
+						<button
+							type="button"
+							class="flex-1 rounded-md px-3 py-1 text-sm font-medium transition {!isImage
+								? 'bg-white text-slate-900 shadow-sm'
+								: 'text-slate-500 hover:text-slate-700'}"
+							aria-pressed={!isImage}
+							onclick={useText}
+						>
+							Text
+						</button>
+						<label
+							class="flex-1 cursor-pointer rounded-md px-3 py-1 text-center text-sm font-medium transition {isImage
+								? 'bg-white text-slate-900 shadow-sm'
+								: 'text-slate-500 hover:text-slate-700'}"
+						>
+							Image
 							<input
-								type="number"
-								min="6"
-								max="300"
-								class="rounded border border-slate-300 px-2 py-1.5 text-sm"
-								value={wm.size ?? 48}
-								oninput={(e) => (wm.size = Number((e.currentTarget as HTMLInputElement).value))}
+								type="file"
+								accept="image/png,image/jpeg,.png,.jpg,.jpeg"
+								class="hidden"
+								onchange={onImageUpload}
 							/>
 						</label>
 					</div>
-					<div class="flex items-center gap-4">
-						<label class="flex items-center gap-2 text-sm">
-							<span class="text-xs font-medium text-slate-600">Color</span>
+
+					{#if isImage}
+						<p class="text-xs text-slate-500">
+							Image watermark — centered, scaled, rotated and translucent on every page.
+						</p>
+						<label class="flex flex-col gap-1">
+							<span class="text-xs font-medium text-slate-600"
+								>Width {Math.round(wm.imageWidth ?? 240)} pt</span
+							>
 							<input
-								type="color"
-								value={toHex(wm.color)}
-								oninput={(e) => (wm.color = fromHex((e.currentTarget as HTMLInputElement).value))}
-								class="h-6 w-6 cursor-pointer rounded border"
-								aria-label="Watermark color"
+								type="range"
+								min="40"
+								max="800"
+								step="10"
+								value={wm.imageWidth ?? 240}
+								oninput={(e) => setImageWidth(Number((e.currentTarget as HTMLInputElement).value))}
+								aria-label="Watermark image width"
 							/>
 						</label>
 						<label class="flex w-28 flex-col gap-1">
@@ -131,7 +172,65 @@
 								oninput={(e) => (wm.rotation = Number((e.currentTarget as HTMLInputElement).value))}
 							/>
 						</label>
-					</div>
+					{:else}
+						<label class="flex flex-col gap-1">
+							<span class="text-xs font-medium text-slate-600">Text</span>
+							<input
+								type="text"
+								class="rounded border border-slate-300 px-2 py-1.5 text-sm"
+								value={wm.text}
+								oninput={(e) => (wm.text = (e.currentTarget as HTMLInputElement).value)}
+							/>
+						</label>
+						<div class="flex items-center gap-3">
+							<label class="flex flex-1 flex-col gap-1">
+								<span class="text-xs font-medium text-slate-600">Font</span>
+								<select
+									class="rounded border border-slate-300 px-2 py-1.5 text-sm"
+									value={wm.font ?? 'Helvetica-Bold'}
+									onchange={(e) =>
+										(wm.font = (e.currentTarget as HTMLSelectElement).value as StandardFontName)}
+								>
+									{#each fonts as f (f)}<option value={f}>{f}</option>{/each}
+								</select>
+							</label>
+							<label class="flex w-24 flex-col gap-1">
+								<span class="text-xs font-medium text-slate-600">Size</span>
+								<input
+									type="number"
+									min="6"
+									max="300"
+									class="rounded border border-slate-300 px-2 py-1.5 text-sm"
+									value={wm.size ?? 48}
+									oninput={(e) => (wm.size = Number((e.currentTarget as HTMLInputElement).value))}
+								/>
+							</label>
+						</div>
+						<div class="flex items-center gap-4">
+							<label class="flex items-center gap-2 text-sm">
+								<span class="text-xs font-medium text-slate-600">Color</span>
+								<input
+									type="color"
+									value={toHex(wm.color)}
+									oninput={(e) => (wm.color = fromHex((e.currentTarget as HTMLInputElement).value))}
+									class="h-6 w-6 cursor-pointer rounded border"
+									aria-label="Watermark color"
+								/>
+							</label>
+							<label class="flex w-28 flex-col gap-1">
+								<span class="text-xs font-medium text-slate-600">Rotation°</span>
+								<input
+									type="number"
+									min="-180"
+									max="180"
+									class="rounded border border-slate-300 px-2 py-1.5 text-sm"
+									value={wm.rotation ?? 45}
+									oninput={(e) => (wm.rotation = Number((e.currentTarget as HTMLInputElement).value))}
+								/>
+							</label>
+						</div>
+					{/if}
+
 					<label class="flex flex-col gap-1">
 						<span class="text-xs font-medium text-slate-600"
 							>Opacity {Math.round((wm.opacity ?? 0.3) * 100)}%</span

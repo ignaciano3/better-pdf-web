@@ -400,12 +400,14 @@ export interface EmbeddedFontAsset {
 }
 
 /**
- * A single text watermark stamped centered, rotated, and semi-transparent on
- * every output page at export. v1 is text-only — the lib's `drawImage` has no
- * opacity/rotation, so image watermarks are deferred.
+ * A single watermark stamped centered, rotated, and semi-transparent on every
+ * output page at export. Either a text watermark (the `text`/`font`/`size`/
+ * `color` fields) or an image watermark (the `image`/`format`/`imageWidth`/
+ * `imageHeight` fields). When {@link image} is set it takes precedence and the
+ * text is ignored. Both kinds share {@link opacity} and {@link rotation}.
  */
 export interface Watermark {
-	/** The watermark text (e.g. "DRAFT"). Empty/whitespace ⇒ no watermark. */
+	/** The watermark text (e.g. "DRAFT"). Empty/whitespace ⇒ no text watermark. */
 	text: string;
 	/** Standard font. Defaults to Helvetica-Bold. */
 	font?: StandardFontName;
@@ -413,6 +415,18 @@ export interface Watermark {
 	size?: number;
 	/** RGB components in 0..1. Defaults to mid-gray. */
 	color?: { r: number; g: number; b: number };
+	/**
+	 * Image-watermark bytes. When set, an image watermark is drawn (scaled to
+	 * {@link imageWidth}×{@link imageHeight}, centered, rotated, translucent) in
+	 * place of the text. Maps to the lib's `embedPng`/`embedJpg` + `drawImage`.
+	 */
+	image?: Uint8Array;
+	/** Encoding of {@link image}, so the builder picks `embedPng` vs `embedJpg`. */
+	format?: 'png' | 'jpg';
+	/** Rendered width of the image watermark in PDF points. */
+	imageWidth?: number;
+	/** Rendered height of the image watermark in PDF points. */
+	imageHeight?: number;
 	/** Opacity 0..1. Defaults to 0.3. */
 	opacity?: number;
 	/** Clockwise display rotation in degrees. Defaults to 45. */

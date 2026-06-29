@@ -36,4 +36,28 @@ describe('WatermarkModal', () => {
 		flushSync();
 		expect(editor.watermark).toBeNull();
 	});
+
+	it('reflects an image watermark and switches back to text', async () => {
+		const user = userEvent.setup();
+		const editor = openModal();
+		editor.watermark = {
+			text: '',
+			image: new Uint8Array([1, 2, 3]),
+			format: 'png',
+			imageWidth: 240,
+			imageHeight: 120
+		};
+		flushSync();
+		render(WatermarkModal, { props: { editor } });
+
+		// Image mode exposes the width slider, not the text field.
+		expect(screen.getByRole('slider', { name: 'Watermark image width' })).toBeTruthy();
+		expect(screen.queryByRole('textbox')).toBeNull();
+
+		// Switching to Text drops the image bytes and restores default text.
+		await user.click(screen.getByRole('button', { name: 'Text' }));
+		flushSync();
+		expect(editor.watermark?.image).toBeUndefined();
+		expect(editor.watermark?.text).toBe('DRAFT');
+	});
 });
