@@ -19,6 +19,7 @@ import type {
 import { flushSync } from 'svelte';
 import { renderSourcePdf, type RenderedPage, PdfRenderError } from '$lib/pdf/render';
 import { PdfDocStore } from '$lib/pdf/pdf-doc-store';
+import { HistoryTimeline } from './editor-history.svelte';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { exportPdf } from './export.remote';
 import { extractFields } from './extractFields.remote';
@@ -239,22 +240,29 @@ export class EditorState {
 	// --- undo / redo ---------------------------------------------------------
 	// History is captured reactively: one effect deep-reads every authored field,
 	// so any mutation anywhere (a method, a modal, a drag handler) is recorded
-	// without each call site having to opt in. Commits are debounced so a drag or
-	// a burst of typing collapses into a single step. #committed is the document
-	// as it currently sits on the timeline; flushHistory() moves a pending edit
-	// onto the undo stack.
-	#undo: DocSnapshot[] = [];
-	#redo: DocSnapshot[] = [];
-	#committed: DocSnapshot;
+	// without each call site having to opt in. The {@link HistoryTimeline} owns
+	// the stacks, the debounce, and the committed baseline; this class only
+	// supplies the document-specific snapshot/serialize/apply hooks and the
+	// tracking effect that tells the timeline when to record.
+	// Initialized as a field (not in the constructor) so the reactive depth
+	// `$derived`s below can reference it; its `snapshot` hook reads the document
+	// `$state` declared above, which is already initialized at this point.
+	#history: HistoryTimeline<DocSnapshot> = new HistoryTimeline<DocSnapshot>(
+		{
+			snapshot: () => this.#takeSnapshot(),
+			serialize: (snap) => this.#serialize(snap),
+			apply: (snap) => this.#applySnapshot(snap)
+		},
+		{ limit: HISTORY_LIMIT, debounceMs: HISTORY_DEBOUNCE_MS }
+	);
 	/** True while applying a snapshot, so the tracking effect ignores its writes. */
 	#applying = false;
-	#commitTimer: ReturnType<typeof setTimeout> | null = null;
 	#historyCleanup: (() => void) | null = null;
-	/** Reactive sizes of the stacks, so toolbar buttons enable/disable live. */
-	undoDepth = $state(0);
-	redoDepth = $state(0);
-	canUndo = $derived(this.undoDepth > 0);
-	canRedo = $derived(this.redoDepth > 0);
+	/** Reactive stack depths, mirrored from the timeline for the toolbar. */
+	undoDepth = $derived(this.#history.undoDepth);
+	redoDepth = $derived(this.#history.redoDepth);
+	canUndo = $derived(this.#history.canUndo);
+	canRedo = $derived(this.#history.canRedo);
 	/**
 	 * True once the user has made at least one change since the document was
 	 * loaded/started — i.e. there's authored work that lives only in this tab and
@@ -262,10 +270,9 @@ export class EditorState {
 	 * it). A freshly loaded PDF with no edits is not "unsaved": the original file
 	 * still exists. Drives the toolbar status and the beforeunload guard.
 	 */
-	hasUnsavedWork = $derived(this.undoDepth > 0);
+	hasUnsavedWork = $derived(this.#history.undoDepth > 0);
 
 	constructor() {
-		this.#committed = this.#takeSnapshot();
 		// Run the tracking effect in its own root so it lives for the editor's
 		// lifetime (not a component's); dispose() tears it down.
 		this.#historyCleanup = $effect.root(() => {
@@ -281,7 +288,7 @@ export class EditorState {
 				this.#track(this.embeddedFonts);
 				void this.flatten;
 				if (this.#applying) return;
-				this.#scheduleCommit();
+				this.#history.record();
 			});
 		});
 	}
@@ -331,27 +338,7 @@ export class EditorState {
 		});
 	}
 
-	#scheduleCommit(): void {
-		if (this.#commitTimer) clearTimeout(this.#commitTimer);
-		this.#commitTimer = setTimeout(() => this.flushHistory(), HISTORY_DEBOUNCE_MS);
-	}
-
-	/** Commit any pending edit as a single undo step. Called on the debounce, and
-	 * synchronously before undo/redo so an in-flight edit becomes its own step. */
-	flushHistory(): void {
-		if (this.#commitTimer) {
-			clearTimeout(this.#commitTimer);
-			this.#commitTimer = null;
-		}
-		const current = this.#takeSnapshot();
-		if (this.#serialize(current) === this.#serialize(this.#committed)) return;
-		this.#undo.push(this.#committed);
-		if (this.#undo.length > HISTORY_LIMIT) this.#undo.shift();
-		this.#redo = [];
-		this.#committed = current;
-		this.#syncDepths();
-	}
-
+	/** Restore a snapshot onto the live document (the timeline's `apply` hook). */
 	#applySnapshot(snap: DocSnapshot): void {
 		this.#applying = true;
 		// Clone so later edits don't mutate the copy still held on a stack.
@@ -368,43 +355,20 @@ export class EditorState {
 		// restore itself doesn't schedule a bogus commit.
 		flushSync();
 		this.#applying = false;
-		this.#committed = snap;
 	}
 
-	#syncDepths(): void {
-		this.undoDepth = this.#undo.length;
-		this.redoDepth = this.#redo.length;
-	}
-
-	/** Reset the timeline to the current document as a fresh baseline. Used when a
-	 * whole new document is loaded/cleared, so undo doesn't cross that boundary. */
-	#resetHistory(): void {
-		if (this.#commitTimer) {
-			clearTimeout(this.#commitTimer);
-			this.#commitTimer = null;
-		}
-		this.#undo = [];
-		this.#redo = [];
-		this.#committed = this.#takeSnapshot();
-		this.#syncDepths();
+	/** Commit any pending edit as a single undo step. Called synchronously before
+	 * undo/redo (the timeline does this internally too) and exposed for tests. */
+	flushHistory(): void {
+		this.#history.flush();
 	}
 
 	undo(): void {
-		this.flushHistory();
-		const prev = this.#undo.pop();
-		if (prev === undefined) return;
-		this.#redo.push(this.#committed);
-		this.#applySnapshot(prev);
-		this.#syncDepths();
+		this.#history.undo();
 	}
 
 	redo(): void {
-		this.flushHistory();
-		const next = this.#redo.pop();
-		if (next === undefined) return;
-		this.#undo.push(this.#committed);
-		this.#applySnapshot(next);
-		this.#syncDepths();
+		this.#history.redo();
 	}
 
 	selected = $derived(this.elements.find((e) => e.id === this.selectedId) ?? null);
@@ -1254,7 +1218,7 @@ export class EditorState {
 			this.elements = detected;
 			// A freshly loaded document is a new baseline: undo shouldn't reach back
 			// into whatever was open before (and across stale source references).
-			this.#resetHistory();
+			this.#history.reset();
 		} catch (e) {
 			this.errorMessage =
 				e instanceof PdfRenderError
@@ -1279,7 +1243,7 @@ export class EditorState {
 		this.metadata = {};
 		this.outline = [];
 		this.embeddedFonts = {};
-		this.#resetHistory();
+		this.#history.reset();
 	}
 
 	/**
@@ -1348,7 +1312,7 @@ export class EditorState {
 	/** Destroy every cached pdf.js document. Call on editor teardown. */
 	dispose() {
 		void this.#docStore.destroyAll();
-		if (this.#commitTimer) clearTimeout(this.#commitTimer);
+		this.#history.dispose();
 		this.#historyCleanup?.();
 		this.#historyCleanup = null;
 	}
