@@ -133,6 +133,21 @@
 		aria-hidden="true"><path d="M12 5v14" /><path d="M5 12h14" /></svg
 	>
 {/snippet}
+{#snippet iconCopy()}
+	<svg
+		class="h-3.5 w-3.5"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+		aria-hidden="true"
+		><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path
+			d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+		/></svg
+	>
+{/snippet}
 {#snippet iconTrash()}
 	<svg
 		class="h-3.5 w-3.5"
@@ -272,6 +287,13 @@
 						title="Insert blank after"
 						aria-label="Insert blank page after page {i + 1}"
 						onclick={() => insertBlank(i)}>{@render iconPlus()}</button
+					>
+					<button
+						type="button"
+						class="{opBtn} text-slate-600"
+						title="Duplicate page"
+						aria-label="Duplicate page {i + 1}"
+						onclick={() => editor.duplicatePage(i)}>{@render iconCopy()}</button
 					>
 					<button
 						type="button"

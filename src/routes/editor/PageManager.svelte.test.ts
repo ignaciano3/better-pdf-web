@@ -25,6 +25,7 @@ describe('PageManager accessibility', () => {
 		expect(screen.getByRole('button', { name: 'Move page 1 down' })).toBeTruthy();
 		expect(screen.getByRole('button', { name: 'Rotate page 1 90 degrees' })).toBeTruthy();
 		expect(screen.getByRole('button', { name: 'Insert blank page after page 1' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Duplicate page 1' })).toBeTruthy();
 		expect(screen.getByRole('button', { name: 'Delete page 1' })).toBeTruthy();
 		// The new-page size select has an accessible label, not just a title.
 		expect(screen.getByRole('combobox', { name: 'Size for new blank pages' })).toBeTruthy();

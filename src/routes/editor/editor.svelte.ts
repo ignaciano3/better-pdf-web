@@ -595,6 +595,45 @@ export class EditorState {
 		this.selectedId = null;
 	}
 
+	/**
+	 * Duplicate the page at `index`, inserting the copy immediately after it. The
+	 * page op (size/rotation/source ref) is cloned, and every element on the page
+	 * is deep-cloned onto the new page with fresh ids (and unique field names).
+	 */
+	duplicatePage(index: number) {
+		// Materialise the implicit first page in blank mode so the copy is added
+		// alongside it rather than replacing it (mirrors insertBlankPage).
+		if (this.pageOps.length === 0) {
+			const first = this.pages[0] ?? { width: DEFAULT_PAGE[0], height: DEFAULT_PAGE[1] };
+			this.pageOps = [{ kind: 'blank', size: [first.width, first.height], rotation: 0 }];
+		}
+		const op = this.pageOps[index];
+		if (!op) return;
+		const at = index + 1;
+		const ops = this.pageOps.slice();
+		ops.splice(at, 0, $state.snapshot(op) as PageOp);
+		// Shift elements on pages ≥ `at` up by one; the source page (at `index`,
+		// before the insert point) keeps its elements.
+		const remap = this.pageOps.map((_, i) => i);
+		remap.splice(at, 0, -1);
+		this.pageOps = ops;
+		this.#remapElementPages(remap);
+		// Copy the source page's elements onto the new page. Iterate a filtered
+		// snapshot and push each clone immediately so uniqueFieldName sees prior
+		// clones and never hands two duplicates the same name.
+		const source = this.elements.filter((e) => (e.page ?? 0) === index);
+		for (const el of source) {
+			const clone = {
+				...$state.snapshot(el),
+				id: this.nextId(el.type[0] ?? 'e'),
+				page: at
+			} as EditElement;
+			if (clone.type === 'field') clone.name = this.uniqueFieldName(clone.field);
+			this.elements.push(clone);
+		}
+		this.selectedId = null;
+	}
+
 	// --- placement -----------------------------------------------------------
 
 	addTextAt(x: number, y: number, pageIndex: number) {

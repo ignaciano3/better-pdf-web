@@ -464,6 +464,50 @@ describe('EditorState add page in blank mode (#3)', () => {
 	});
 });
 
+describe('EditorState duplicatePage', () => {
+	it('clones the page op and its elements onto a fresh page, shifting later pages', () => {
+		const e = new EditorState();
+		e.pageOps = [
+			{ kind: 'blank', size: [300, 400], rotation: 90 },
+			{ kind: 'blank', size: [500, 500], rotation: 0 }
+		];
+		e.elements = [
+			{ type: 'text', id: 'src-text', text: 'A', x: 1, y: 2, size: 12, page: 0 },
+			{
+				type: 'field',
+				id: 'src-field',
+				field: 'text',
+				name: 'text1',
+				x: 0,
+				y: 0,
+				width: 10,
+				height: 10,
+				page: 0
+			},
+			{ type: 'text', id: 'src-b', text: 'B', x: 3, y: 4, size: 12, page: 1 }
+		];
+		flushSync();
+
+		e.duplicatePage(0);
+		flushSync();
+
+		// The copy is inserted at index 1 (cloned op), pushing page 1 to index 2.
+		expect(e.pageOps.length).toBe(3);
+		expect(e.pageOps[1]).toEqual({ kind: 'blank', size: [300, 400], rotation: 90 });
+		expect(e.elements.find((x) => x.id === 'src-b')?.page).toBe(2);
+
+		// Both page-0 elements are cloned onto the new page 1 with fresh ids.
+		const onNew = e.elements.filter((x) => x.page === 1);
+		expect(onNew.length).toBe(2);
+		expect(onNew.map((x) => x.id)).not.toContain('src-text');
+		expect(onNew.map((x) => x.id)).not.toContain('src-field');
+
+		// The cloned field keeps a unique name (not the source's).
+		const fieldClone = onNew.find((x) => x.type === 'field');
+		expect(fieldClone && fieldClone.type === 'field' ? fieldClone.name : '').not.toBe('text1');
+	});
+});
+
 describe('EditorState export error reporting (#4)', () => {
 	it('surfaces the server error detail and status', async () => {
 		vi.mocked(exportPdf).mockRejectedValueOnce({
