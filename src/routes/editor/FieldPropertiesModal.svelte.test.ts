@@ -25,7 +25,7 @@ function fakePage(): HTMLElement {
 	} as unknown as HTMLElement;
 }
 
-function withField(kind: 'text' | 'dropdown' | 'checkbox') {
+function withField(kind: 'text' | 'dropdown' | 'checkbox' | 'listbox') {
 	const editor = new EditorState();
 	editor.setTool({ type: 'field', kind });
 	editor.placeAtClient(20, 20, fakePage(), 0);
@@ -132,5 +132,37 @@ describe('FieldPropertiesModal', () => {
 		await user.click(screen.getByLabelText('Checked by default'));
 		flushSync();
 		expect(editor.selectedField?.defaultChecked).toBe(true);
+	});
+
+	it('toggles multi-select for a listbox and edits selected values', async () => {
+		const user = userEvent.setup();
+		const editor = withField('listbox');
+		editor.selectedField!.options = ['a', 'b', 'c'];
+		flushSync();
+		render(FieldPropertiesModal, { props: { editor } });
+
+		await user.click(screen.getByLabelText('Multi-select'));
+		flushSync();
+		expect(editor.selectedField?.multiSelect).toBe(true);
+
+		await user.click(screen.getByLabelText('a'));
+		await user.click(screen.getByLabelText('b'));
+		flushSync();
+		expect(editor.selectedField?.selectedValues).toEqual(['a', 'b']);
+	});
+
+	it('clears selectedValues when multi-select is turned off', async () => {
+		const user = userEvent.setup();
+		const editor = withField('listbox');
+		editor.selectedField!.options = ['a', 'b'];
+		editor.selectedField!.multiSelect = true;
+		editor.selectedField!.selectedValues = ['a'];
+		flushSync();
+		render(FieldPropertiesModal, { props: { editor } });
+
+		await user.click(screen.getByLabelText('Multi-select'));
+		flushSync();
+		expect(editor.selectedField?.multiSelect).toBeUndefined();
+		expect(editor.selectedField?.selectedValues).toBeUndefined();
 	});
 });

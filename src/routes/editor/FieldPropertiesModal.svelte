@@ -55,6 +55,18 @@
 			: false
 	);
 
+	// Multi-select applies to list boxes only.
+	const isListbox = $derived(field ? field.field === 'listbox' : false);
+
+	function toggleSelectedValue(f: FieldElement, value: string, on: boolean) {
+		const cur = f.selectedValues ?? [];
+		if (on) {
+			if (!cur.includes(value)) f.selectedValues = [...cur, value];
+		} else {
+			f.selectedValues = cur.filter((v) => v !== value);
+		}
+	}
+
 	function toHex(c: { r: number; g: number; b: number } | undefined): string {
 		const v = c ?? { r: 0, g: 0, b: 0 };
 		const h = (n: number) =>
@@ -469,25 +481,62 @@
 				</div>
 			{/if}
 
+			{#if isListbox}
+				<label class="mt-3 flex items-center gap-1.5 text-sm">
+					<input
+						type="checkbox"
+						checked={field.multiSelect ?? false}
+						onchange={(e) => {
+							if ((e.currentTarget as HTMLInputElement).checked) {
+								field.multiSelect = true;
+							} else {
+								delete field.multiSelect;
+								delete field.selectedValues;
+							}
+						}}
+					/> Multi-select
+				</label>
+			{/if}
+
 			{#if hasOptions}
 				<div class="mt-3 flex items-center gap-4">
-					<label class="flex items-center gap-2 text-sm">
-						Initial
-						<select
-							class="rounded border border-slate-300 px-2 py-1 text-sm"
-							value={field.value ?? ''}
-							onchange={(e) => {
-								const v = (e.currentTarget as HTMLSelectElement).value;
-								if (v === '') delete field.value;
-								else field.value = v;
-							}}
-						>
-							<option value="">— none —</option>
+					{#if isListbox && field.multiSelect}
+						<div class="flex flex-col gap-1">
+							<span class="text-sm font-medium text-slate-700">Initial selection</span>
 							{#each field.options ?? [] as opt (opt)}
-								<option value={opt}>{opt}</option>
+								<label class="flex items-center gap-1.5 text-sm">
+									<input
+										type="checkbox"
+										checked={(field.selectedValues ?? []).includes(opt)}
+										onchange={(e) =>
+											toggleSelectedValue(
+												field,
+												opt,
+												(e.currentTarget as HTMLInputElement).checked
+											)}
+									/> {opt}
+								</label>
 							{/each}
-						</select>
-					</label>
+						</div>
+					{:else}
+						<label class="flex items-center gap-2 text-sm">
+							Initial
+							<select
+								class="rounded border border-slate-300 px-2 py-1 text-sm"
+								value={field.value ?? ''}
+								onchange={(e) => {
+									const v = (e.currentTarget as HTMLSelectElement).value;
+									if (v === '') delete field.value;
+									else field.value = v;
+								}}
+							>
+								<option value="">— none —</option>
+								{#each field.options ?? [] as opt (opt)}
+									<option value={opt}>{opt}</option>
+								{/each}
+							</select>
+						</label>
+					{/if}
 					<label class="flex items-center gap-2 text-sm">
 						Reset default
 						<select
