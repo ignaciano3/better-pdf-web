@@ -116,7 +116,7 @@
 		{#if field.field === 'text'}
 			{#if field.multiline}
 				<textarea
-					class="h-full w-full resize-none rounded border border-slate-300 bg-white/90 px-1 text-xs"
+					class="block h-full w-full resize-none rounded border border-slate-300 bg-white/90 px-1 text-xs"
 					style={fieldStyle}
 					placeholder={field.placeholder ?? ''}
 					maxlength={field.maxLength}
@@ -126,7 +126,7 @@
 			{:else}
 				<input
 					type="text"
-					class="h-full w-full rounded border border-slate-300 bg-white/90 px-1 text-xs"
+					class="block h-full w-full rounded border border-slate-300 bg-white/90 px-1 text-xs"
 					style={fieldStyle}
 					placeholder={field.placeholder ?? ''}
 					maxlength={field.maxLength}
@@ -155,7 +155,7 @@
 			</button>
 		{:else if field.field === 'dropdown' || field.field === 'combo'}
 			<select
-				class="h-full w-full rounded border border-slate-300 bg-white/90 px-1 text-xs"
+				class="block h-full w-full rounded border border-slate-300 bg-white/90 px-1 text-xs"
 				style={fieldStyle}
 				disabled={field.readOnly}
 				bind:value={field.value}
@@ -169,7 +169,7 @@
 		{:else if field.field === 'listbox'}
 			<select
 				multiple
-				class="h-full w-full rounded border border-slate-300 bg-white/90 px-1 text-xs"
+				class="block h-full w-full rounded border border-slate-300 bg-white/90 px-1 text-xs"
 				style={fieldStyle}
 				disabled={field.readOnly}
 				onfocus={() => editor.select(el.id)}
