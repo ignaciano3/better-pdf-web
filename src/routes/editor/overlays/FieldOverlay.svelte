@@ -45,6 +45,22 @@
 	// Radio buttons: each option is an independently placed widget (#3). Position
 	// from radioLayout, falling back to a vertical stack below the anchor.
 	const radioSize = $derived(Math.min(field.width, field.height));
+
+	// Comb text fields split a single line into `maxLength` equal cells (#comb).
+	// Native inputs can't show the cell separators, so we overlay vertical divider
+	// lines spaced at the cell width. Only valid for single-line text + maxLength.
+	const combCells = $derived(
+		field.field === 'text' && field.comb && !field.multiline && (field.maxLength ?? 0) > 1
+			? (field.maxLength as number)
+			: 0
+	);
+	const combCellW = $derived(combCells > 0 ? w / combCells : 0);
+	// Font for the comb char overlay: mirror the field's size/color so the painted
+	// characters match what export produces.
+	const combFont = $derived(
+		(field.fontSize !== undefined ? `font-size:${field.fontSize * SCALE}px;` : 'font-size:0.75rem;') +
+			(field.textColor ? `color:${rgbCss(field.textColor)};` : 'color:rgb(15 23 42);')
+	);
 	const radioPositions = $derived(
 		(field.options ?? []).map(
 			(_, i) => field.radioLayout?.[i] ?? { x: field.x, y: field.y + i * (radioSize + 6) }
@@ -123,6 +139,32 @@
 					readonly={field.readOnly}
 					bind:value={field.value}
 					onfocus={() => editor.select(el.id)}></textarea>
+			{:else if combCells > 0}
+				<!-- Comb field: maxLength equal cells, one char each. The input keeps the
+				     caret/editing but its own text is hidden; an overlay paints each
+				     character centered in its cell so spacing matches the exported comb. -->
+				<input
+					type="text"
+					class="block h-full w-full rounded border border-slate-300 bg-white/90 text-xs"
+					style="{fieldStyle} color:transparent; caret-color:rgb(100 116 139);"
+					placeholder={field.placeholder ?? ''}
+					maxlength={field.maxLength}
+					readonly={field.readOnly}
+					bind:value={field.value}
+					onfocus={() => editor.select(el.id)}
+				/>
+				<div class="pointer-events-none absolute inset-0 flex" style={combFont}>
+					{#each Array(combCells) as _, i (i)}
+						<div
+							class="flex items-center justify-center overflow-hidden"
+							style="width:{combCellW}px;{i < combCells - 1
+								? ' border-right:1px solid rgb(148 163 184 / 0.7);'
+								: ''}"
+						>
+							{(field.value ?? '')[i] ?? ''}
+						</div>
+					{/each}
+				</div>
 			{:else}
 				<input
 					type="text"
