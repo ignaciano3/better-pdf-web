@@ -162,6 +162,20 @@ function validateElement(el: EditElement): void {
 				}
 				if (el.options.length > MAX_FIELD_OPTIONS) error(422, 'Too many field options');
 			}
+			if (el.multiSelect !== undefined && typeof el.multiSelect !== 'boolean') {
+				error(422, 'Invalid field multiSelect');
+			}
+			if (el.selectedValues !== undefined) {
+				if (
+					!Array.isArray(el.selectedValues) ||
+					!el.selectedValues.every((v) => typeof v === 'string')
+				) {
+					error(422, 'Invalid field selectedValues');
+				}
+				if (el.selectedValues.length > MAX_FIELD_OPTIONS) {
+					error(422, 'Too many field selectedValues');
+				}
+			}
 			if (el.maxLength !== undefined && !isFiniteNumber(el.maxLength)) {
 				error(422, 'Invalid field max length');
 			}

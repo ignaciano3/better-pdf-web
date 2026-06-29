@@ -59,13 +59,34 @@ describe('extract-fields mapper', () => {
 		expect(el!.options).toEqual(['AR', 'US']);
 	});
 
-	it('keeps multiSelect listboxes as listbox', () => {
+	it('maps a multi-select listbox to multiSelect + selectedValues (valid options only)', () => {
 		const el = fieldInfoToElement(
-			info({ name: 'langs', type: 'listbox', multiSelect: true, options: ['a', 'b'] }),
+			info({
+				name: 'langs',
+				type: 'listbox',
+				multiSelect: true,
+				options: ['a', 'b', 'c'],
+				value: 'a,c,zzz'
+			}),
 			pageHeights,
 			'field0'
 		);
 		expect(el!.field).toBe('listbox');
+		expect(el!.multiSelect).toBe(true);
+		expect(el!.selectedValues).toEqual(['a', 'c']); // 'zzz' dropped (not an option)
+		expect(el!.value).toBeUndefined(); // single value not set for multi-select
+	});
+
+	it('leaves a single-select listbox using the single value', () => {
+		const el = fieldInfoToElement(
+			info({ name: 'lang', type: 'listbox', multiSelect: false, options: ['a', 'b'], value: 'b' }),
+			pageHeights,
+			'field0'
+		);
+		expect(el!.field).toBe('listbox');
+		expect(el!.multiSelect).toBeUndefined();
+		expect(el!.value).toBe('b');
+		expect(el!.selectedValues).toBeUndefined();
 	});
 
 	it('only carries maxLength for text fields', () => {

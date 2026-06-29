@@ -114,7 +114,21 @@ export function fieldInfoToElement(
 		element.options = [...info.options];
 	}
 	// "Off" is the AcroForm unselected sentinel for checkbox/radio, not a value.
-	if (info.value != null && info.value !== '' && info.value !== 'Off') element.value = info.value;
+	// A multi-select list box reports its /V array as a comma-joined string; split
+	// it back into selectedValues (valid options only) instead of a single value.
+	if (kind === 'listbox' && info.multiSelect) {
+		element.multiSelect = true;
+		if (info.value != null && info.value !== '') {
+			const opts = element.options ?? [];
+			const vals = info.value
+				.split(',')
+				.map((s) => s.trim())
+				.filter((v) => opts.includes(v));
+			if (vals.length > 0) element.selectedValues = vals;
+		}
+	} else if (info.value != null && info.value !== '' && info.value !== 'Off') {
+		element.value = info.value;
+	}
 	if (kind === 'text' && info.maxLength != null) element.maxLength = info.maxLength;
 	if (info.tooltip) element.tooltip = info.tooltip;
 	const isValueText =

@@ -550,6 +550,21 @@ export interface FieldElement {
 	 * states). Maps to the lib's `defaultSelected` option (`/DV`).
 	 */
 	defaultSelected?: string;
+	/**
+	 * List-box only: when true, sets the PDF Multiselect flag via
+	 * `addListBox({ multiSelect: true })`, so the field accepts multiple
+	 * simultaneous selections. Maps to the lib's `multiSelect` option.
+	 */
+	multiSelect?: boolean;
+	/**
+	 * Multi-select list-box only: the set of initially-selected option values
+	 * (the `/V` array). Used in place of {@link value} when {@link multiSelect}
+	 * is on. Applied at export via a post-build `selectMultiple` pass, since the
+	 * builder's `addListBox` accepts only a single `selected`. Entries must be a
+	 * subset of {@link options}. A multi-value reset-default is not supported by
+	 * the library, so {@link defaultSelected} (single) is reused for the default.
+	 */
+	selectedValues?: string[];
 }
 
 /** Discriminated union of everything the editor can stamp onto a page. */

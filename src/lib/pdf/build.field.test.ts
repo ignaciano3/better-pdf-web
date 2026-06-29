@@ -324,4 +324,57 @@ describe('buildPdf field authoring (D3 rebuild)', () => {
 		expect(f?.options).not.toContain('zzz');
 		expect(f?.defaultValue).toBeNull();
 	});
+
+	it('authors a multi-select listbox whose initial values round-trip', async () => {
+		const state: EditState = {
+			pageSize: [400, 500],
+			elements: [
+				field({
+					field: 'listbox',
+					name: 'langs',
+					x: 20,
+					y: 150,
+					height: 60,
+					options: ['ts', 'rs', 'py'],
+					multiSelect: true,
+					selectedValues: ['ts', 'py', 'zzz'] // 'zzz' is not an option → dropped
+				})
+			]
+		};
+		const bytes = await buildPdf(state);
+		const doc = await PdfDocument.load(bytes);
+		const f = doc.getForm().getField('langs');
+		expect(f?.type).toBe('listbox');
+		expect(f?.multiSelect).toBe(true);
+		// The reader renders the /V array as a comma-joined string.
+		const selected = (f?.value ?? '')
+			.split(',')
+			.filter(Boolean)
+			.map((s) => s.trim());
+		expect(selected).toEqual(expect.arrayContaining(['ts', 'py']));
+		expect(selected).not.toContain('zzz');
+	});
+
+	it('flatten still works for a multi-select listbox', async () => {
+		const state: EditState = {
+			pageSize: [400, 500],
+			flatten: true,
+			elements: [
+				field({
+					field: 'listbox',
+					name: 'langs',
+					x: 20,
+					y: 150,
+					height: 60,
+					options: ['ts', 'rs'],
+					multiSelect: true,
+					selectedValues: ['ts', 'rs']
+				})
+			]
+		};
+		const bytes = await buildPdf(state);
+		const doc = await PdfDocument.load(bytes);
+		// Flattened → no interactive fields remain.
+		expect(doc.getForm().getFields().length).toBe(0);
+	});
 });
