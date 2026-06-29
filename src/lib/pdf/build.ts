@@ -449,6 +449,7 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 				...(f.comb && f.maxLength !== undefined && !f.multiline ? { comb: true } : {}),
 				...(f.align ? { align: f.align } : {}),
 				...(f.fontSize !== undefined ? { fontSize: f.fontSize } : {}),
+				...(f.font ? { font: f.font as StandardFonts } : {}),
 				...(f.password ? { password: true } : {}),
 				...(f.defaultValue && (f.maxLength === undefined || f.defaultValue.length <= f.maxLength)
 					? { defaultValue: f.defaultValue }
@@ -530,6 +531,7 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 				...(f.value ? { selected: f.value } : {}),
 				...(f.align ? { align: f.align } : {}),
 				...(f.fontSize !== undefined ? { fontSize: f.fontSize } : {}),
+				...(f.font ? { font: f.font as StandardFonts } : {}),
 				...(f.defaultSelected && options.includes(f.defaultSelected)
 					? { defaultSelected: f.defaultSelected }
 					: {})
@@ -549,6 +551,7 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 				...(!f.multiSelect && f.value ? { selected: f.value } : {}),
 				...(f.align ? { align: f.align } : {}),
 				...(f.fontSize !== undefined ? { fontSize: f.fontSize } : {}),
+				...(f.font ? { font: f.font as StandardFonts } : {}),
 				...(f.defaultSelected && (f.options ?? []).includes(f.defaultSelected)
 					? { defaultSelected: f.defaultSelected }
 					: {})

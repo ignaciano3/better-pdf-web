@@ -1,4 +1,4 @@
-import type { FieldElement, FieldKind } from '$lib/pdf/types';
+import type { FieldElement, FieldKind, StandardFontName } from '$lib/pdf/types';
 import { rectToTopLeft, type PdfRect } from '$lib/pdf/coords';
 
 /**
@@ -41,6 +41,48 @@ export interface FieldInfoLike {
 	align?: 'left' | 'center' | 'right';
 	tooltip?: string | null;
 	fontSize?: number | null;
+	/** Effective `/DA` font resource name (e.g. "Helv"), or null. */
+	fontName?: string | null;
+}
+
+/**
+ * Map a `/DA` font resource name to one of the 12 standard fonts, or null when it
+ * isn't recognisable. Handles both the Adobe AcroForm short codes (e.g. "Helv",
+ * "HeBo") and full base-font names (e.g. "Helvetica-Bold"). Unknown / embedded
+ * fonts return null so the field falls back to the lib's default Helvetica.
+ */
+export function resourceFontToStandard(name: string | null | undefined): StandardFontName | null {
+	if (!name) return null;
+	const direct: StandardFontName[] = [
+		'Helvetica',
+		'Helvetica-Bold',
+		'Helvetica-Oblique',
+		'Helvetica-BoldOblique',
+		'Courier',
+		'Courier-Bold',
+		'Courier-Oblique',
+		'Courier-BoldOblique',
+		'Times-Roman',
+		'Times-Bold',
+		'Times-Italic',
+		'Times-BoldItalic'
+	];
+	if (direct.includes(name as StandardFontName)) return name as StandardFontName;
+	const abbrev: Record<string, StandardFontName> = {
+		Helv: 'Helvetica',
+		HeBo: 'Helvetica-Bold',
+		HeOb: 'Helvetica-Oblique',
+		HeBO: 'Helvetica-BoldOblique',
+		Cour: 'Courier',
+		CoBo: 'Courier-Bold',
+		CoOb: 'Courier-Oblique',
+		CoBO: 'Courier-BoldOblique',
+		TiRo: 'Times-Roman',
+		TiBo: 'Times-Bold',
+		TiIt: 'Times-Italic',
+		TiBI: 'Times-BoldItalic'
+	};
+	return abbrev[name] ?? null;
 }
 
 /** Map a detected field type to our {@link FieldKind}, or null to skip it. */
@@ -136,6 +178,9 @@ export function fieldInfoToElement(
 	if (isValueText) {
 		if (info.align && info.align !== 'left') element.align = info.align;
 		if (info.fontSize != null && info.fontSize > 0) element.fontSize = info.fontSize;
+		const font = resourceFontToStandard(info.fontName);
+		// Helvetica is the lib default; only carry a non-default font.
+		if (font && font !== 'Helvetica') element.font = font;
 	}
 	if (kind === 'text') {
 		if (info.multiline) element.multiline = true;

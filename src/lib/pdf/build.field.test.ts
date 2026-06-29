@@ -91,6 +91,27 @@ describe('buildPdf field authoring (D3 rebuild)', () => {
 		expect(f?.maxLength).toBe(8);
 	});
 
+	it('authors a non-default field font that round-trips on re-load', async () => {
+		const state: EditState = {
+			pageSize: [400, 500],
+			elements: [
+				field({ field: 'text', name: 'titled', font: 'Times-Bold' }),
+				field({ field: 'dropdown', name: 'pick', options: ['a', 'b'], font: 'Courier' })
+			]
+		};
+		const bytes = await buildPdf(state);
+		const doc = await PdfDocument.load(bytes);
+		const fields = doc.getForm().getFields();
+		const titled = fields.find((f) => f.name === 'titled');
+		const pick = fields.find((f) => f.name === 'pick');
+		// fontName is the /DA resource name; Times-Bold/Courier must not read back as
+		// the default Helvetica resource.
+		expect(titled?.fontName).not.toBe('Helv');
+		expect(titled?.fontName).toBeTruthy();
+		expect(pick?.fontName).not.toBe('Helv');
+		expect(pick?.fontName).toBeTruthy();
+	});
+
 	it('round-trips fields placed over an embedded source page', async () => {
 		// Build a 1-page source PDF.
 		const src = await PdfDocument.create();

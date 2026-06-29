@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { mapFields, fieldInfoToElement, type FieldInfoLike } from './extract-fields';
+import {
+	mapFields,
+	fieldInfoToElement,
+	resourceFontToStandard,
+	type FieldInfoLike
+} from './extract-fields';
 
 function info(over: Partial<FieldInfoLike>): FieldInfoLike {
 	return {
@@ -168,6 +173,37 @@ describe('extract-fields mapper', () => {
 		expect(el!.fontSize).toBe(14);
 		expect(el!.multiline).toBe(true);
 		expect(el!.password).toBe(true);
+	});
+
+	it('maps a non-default field font abbreviation on import; drops Helvetica', () => {
+		const timesEl = fieldInfoToElement(
+			info({ type: 'text', fontName: 'TiBo' }),
+			pageHeights,
+			'field0'
+		);
+		expect(timesEl!.font).toBe('Times-Bold');
+		// Helvetica is the lib default — not carried, so a re-author stays minimal.
+		const helvEl = fieldInfoToElement(
+			info({ type: 'text', fontName: 'Helv' }),
+			pageHeights,
+			'field0'
+		);
+		expect(helvEl!.font).toBeUndefined();
+		// Unknown/embedded font name → no standard font.
+		const embeddedEl = fieldInfoToElement(
+			info({ type: 'text', fontName: 'Arial' }),
+			pageHeights,
+			'field0'
+		);
+		expect(embeddedEl!.font).toBeUndefined();
+	});
+
+	it('resourceFontToStandard maps abbreviations and full names', () => {
+		expect(resourceFontToStandard('HeBo')).toBe('Helvetica-Bold');
+		expect(resourceFontToStandard('Times-Italic')).toBe('Times-Italic');
+		expect(resourceFontToStandard('Cour')).toBe('Courier');
+		expect(resourceFontToStandard(null)).toBeNull();
+		expect(resourceFontToStandard('Wingdings')).toBeNull();
 	});
 
 	it('maps an editable dropdown to a combo field', () => {

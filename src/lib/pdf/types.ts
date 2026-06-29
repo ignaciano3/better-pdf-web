@@ -523,6 +523,13 @@ export interface FieldElement {
 	 */
 	fontSize?: number;
 	/**
+	 * One of the 12 standard fonts used to render the field's value. Defaults to
+	 * the lib's Helvetica. Meaningful for fields that render value text: text,
+	 * dropdown, combo, listbox. Maps to the lib's `font` field option (registered
+	 * once in the AcroForm `/DR`). Embedded/CJK fonts are unsupported for fields.
+	 */
+	font?: StandardFontName;
+	/**
 	 * Mark style for checkbox/radio fields. Maps to the lib's `checkStyle`.
 	 * Defaults to `check` (checkbox) / `circle` (radio) when unset.
 	 */

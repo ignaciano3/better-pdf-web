@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { EditorState } from './editor.svelte';
-	import type { CheckStyle, FieldElement } from '$lib/pdf/types';
+	import type { CheckStyle, FieldElement, StandardFontName } from '$lib/pdf/types';
 
 	let { editor }: { editor: EditorState } = $props();
 
@@ -304,6 +304,31 @@
 						/>
 					</label>
 				</div>
+				<label class="mt-3 flex items-center gap-2 text-sm">
+					Font
+					<select
+						class="rounded border border-slate-300 px-2 py-1 text-sm"
+						value={field.font ?? 'Helvetica'}
+						onchange={(e) => {
+							const v = (e.currentTarget as HTMLSelectElement).value;
+							if (v === 'Helvetica') delete field.font;
+							else field.font = v as StandardFontName;
+						}}
+					>
+						<option value="Helvetica">Helvetica</option>
+						<option value="Helvetica-Bold">Helvetica Bold</option>
+						<option value="Helvetica-Oblique">Helvetica Oblique</option>
+						<option value="Helvetica-BoldOblique">Helvetica Bold Oblique</option>
+						<option value="Courier">Courier</option>
+						<option value="Courier-Bold">Courier Bold</option>
+						<option value="Courier-Oblique">Courier Oblique</option>
+						<option value="Courier-BoldOblique">Courier Bold Oblique</option>
+						<option value="Times-Roman">Times Roman</option>
+						<option value="Times-Bold">Times Bold</option>
+						<option value="Times-Italic">Times Italic</option>
+						<option value="Times-BoldItalic">Times Bold Italic</option>
+					</select>
+				</label>
 			{/if}
 
 			{#if hasCheckStyle}
