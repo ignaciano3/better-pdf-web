@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, fireEvent } from '@testing-library/svelte';
 
 vi.mock('./export.remote', () => ({ exportPdf: vi.fn() }));
 vi.mock('./extractFields.remote', () => ({ extractFields: vi.fn() }));
@@ -37,5 +37,21 @@ describe('PageManager accessibility', () => {
 		const del = screen.getByRole('button', { name: 'Delete page 1' }) as HTMLButtonElement;
 		expect(up.disabled).toBe(true);
 		expect(del.disabled).toBe(true);
+	});
+});
+
+describe('PageManager per-page resize', () => {
+	it('reflects the page size and overrides one page on change', async () => {
+		const editor = new EditorState();
+		editor.pageOps = [{ kind: 'blank', size: [300, 400], rotation: 0 }];
+		render(PageManager, { props: { editor } });
+
+		const select = screen.getByRole('combobox', { name: 'Resize page 1' }) as HTMLSelectElement;
+		// Unknown 300×400 size reflects as the disabled "Custom size" placeholder.
+		expect(select.value).toBe('custom');
+
+		// Picking Letter landscape overrides only this page's content box (swapped).
+		await fireEvent.change(select, { target: { value: 'Letter|l' } });
+		expect(editor.pageContentBox(0)).toEqual({ width: 792, height: 612 });
 	});
 });

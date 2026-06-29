@@ -1,9 +1,40 @@
 <script lang="ts">
 	import type { EditorState } from './editor.svelte';
-	import { SCALE, PAGE_SIZES } from './constants';
+	import { SCALE, PAGE_SIZES, NAMED_PAGE_SIZES } from './constants';
 	import { overlayFor } from './overlays';
 
 	let { editor }: { editor: EditorState } = $props();
+
+	// Per-page resize (#2). The curated named sizes in both orientations, plus an
+	// "Original size" entry that drops a source page's override. Sizes are the
+	// un-rotated content box, matching editor.setPageSize / pageContentBox.
+	const RESIZE_OPTS = NAMED_PAGE_SIZES.flatMap((s) => [
+		{ value: `${s.label}|p`, label: `${s.label} portrait`, size: s.size },
+		{
+			value: `${s.label}|l`,
+			label: `${s.label} landscape`,
+			size: [s.size[1], s.size[0]] as [number, number]
+		}
+	]);
+
+	/** Encoded select value reflecting page `i`'s current content box. */
+	function resizeValue(i: number): string {
+		const box = editor.pageContentBox(i);
+		const match = RESIZE_OPTS.find((o) => o.size[0] === box.width && o.size[1] === box.height);
+		if (match) return match.value;
+		const op = editor.pageOps[i];
+		return op?.kind === 'source' && !op.size ? 'original' : 'custom';
+	}
+
+	function onResize(i: number, event: Event) {
+		const value = (event.currentTarget as HTMLSelectElement).value;
+		if (value === 'original') {
+			editor.clearPageSize(i);
+			return;
+		}
+		const opt = RESIZE_OPTS.find((o) => o.value === value);
+		if (opt) editor.setPageSize(i, opt.size);
+	}
 
 	// Size used for newly inserted blank pages (#5). Index into PAGE_SIZES;
 	// 0 = "Match document" (clone the first page).
@@ -251,6 +282,21 @@
 						onclick={() => editor.deletePage(i)}>{@render iconTrash()}</button
 					>
 				</div>
+
+				<!-- Per-page resize (#2): override one page's output size. -->
+				<select
+					class="w-full rounded border border-slate-200 px-1 py-0.5 text-[11px] text-slate-600 focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none"
+					title="Resize page {i + 1}"
+					aria-label="Resize page {i + 1}"
+					value={resizeValue(i)}
+					onchange={(e) => onResize(i, e)}
+				>
+					<option value="original">Original size</option>
+					<option value="custom" disabled hidden>Custom size</option>
+					{#each RESIZE_OPTS as o (o.value)}
+						<option value={o.value}>{o.label}</option>
+					{/each}
+				</select>
 			</div>
 		{/each}
 	</aside>
