@@ -97,9 +97,7 @@ async function applyMultiSelections(
 export async function buildPdf(state: EditState): Promise<Uint8Array> {
 	const sources = resolveSources(state);
 	const hasSource = sources.some((s) => s && s.byteLength > 0);
-	let bytes = hasSource
-		? await buildSourceRebuild(state, sources)
-		: await buildBlankRebuild(state);
+	let bytes = hasSource ? await buildSourceRebuild(state, sources) : await buildBlankRebuild(state);
 
 	// Apply multi-select list-box initial selections (a second load/save pass; the
 	// builder's addListBox takes only a single `selected`). Runs before flatten so

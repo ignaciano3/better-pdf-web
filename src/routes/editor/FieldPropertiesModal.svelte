@@ -514,7 +514,8 @@
 												opt,
 												(e.currentTarget as HTMLInputElement).checked
 											)}
-									/> {opt}
+									/>
+									{opt}
 								</label>
 							{/each}
 						</div>

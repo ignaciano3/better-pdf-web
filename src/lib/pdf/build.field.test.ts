@@ -347,7 +347,10 @@ describe('buildPdf field authoring (D3 rebuild)', () => {
 		expect(f?.type).toBe('listbox');
 		expect(f?.multiSelect).toBe(true);
 		// The reader renders the /V array as a comma-joined string.
-		const selected = (f?.value ?? '').split(',').filter(Boolean).map((s) => s.trim());
+		const selected = (f?.value ?? '')
+			.split(',')
+			.filter(Boolean)
+			.map((s) => s.trim());
 		expect(selected).toEqual(expect.arrayContaining(['ts', 'py']));
 		expect(selected).not.toContain('zzz');
 	});
