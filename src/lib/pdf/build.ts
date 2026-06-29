@@ -458,23 +458,44 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 			break;
 		}
 		case 'dropdown':
-		case 'combo':
+		case 'combo': {
 			// Both author via addDropdown; `editable` (combo box Edit flag) is set
 			// only for `combo` so the user can type a value outside `options`.
+			//
+			// The builder validates `selected`/`defaultSelected` against `options`
+			// and throws otherwise. An editable combo, however, legitimately carries
+			// a free-text value/default (e.g. round-tripped from an uploaded PDF whose
+			// /V is outside /Opt). Fold those free-text entries into the option list so
+			// authoring succeeds; for a plain (non-editable) dropdown free-text stays
+			// invalid, so an out-of-options default is dropped below.
+			const baseOptions = f.options ?? [];
+			const extra: string[] = [];
+			if (f.field === 'combo') {
+				if (f.value && !baseOptions.includes(f.value)) extra.push(f.value);
+				if (
+					f.defaultSelected &&
+					!baseOptions.includes(f.defaultSelected) &&
+					!extra.includes(f.defaultSelected)
+				) {
+					extra.push(f.defaultSelected);
+				}
+			}
+			const options = extra.length > 0 ? [...baseOptions, ...extra] : baseOptions;
 			form.addDropdown(f.name, {
 				...base,
 				width: f.width,
 				height: f.height,
-				options: f.options ?? [],
+				options,
 				...(f.field === 'combo' ? { editable: true } : {}),
 				...(f.value ? { selected: f.value } : {}),
 				...(f.align ? { align: f.align } : {}),
 				...(f.fontSize !== undefined ? { fontSize: f.fontSize } : {}),
-				...(f.defaultSelected && (f.options ?? []).includes(f.defaultSelected)
+				...(f.defaultSelected && options.includes(f.defaultSelected)
 					? { defaultSelected: f.defaultSelected }
 					: {})
 			});
 			break;
+		}
 		case 'listbox':
 			form.addListBox(f.name, {
 				...base,

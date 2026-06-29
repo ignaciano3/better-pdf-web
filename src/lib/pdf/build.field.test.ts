@@ -276,4 +276,52 @@ describe('buildPdf field authoring (D3 rebuild)', () => {
 		expect(byName['short']?.defaultValue).toBeNull();
 		expect(byName['pick']?.defaultValue).toBeNull();
 	});
+
+	it('authors an editable combo with a free-text value + default not in its options', async () => {
+		// An editable combo (e.g. imported from a PDF whose /V is a typed value
+		// outside /Opt) must not crash export. The builder validates
+		// selected/defaultSelected against options, so the free-text entries are
+		// folded into the option list.
+		const state: EditState = {
+			pageSize: [400, 500],
+			elements: [
+				field({
+					field: 'combo',
+					name: 'city',
+					options: ['BA', 'NY'],
+					value: 'Rosario',
+					defaultSelected: 'Cordoba'
+				})
+			]
+		};
+		const bytes = await buildPdf(state);
+		const doc = await PdfDocument.load(bytes);
+		const f = doc.getForm().getField('city');
+		expect(f?.type).toBe('dropdown'); // combo authors as an editable dropdown
+		expect(f?.value).toBe('Rosario');
+		expect(f?.defaultValue).toBe('Cordoba');
+		expect(f?.options).toEqual(expect.arrayContaining(['BA', 'NY', 'Rosario', 'Cordoba']));
+	});
+
+	it('still drops an out-of-options value/default for a plain (non-editable) dropdown', async () => {
+		const state: EditState = {
+			pageSize: [400, 500],
+			elements: [
+				field({
+					field: 'dropdown',
+					name: 'plain',
+					options: ['a', 'b'],
+					defaultSelected: 'zzz'
+				})
+			]
+		};
+		// Plain dropdown is not editable: free-text is invalid, so the default is
+		// dropped (not folded into options). Export must not throw.
+		const bytes = await buildPdf(state);
+		const doc = await PdfDocument.load(bytes);
+		const f = doc.getForm().getField('plain');
+		expect(f?.options).toEqual(expect.arrayContaining(['a', 'b']));
+		expect(f?.options).not.toContain('zzz');
+		expect(f?.defaultValue).toBeNull();
+	});
 });
