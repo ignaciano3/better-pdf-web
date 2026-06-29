@@ -325,6 +325,32 @@ describe('validateExportInput', () => {
 		expect(() => validateExportInput(input)).toThrow();
 	});
 
+	it('accepts a multi-select listbox field', () => {
+		expect(() =>
+			validateExportInput(
+				fieldInput({
+					field: 'listbox',
+					options: ['a', 'b'],
+					multiSelect: true,
+					selectedValues: ['a', 'b']
+				})
+			)
+		).not.toThrow();
+	});
+
+	it('rejects a non-array selectedValues', () => {
+		expect(() =>
+			validateExportInput(
+				fieldInput({
+					field: 'listbox',
+					options: ['a'],
+					multiSelect: true,
+					selectedValues: 'a'
+				})
+			)
+		).toThrow();
+	});
+
 	it('accepts a valid outline with nesting', () => {
 		const input = {
 			fingerprint: 'fp',
