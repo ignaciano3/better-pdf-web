@@ -22,7 +22,9 @@ function text(extra: Partial<TextElement> = {}): TextElement {
 
 function styleFor(font: StandardFontName | undefined): CSSStyleDeclaration {
 	const editor = new EditorState();
-	const { container } = render(TextOverlay, { props: { el: text({ font }), editor } });
+	const { container } = render(TextOverlay, {
+		props: { el: text(font === undefined ? {} : { font }), editor }
+	});
 	return (container.querySelector('div[contenteditable]') as HTMLDivElement).style;
 }
 
