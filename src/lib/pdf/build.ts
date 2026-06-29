@@ -40,6 +40,42 @@ async function flattenAllFields(bytes: Uint8Array): Promise<Uint8Array> {
 }
 
 /**
+ * Collect the multi-select list boxes that carry initial selections. Each entry
+ * names a field and the option values to pre-select, filtered to valid options
+ * (selectMultiple throws on an unknown value). Empty selections are skipped.
+ */
+function collectMultiSelections(
+	elements: readonly EditElement[]
+): { name: string; values: string[] }[] {
+	const out: { name: string; values: string[] }[] = [];
+	for (const el of elements) {
+		if (el.type !== 'field' || el.field !== 'listbox' || !el.multiSelect) continue;
+		const options = el.options ?? [];
+		const values = (el.selectedValues ?? []).filter((v) => options.includes(v));
+		if (values.length > 0) out.push({ name: el.name, values });
+	}
+	return out;
+}
+
+/**
+ * Apply multi-select initial selections as a second load/save pass. The builder
+ * authors the Multiselect flag but takes only a single `selected`, so multiple
+ * initial values are written here via `selectMultiple` (sets the field's `/V`
+ * array and `/I` indices).
+ */
+async function applyMultiSelections(
+	bytes: Uint8Array,
+	selections: { name: string; values: string[] }[]
+): Promise<Uint8Array> {
+	const doc = await PdfDocument.load(bytes);
+	const form = doc.getForm();
+	for (const { name, values } of selections) {
+		form.getListBox(name).selectMultiple(values);
+	}
+	return await doc.save();
+}
+
+/**
  * Finalize editor state into PDF bytes using better-pdf.
  *
  * The export is always a **rebuild** (design decision D3): a fresh document is
@@ -61,9 +97,15 @@ async function flattenAllFields(bytes: Uint8Array): Promise<Uint8Array> {
 export async function buildPdf(state: EditState): Promise<Uint8Array> {
 	const sources = resolveSources(state);
 	const hasSource = sources.some((s) => s && s.byteLength > 0);
-	const bytes = hasSource
+	let bytes = hasSource
 		? await buildSourceRebuild(state, sources)
 		: await buildBlankRebuild(state);
+
+	// Apply multi-select list-box initial selections (a second load/save pass; the
+	// builder's addListBox takes only a single `selected`). Runs before flatten so
+	// the selected appearance is baked when flattening.
+	const multi = collectMultiSelections(state.elements);
+	if (multi.length > 0) bytes = await applyMultiSelections(bytes, multi);
 
 	// Flatten is a second pass over the built (interactive) bytes. Skip when no
 	// fields exist — flattening nothing just costs a load/save round-trip.
@@ -502,7 +544,11 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 				width: f.width,
 				height: f.height,
 				options: f.options ?? [],
-				...(f.value ? { selected: f.value } : {}),
+				...(f.multiSelect ? { multiSelect: true } : {}),
+				// Single-select uses the single `selected`; multi-select initial
+				// values are applied in a post-build selectMultiple pass, since the
+				// builder accepts only one `selected`.
+				...(!f.multiSelect && f.value ? { selected: f.value } : {}),
 				...(f.align ? { align: f.align } : {}),
 				...(f.fontSize !== undefined ? { fontSize: f.fontSize } : {}),
 				...(f.defaultSelected && (f.options ?? []).includes(f.defaultSelected)
