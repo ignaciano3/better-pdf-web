@@ -489,6 +489,9 @@
 						onchange={(e) => {
 							if ((e.currentTarget as HTMLInputElement).checked) {
 								field.multiSelect = true;
+								// Multi-select uses selectedValues; drop the single-select value so a
+								// stale "Initial" can't reappear if multi-select is later turned off.
+								delete field.value;
 							} else {
 								delete field.multiSelect;
 								delete field.selectedValues;

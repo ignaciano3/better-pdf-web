@@ -165,4 +165,18 @@ describe('FieldPropertiesModal', () => {
 		expect(editor.selectedField?.multiSelect).toBeUndefined();
 		expect(editor.selectedField?.selectedValues).toBeUndefined();
 	});
+
+	it('drops a stale single value when multi-select is turned on', async () => {
+		const user = userEvent.setup();
+		const editor = withField('listbox');
+		editor.selectedField!.options = ['a', 'b'];
+		editor.selectedField!.value = 'a';
+		flushSync();
+		render(FieldPropertiesModal, { props: { editor } });
+
+		await user.click(screen.getByLabelText('Multi-select'));
+		flushSync();
+		expect(editor.selectedField?.multiSelect).toBe(true);
+		expect(editor.selectedField?.value).toBeUndefined();
+	});
 });
