@@ -902,6 +902,48 @@ export class EditorState {
 	}
 
 	/**
+	 * Shared press-drag draw lifecycle. Captures the pointer on `pageEl`, converts
+	 * client coords to clamped top-left PDF points, creates the element via
+	 * `create(start)`, runs `onMove(live, cur, start)` on every pointermove, and
+	 * `commit(live)` once on release — then suppresses the trailing synthetic
+	 * click and returns to the select tool. The per-kind callers only describe the
+	 * element shape and how a drag mutates it; the gesture plumbing lives here.
+	 */
+	#beginDraw<T extends EditElement>(
+		event: PointerEvent,
+		pageEl: HTMLElement,
+		pageIndex: number,
+		create: (start: { x: number; y: number }) => T,
+		onMove: (live: T, cur: { x: number; y: number }, start: { x: number; y: number }) => void,
+		commit: (live: T) => void
+	): boolean {
+		event.preventDefault();
+		pageEl.setPointerCapture(event.pointerId);
+		const rect = pageEl.getBoundingClientRect();
+		const at = (e: PointerEvent) =>
+			this.clampToPage(
+				(e.clientX - rect.left) / this.cssScale,
+				(e.clientY - rect.top) / this.cssScale,
+				pageIndex
+			);
+		const start = at(event);
+		this.add(create(start));
+		// Use the reactive proxy version so mutations trigger re-renders.
+		const live = this.elements[this.elements.length - 1] as T;
+
+		this.#trackGesture(
+			(e) => onMove(live, at(e), start),
+			() => {
+				commit(live);
+				// One-shot tool: return to select after drawing.
+				this.suppressNextClick = true;
+				this.resetTool();
+			}
+		);
+		return true;
+	}
+
+	/**
 	 * Begin drawing a shape: press defines one corner, drag sizes the bounding
 	 * box, release commits it. No-op (returns false) when no shape tool is active
 	 * so the page keeps its normal click-to-add-text behaviour. Called from the
@@ -914,55 +956,38 @@ export class EditorState {
 				? this.tool.kind
 				: null;
 		if (!kind) return false;
-		event.preventDefault();
-		pageEl.setPointerCapture(event.pointerId);
-		const rect = pageEl.getBoundingClientRect();
-		const { x: startX, y: startY } = this.clampToPage(
-			(event.clientX - rect.left) / this.cssScale,
-			(event.clientY - rect.top) / this.cssScale,
-			pageIndex
-		);
-
 		const stroke = $state.snapshot(this.shapeStroke);
-		const el: ShapeElement = {
-			type: 'shape',
-			id: this.nextId('sh'),
-			shape: kind,
-			x: startX,
-			y: startY,
-			width: 0,
-			height: 0,
-			page: pageIndex,
-			strokeColor: stroke,
-			strokeWidth: SHAPE_DEFAULT_STROKE_WIDTH
-		};
-		this.add(el);
-		// Use the reactive proxy version so mutations trigger re-renders.
-		const live = this.elements[this.elements.length - 1] as ShapeElement;
-
-		const move = (e: PointerEvent) => {
-			const { x: curX, y: curY } = this.clampToPage(
-				(e.clientX - rect.left) / this.cssScale,
-				(e.clientY - rect.top) / this.cssScale,
-				pageIndex
-			);
-			live.x = Math.min(startX, curX);
-			live.y = Math.min(startY, curY);
-			live.width = Math.abs(curX - startX);
-			live.height = Math.abs(curY - startY);
-			// A line keeps its drag direction: anti-diagonal when X and Y move in
-			// opposite directions (top-right → bottom-left or bottom-left → top-right).
-			if (live.shape === 'line') live.antidiagonal = (curX - startX) * (curY - startY) < 0;
-		};
-		this.#trackGesture(move, () => {
-			// A stray click with no real drag still yields a visible default shape.
-			if (live.width < SHAPE_MIN_SIZE) live.width = SHAPE_MIN_SIZE * 4;
-			if (live.shape !== 'line' && live.height < SHAPE_MIN_SIZE) live.height = SHAPE_MIN_SIZE * 4;
-			// One-shot tool: return to select after drawing.
-			this.suppressNextClick = true;
-			this.resetTool();
-		});
-		return true;
+		return this.#beginDraw<ShapeElement>(
+			event,
+			pageEl,
+			pageIndex,
+			(start) => ({
+				type: 'shape',
+				id: this.nextId('sh'),
+				shape: kind,
+				x: start.x,
+				y: start.y,
+				width: 0,
+				height: 0,
+				page: pageIndex,
+				strokeColor: stroke,
+				strokeWidth: SHAPE_DEFAULT_STROKE_WIDTH
+			}),
+			(live, cur, start) => {
+				live.x = Math.min(start.x, cur.x);
+				live.y = Math.min(start.y, cur.y);
+				live.width = Math.abs(cur.x - start.x);
+				live.height = Math.abs(cur.y - start.y);
+				// A line keeps its drag direction: anti-diagonal when X and Y move in
+				// opposite directions (top-right → bottom-left or bottom-left → top-right).
+				if (live.shape === 'line') live.antidiagonal = (cur.x - start.x) * (cur.y - start.y) < 0;
+			},
+			(live) => {
+				// A stray click with no real drag still yields a visible default shape.
+				if (live.width < SHAPE_MIN_SIZE) live.width = SHAPE_MIN_SIZE * 4;
+				if (live.shape !== 'line' && live.height < SHAPE_MIN_SIZE) live.height = SHAPE_MIN_SIZE * 4;
+			}
+		);
 	}
 
 	// --- vector paths / polygons / links -------------------------------------
@@ -975,52 +1000,39 @@ export class EditorState {
 	 */
 	beginFreehandDraw(event: PointerEvent, pageEl: HTMLElement, pageIndex: number): boolean {
 		if (!(this.tool.type === 'draw' && this.tool.kind === 'path')) return false;
-		event.preventDefault();
-		pageEl.setPointerCapture(event.pointerId);
-		const rect = pageEl.getBoundingClientRect();
-		const at = (e: PointerEvent) =>
-			this.clampToPage(
-				(e.clientX - rect.left) / this.cssScale,
-				(e.clientY - rect.top) / this.cssScale,
-				pageIndex
-			);
-		const start = at(event);
 		const stroke = $state.snapshot(this.shapeStroke);
-		const el: PathElement = {
-			type: 'path',
-			id: this.nextId('pa'),
-			x: start.x,
-			y: start.y,
-			page: pageIndex,
-			points: [start],
-			closed: false,
-			strokeColor: stroke,
-			strokeWidth: VECTOR_DEFAULT_STROKE_WIDTH
-		};
-		this.add(el);
-		// Use the reactive proxy version so mutations trigger re-renders.
-		const live = this.elements[this.elements.length - 1] as PathElement;
-
-		const move = (e: PointerEvent) => {
-			const p = at(e);
-			// Skip near-duplicate samples to keep the point list manageable.
-			const last = live.points[live.points.length - 1];
-			if (last && Math.hypot(p.x - last.x, p.y - last.y) < 1) return;
-			live.points = [...live.points, p];
-			const box = boundingBox(live.points);
-			live.x = box.x;
-			live.y = box.y;
-		};
-		this.#trackGesture(move, () => {
-			// Discard single-point taps that produce no visible stroke.
-			if (live.points.length < 2) {
-				this.elements = this.elements.filter((e) => e.id !== live.id);
-				this.selectedId = null;
+		return this.#beginDraw<PathElement>(
+			event,
+			pageEl,
+			pageIndex,
+			(start) => ({
+				type: 'path',
+				id: this.nextId('pa'),
+				x: start.x,
+				y: start.y,
+				page: pageIndex,
+				points: [start],
+				closed: false,
+				strokeColor: stroke,
+				strokeWidth: VECTOR_DEFAULT_STROKE_WIDTH
+			}),
+			(live, p) => {
+				// Skip near-duplicate samples to keep the point list manageable.
+				const last = live.points[live.points.length - 1];
+				if (last && Math.hypot(p.x - last.x, p.y - last.y) < 1) return;
+				live.points = [...live.points, p];
+				const box = boundingBox(live.points);
+				live.x = box.x;
+				live.y = box.y;
+			},
+			(live) => {
+				// Discard single-point taps that produce no visible stroke.
+				if (live.points.length < 2) {
+					this.elements = this.elements.filter((e) => e.id !== live.id);
+					this.selectedId = null;
+				}
 			}
-			this.suppressNextClick = true;
-			this.resetTool();
-		});
-		return true;
+		);
 	}
 
 	/**
@@ -1030,46 +1042,31 @@ export class EditorState {
 	 */
 	beginLinkDraw(event: PointerEvent, pageEl: HTMLElement, pageIndex: number): boolean {
 		if (!(this.tool.type === 'draw' && this.tool.kind === 'link')) return false;
-		event.preventDefault();
-		pageEl.setPointerCapture(event.pointerId);
-		const rect = pageEl.getBoundingClientRect();
-		const { x: startX, y: startY } = this.clampToPage(
-			(event.clientX - rect.left) / this.cssScale,
-			(event.clientY - rect.top) / this.cssScale,
-			pageIndex
+		return this.#beginDraw<LinkElement>(
+			event,
+			pageEl,
+			pageIndex,
+			(start) => ({
+				type: 'link',
+				id: this.nextId('ln'),
+				x: start.x,
+				y: start.y,
+				width: 0,
+				height: 0,
+				page: pageIndex,
+				url: ''
+			}),
+			(live, cur, start) => {
+				live.x = Math.min(start.x, cur.x);
+				live.y = Math.min(start.y, cur.y);
+				live.width = Math.abs(cur.x - start.x);
+				live.height = Math.abs(cur.y - start.y);
+			},
+			(live) => {
+				if (live.width < SHAPE_MIN_SIZE) live.width = LINK_DEFAULT_SIZE.width;
+				if (live.height < SHAPE_MIN_SIZE) live.height = LINK_DEFAULT_SIZE.height;
+			}
 		);
-		const el: LinkElement = {
-			type: 'link',
-			id: this.nextId('ln'),
-			x: startX,
-			y: startY,
-			width: 0,
-			height: 0,
-			page: pageIndex,
-			url: ''
-		};
-		this.add(el);
-		// Use the reactive proxy version so mutations trigger re-renders.
-		const live = this.elements[this.elements.length - 1] as LinkElement;
-
-		const move = (e: PointerEvent) => {
-			const { x: curX, y: curY } = this.clampToPage(
-				(e.clientX - rect.left) / this.cssScale,
-				(e.clientY - rect.top) / this.cssScale,
-				pageIndex
-			);
-			live.x = Math.min(startX, curX);
-			live.y = Math.min(startY, curY);
-			live.width = Math.abs(curX - startX);
-			live.height = Math.abs(curY - startY);
-		};
-		this.#trackGesture(move, () => {
-			if (live.width < SHAPE_MIN_SIZE) live.width = LINK_DEFAULT_SIZE.width;
-			if (live.height < SHAPE_MIN_SIZE) live.height = LINK_DEFAULT_SIZE.height;
-			this.suppressNextClick = true;
-			this.resetTool();
-		});
-		return true;
 	}
 
 	/**

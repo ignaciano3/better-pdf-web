@@ -70,19 +70,19 @@ bun run dev -- --open
 
 ## Scripts
 
-| Script              | Description                                      |
-| ------------------- | ------------------------------------------------ |
-| `bun run dev`       | Start the dev server                             |
-| `bun run build`     | Build for production                             |
-| `bun run preview`   | Preview the production build                     |
-| `bun run check`     | Type-check with `svelte-check`                   |
-| `bun run lint`      | Lint with Prettier + ESLint                      |
-| `bun run format`    | Format with Prettier                             |
-| `bun run test`      | Run unit tests (Vitest)                          |
-| `bun run e2e`       | Run end-to-end tests (Playwright)                |
-| `bun run db:start`  | Start the local Postgres container               |
-| `bun run db:migrate`| Apply database migrations                        |
-| `bun run db:studio` | Open Drizzle Studio                              |
+| Script               | Description                        |
+| -------------------- | ---------------------------------- |
+| `bun run dev`        | Start the dev server               |
+| `bun run build`      | Build for production               |
+| `bun run preview`    | Preview the production build       |
+| `bun run check`      | Type-check with `svelte-check`     |
+| `bun run lint`       | Lint with Prettier + ESLint        |
+| `bun run format`     | Format with Prettier               |
+| `bun run test`       | Run unit tests (Vitest)            |
+| `bun run e2e`        | Run end-to-end tests (Playwright)  |
+| `bun run db:start`   | Start the local Postgres container |
+| `bun run db:migrate` | Apply database migrations          |
+| `bun run db:studio`  | Open Drizzle Studio                |
 
 ## Database
 

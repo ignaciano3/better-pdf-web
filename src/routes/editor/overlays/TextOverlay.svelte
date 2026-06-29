@@ -68,8 +68,8 @@
 		SCALE}px; line-height: {text.lineHeight
 		? text.lineHeight / text.size
 		: 1}; font-family: {fontCss(text.font)}; font-weight: {fontWeight(
-			text.font
-		)}; font-style: {fontStyle(text.font)}; color: {text.color
+		text.font
+	)}; font-style: {fontStyle(text.font)}; color: {text.color
 		? `rgb(${text.color.r * 255} ${text.color.g * 255} ${text.color.b * 255})`
 		: 'black'}; opacity: {text.opacity ?? 1}; transform: rotate({text.rotation ??
 		0}deg); transform-origin: top left;"

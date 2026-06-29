@@ -1,10 +1,11 @@
 import { error } from '@sveltejs/kit';
-import type {
-	DocumentMetadataInput,
-	EditElement,
-	EditState,
-	OutlineItem,
-	PageOp
+import {
+	STANDARD_FONTS,
+	type DocumentMetadataInput,
+	type EditElement,
+	type EditState,
+	type OutlineItem,
+	type PageOp
 } from '$lib/pdf/types';
 
 // Server-side hard limits. These cap the attack surface of the WASM/PDF
@@ -38,21 +39,6 @@ const MAX_OUTLINE_DEPTH = 32;
 const MAX_OUTLINE_TITLE_LEN = 2_000;
 
 const FIELD_KINDS = ['text', 'checkbox', 'radio', 'dropdown', 'signature', 'listbox', 'combo'];
-
-const STANDARD_FONTS = [
-	'Helvetica',
-	'Helvetica-Bold',
-	'Helvetica-Oblique',
-	'Helvetica-BoldOblique',
-	'Courier',
-	'Courier-Bold',
-	'Courier-Oblique',
-	'Courier-BoldOblique',
-	'Times-Roman',
-	'Times-Bold',
-	'Times-Italic',
-	'Times-BoldItalic'
-];
 
 function isFiniteNumber(n: unknown): n is number {
 	return typeof n === 'number' && Number.isFinite(n);
@@ -243,7 +229,7 @@ function validateWatermark(wm: unknown): void {
 			error(422, 'Invalid watermark image height');
 		}
 	}
-	if (w.font !== undefined && !STANDARD_FONTS.includes(w.font as string)) {
+	if (w.font !== undefined && !(STANDARD_FONTS as readonly string[]).includes(w.font as string)) {
 		error(422, 'Invalid watermark font');
 	}
 	if (w.size !== undefined && !isFiniteNumber(w.size)) error(422, 'Invalid watermark size');

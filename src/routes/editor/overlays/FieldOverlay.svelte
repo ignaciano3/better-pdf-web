@@ -58,7 +58,9 @@
 	// Font for the comb char overlay: mirror the field's size/color so the painted
 	// characters match what export produces.
 	const combFont = $derived(
-		(field.fontSize !== undefined ? `font-size:${field.fontSize * SCALE}px;` : 'font-size:0.75rem;') +
+		(field.fontSize !== undefined
+			? `font-size:${field.fontSize * SCALE}px;`
+			: 'font-size:0.75rem;') +
 			(field.textColor ? `color:${rgbCss(field.textColor)};` : 'color:rgb(15 23 42);')
 	);
 	const radioPositions = $derived(

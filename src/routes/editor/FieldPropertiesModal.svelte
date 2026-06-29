@@ -1,6 +1,12 @@
 <script lang="ts">
 	import type { EditorState } from './editor.svelte';
-	import type { CheckStyle, FieldElement, StandardFontName } from '$lib/pdf/types';
+	import {
+		STANDARD_FONTS,
+		type CheckStyle,
+		type FieldElement,
+		type StandardFontName
+	} from '$lib/pdf/types';
+	import { hexToRgb, rgbToHex } from '$lib/color';
 
 	let { editor }: { editor: EditorState } = $props();
 
@@ -67,20 +73,9 @@
 		}
 	}
 
-	function toHex(c: { r: number; g: number; b: number } | undefined): string {
-		const v = c ?? { r: 0, g: 0, b: 0 };
-		const h = (n: number) =>
-			Math.round(Math.max(0, Math.min(1, n)) * 255)
-				.toString(16)
-				.padStart(2, '0');
-		return `#${h(v.r)}${h(v.g)}${h(v.b)}`;
-	}
-	function fromHex(hex: string): { r: number; g: number; b: number } {
-		return {
-			r: parseInt(hex.slice(1, 3), 16) / 255,
-			g: parseInt(hex.slice(3, 5), 16) / 255,
-			b: parseInt(hex.slice(5, 7), 16) / 255
-		};
+	/** Human label for a standard font name, e.g. `Times-Roman` → `Times Roman`. */
+	function fontLabel(name: string): string {
+		return name.replace(/-/g, ' ');
 	}
 
 	function save() {
@@ -191,10 +186,10 @@
 				{#if field.border}
 					<input
 						type="color"
-						value={toHex(field.border.color)}
+						value={rgbToHex(field.border.color)}
 						oninput={(e) => {
 							if (field.border)
-								field.border.color = fromHex((e.currentTarget as HTMLInputElement).value);
+								field.border.color = hexToRgb((e.currentTarget as HTMLInputElement).value);
 						}}
 						class="h-6 w-6 cursor-pointer rounded border"
 						aria-label="Border color"
@@ -232,9 +227,9 @@
 				{#if field.background}
 					<input
 						type="color"
-						value={toHex(field.background)}
+						value={rgbToHex(field.background)}
 						oninput={(e) =>
-							(field.background = fromHex((e.currentTarget as HTMLInputElement).value))}
+							(field.background = hexToRgb((e.currentTarget as HTMLInputElement).value))}
 						class="h-6 w-6 cursor-pointer rounded border"
 						aria-label="Background color"
 					/>
@@ -260,9 +255,9 @@
 					{#if field.textColor}
 						<input
 							type="color"
-							value={toHex(field.textColor)}
+							value={rgbToHex(field.textColor)}
 							oninput={(e) =>
-								(field.textColor = fromHex((e.currentTarget as HTMLInputElement).value))}
+								(field.textColor = hexToRgb((e.currentTarget as HTMLInputElement).value))}
 							class="h-6 w-6 cursor-pointer rounded border"
 							aria-label="Text color"
 						/>
@@ -315,18 +310,9 @@
 							else field.font = v as StandardFontName;
 						}}
 					>
-						<option value="Helvetica">Helvetica</option>
-						<option value="Helvetica-Bold">Helvetica Bold</option>
-						<option value="Helvetica-Oblique">Helvetica Oblique</option>
-						<option value="Helvetica-BoldOblique">Helvetica Bold Oblique</option>
-						<option value="Courier">Courier</option>
-						<option value="Courier-Bold">Courier Bold</option>
-						<option value="Courier-Oblique">Courier Oblique</option>
-						<option value="Courier-BoldOblique">Courier Bold Oblique</option>
-						<option value="Times-Roman">Times Roman</option>
-						<option value="Times-Bold">Times Bold</option>
-						<option value="Times-Italic">Times Italic</option>
-						<option value="Times-BoldItalic">Times Bold Italic</option>
+						{#each STANDARD_FONTS as name (name)}
+							<option value={name}>{fontLabel(name)}</option>
+						{/each}
 					</select>
 				</label>
 			{/if}

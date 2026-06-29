@@ -118,20 +118,25 @@ export type PageOp =
 			rotation: number;
 	  };
 
-/** The 12 standard PDF fonts better-pdf exposes without embedding. */
-export type StandardFontName =
-	| 'Helvetica'
-	| 'Helvetica-Bold'
-	| 'Helvetica-Oblique'
-	| 'Helvetica-BoldOblique'
-	| 'Courier'
-	| 'Courier-Bold'
-	| 'Courier-Oblique'
-	| 'Courier-BoldOblique'
-	| 'Times-Roman'
-	| 'Times-Bold'
-	| 'Times-Italic'
-	| 'Times-BoldItalic';
+/** The 12 standard PDF fonts better-pdf exposes without embedding. Single
+ * source of truth for both the {@link StandardFontName} type and the runtime
+ * list used by font pickers and the export validator. */
+export const STANDARD_FONTS = [
+	'Helvetica',
+	'Helvetica-Bold',
+	'Helvetica-Oblique',
+	'Helvetica-BoldOblique',
+	'Courier',
+	'Courier-Bold',
+	'Courier-Oblique',
+	'Courier-BoldOblique',
+	'Times-Roman',
+	'Times-Bold',
+	'Times-Italic',
+	'Times-BoldItalic'
+] as const;
+
+export type StandardFontName = (typeof STANDARD_FONTS)[number];
 
 export interface TextElement {
 	type: 'text';

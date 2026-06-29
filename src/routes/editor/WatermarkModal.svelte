@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { EditorState } from './editor.svelte';
 	import type { StandardFontName } from '$lib/pdf/types';
+	import { hexToRgb, rgbToHex } from '$lib/color';
 
 	let { editor }: { editor: EditorState } = $props();
 
@@ -13,22 +14,6 @@
 		'Times-Roman',
 		'Courier-Bold'
 	];
-
-	function toHex(c: { r: number; g: number; b: number } | undefined): string {
-		const v = c ?? { r: 0.5, g: 0.5, b: 0.5 };
-		const h = (n: number) =>
-			Math.round(Math.max(0, Math.min(1, n)) * 255)
-				.toString(16)
-				.padStart(2, '0');
-		return `#${h(v.r)}${h(v.g)}${h(v.b)}`;
-	}
-	function fromHex(hex: string): { r: number; g: number; b: number } {
-		return {
-			r: parseInt(hex.slice(1, 3), 16) / 255,
-			g: parseInt(hex.slice(3, 5), 16) / 255,
-			b: parseInt(hex.slice(5, 7), 16) / 255
-		};
-	}
 
 	// A default watermark used when enabling from scratch.
 	function ensure() {
@@ -117,7 +102,11 @@
 				{@const wm = editor.watermark}
 				<div class="flex flex-col gap-3">
 					<!-- Text / image mode toggle. Image takes precedence in the export. -->
-					<div class="flex gap-1 rounded-lg bg-slate-100 p-0.5" role="group" aria-label="Watermark type">
+					<div
+						class="flex gap-1 rounded-lg bg-slate-100 p-0.5"
+						role="group"
+						aria-label="Watermark type"
+					>
 						<button
 							type="button"
 							class="flex-1 rounded-md px-3 py-1 text-sm font-medium transition {!isImage
@@ -211,8 +200,9 @@
 								<span class="text-xs font-medium text-slate-600">Color</span>
 								<input
 									type="color"
-									value={toHex(wm.color)}
-									oninput={(e) => (wm.color = fromHex((e.currentTarget as HTMLInputElement).value))}
+									value={rgbToHex(wm.color ?? { r: 0.5, g: 0.5, b: 0.5 })}
+									oninput={(e) =>
+										(wm.color = hexToRgb((e.currentTarget as HTMLInputElement).value))}
 									class="h-6 w-6 cursor-pointer rounded border"
 									aria-label="Watermark color"
 								/>
@@ -225,7 +215,8 @@
 									max="180"
 									class="rounded border border-slate-300 px-2 py-1.5 text-sm"
 									value={wm.rotation ?? 45}
-									oninput={(e) => (wm.rotation = Number((e.currentTarget as HTMLInputElement).value))}
+									oninput={(e) =>
+										(wm.rotation = Number((e.currentTarget as HTMLInputElement).value))}
 								/>
 							</label>
 						</div>

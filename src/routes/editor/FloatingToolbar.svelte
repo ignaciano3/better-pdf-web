@@ -2,6 +2,7 @@
 	import type { EditorState } from './editor.svelte';
 	import { SCALE } from './constants';
 	import type { StandardFontName } from '$lib/pdf/types';
+	import { hexToRgb, rgbToHex } from '$lib/color';
 
 	// `pageHeight` is the selected element's page height in unzoomed canvas px,
 	// used to bottom-anchor the bar above the element (so it never covers tall
@@ -18,22 +19,6 @@
 		'Courier',
 		'Courier-Bold'
 	];
-
-	function toHex(c: { r: number; g: number; b: number } | undefined): string {
-		const v = c ?? { r: 0, g: 0, b: 0 };
-		const h = (n: number) =>
-			Math.round(Math.max(0, Math.min(1, n)) * 255)
-				.toString(16)
-				.padStart(2, '0');
-		return `#${h(v.r)}${h(v.g)}${h(v.b)}`;
-	}
-	function fromHex(hex: string): { r: number; g: number; b: number } {
-		return {
-			r: parseInt(hex.slice(1, 3), 16) / 255,
-			g: parseInt(hex.slice(3, 5), 16) / 255,
-			b: parseInt(hex.slice(5, 7), 16) / 255
-		};
-	}
 
 	// Top-left anchor point of the selection (unzoomed points). For a radio group
 	// that's the top-most/left-most button so the bar clears every option.
@@ -111,8 +96,8 @@
 			/>
 			<input
 				type="color"
-				value={toHex(t.color)}
-				oninput={(e) => (t.color = fromHex((e.currentTarget as HTMLInputElement).value))}
+				value={rgbToHex(t.color)}
+				oninput={(e) => (t.color = hexToRgb((e.currentTarget as HTMLInputElement).value))}
 				class="swatch h-6 w-6 cursor-pointer rounded border"
 				aria-label="Text color"
 			/>
@@ -150,8 +135,8 @@
 			{@const sh = editor.selectedShape}
 			<input
 				type="color"
-				value={toHex(sh.strokeColor)}
-				oninput={(e) => (sh.strokeColor = fromHex((e.currentTarget as HTMLInputElement).value))}
+				value={rgbToHex(sh.strokeColor)}
+				oninput={(e) => (sh.strokeColor = hexToRgb((e.currentTarget as HTMLInputElement).value))}
 				class="swatch h-6 w-6 cursor-pointer rounded border"
 				aria-label="Stroke color"
 			/>
@@ -184,8 +169,8 @@
 				{#if sh.fillColor}
 					<input
 						type="color"
-						value={toHex(sh.fillColor)}
-						oninput={(e) => (sh.fillColor = fromHex((e.currentTarget as HTMLInputElement).value))}
+						value={rgbToHex(sh.fillColor)}
+						oninput={(e) => (sh.fillColor = hexToRgb((e.currentTarget as HTMLInputElement).value))}
 						class="swatch h-6 w-6 cursor-pointer rounded border"
 						aria-label="Fill color"
 					/>
@@ -197,8 +182,8 @@
 			{@const v = editor.selectedVector}
 			<input
 				type="color"
-				value={toHex(v.strokeColor)}
-				oninput={(e) => (v.strokeColor = fromHex((e.currentTarget as HTMLInputElement).value))}
+				value={rgbToHex(v.strokeColor)}
+				oninput={(e) => (v.strokeColor = hexToRgb((e.currentTarget as HTMLInputElement).value))}
 				class="swatch h-6 w-6 cursor-pointer rounded border"
 				aria-label="Stroke color"
 			/>
@@ -240,8 +225,8 @@
 			{#if v.fillColor}
 				<input
 					type="color"
-					value={toHex(v.fillColor)}
-					oninput={(e) => (v.fillColor = fromHex((e.currentTarget as HTMLInputElement).value))}
+					value={rgbToHex(v.fillColor)}
+					oninput={(e) => (v.fillColor = hexToRgb((e.currentTarget as HTMLInputElement).value))}
 					class="swatch h-6 w-6 cursor-pointer rounded border"
 					aria-label="Fill color"
 				/>
@@ -372,8 +357,8 @@
 			{#if fld.field === 'text' || fld.field === 'dropdown' || fld.field === 'combo' || fld.field === 'listbox'}
 				<input
 					type="color"
-					value={toHex(fld.textColor)}
-					oninput={(e) => (fld.textColor = fromHex((e.currentTarget as HTMLInputElement).value))}
+					value={rgbToHex(fld.textColor)}
+					oninput={(e) => (fld.textColor = hexToRgb((e.currentTarget as HTMLInputElement).value))}
 					class="swatch h-6 w-6 cursor-pointer rounded border"
 					aria-label="Text color"
 					title="Text color"

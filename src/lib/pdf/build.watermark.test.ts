@@ -31,7 +31,14 @@ describe('buildPdf watermark', () => {
 		const stamped = await buildPdf({
 			pageSize: A4,
 			elements: [],
-			watermark: { text: '', image: png, format: 'png', imageWidth: 200, imageHeight: 200, rotation: 30 }
+			watermark: {
+				text: '',
+				image: png,
+				format: 'png',
+				imageWidth: 200,
+				imageHeight: 200,
+				rotation: 30
+			}
 		});
 		expect(isPdf(stamped)).toBe(true);
 		expect(stamped.byteLength).toBeGreaterThan(plain.byteLength);
