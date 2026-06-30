@@ -10,7 +10,11 @@ export interface Identity {
 	kind: IdentityKind;
 	/** Set when `kind === 'user'`. */
 	userId?: string;
-	/** Set when `kind === 'anon'`. */
+	/**
+	 * Hash of client IP + browser fingerprint. Always set — even for logged-in
+	 * users — so an account's rate-limit count can absorb the exports it made
+	 * while still anonymous from the same browser (see `countsTowardWindow`).
+	 */
 	ipHash?: string;
 	/** Coarse tier label recorded on the usage event. */
 	tier: 'anonymous' | 'authenticated';
@@ -31,10 +35,10 @@ function hashAnon(ip: string, fingerprint: string): string {
  * `event.locals`; otherwise hashes the client address with the fingerprint.
  */
 export function resolveIdentity(event: RequestEvent, fingerprint: string): Identity {
+	const ipHash = hashAnon(event.getClientAddress(), fingerprint);
 	const userId = event.locals.user?.id;
 	if (userId) {
-		return { kind: 'user', userId, tier: 'authenticated' };
+		return { kind: 'user', userId, ipHash, tier: 'authenticated' };
 	}
-	const ip = event.getClientAddress();
-	return { kind: 'anon', ipHash: hashAnon(ip, fingerprint), tier: 'anonymous' };
+	return { kind: 'anon', ipHash, tier: 'anonymous' };
 }

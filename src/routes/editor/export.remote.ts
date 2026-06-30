@@ -1,6 +1,6 @@
 import { command, getRequestEvent } from '$app/server';
 import { error } from '@sveltejs/kit';
-import { and, count, eq, gte } from 'drizzle-orm';
+import { and, count, eq, gte, isNull, or } from 'drizzle-orm';
 import { buildPdf, PdfBuildError } from '$lib/pdf/build';
 import { getDb } from '$lib/server/db';
 import { usageEvent } from '$lib/server/db/schema.app';
@@ -15,6 +15,12 @@ const UPGRADE_URL = '/pricing';
 
 /**
  * Count this actor's prior export events within the current window.
+ *
+ * The `who` clause is the SQL mirror of `countsTowardWindow`: an authenticated
+ * actor's own events (by `userId`) plus any anonymous events from the same
+ * browser/IP (by `ipHash`, restricted to rows with no `userId`). The anonymous
+ * branch is what carries a guest's pre-signup exports into their new account
+ * while keeping a different account on a shared computer from inheriting them.
  */
 async function countInWindow(
 	userId: string | undefined,
@@ -23,7 +29,8 @@ async function countInWindow(
 ): Promise<number> {
 	const db = getDb();
 	const since = windowStart(now);
-	const who = userId ? eq(usageEvent.userId, userId) : eq(usageEvent.ipHash, ipHash!);
+	const anonMatch = and(isNull(usageEvent.userId), eq(usageEvent.ipHash, ipHash!));
+	const who = userId ? or(eq(usageEvent.userId, userId), anonMatch) : anonMatch;
 	const rows = await db
 		.select({ value: count() })
 		.from(usageEvent)
@@ -72,8 +79,10 @@ export const exportPdf = command('unchecked', async (input: unknown): Promise<Ui
 			action: EXPORT_ACTION,
 			tierAtTime: tier,
 			createdAt: now,
-			...(identity.userId ? { userId: identity.userId } : {}),
-			...(identity.ipHash ? { ipHash: identity.ipHash } : {})
+			// Logged-in events are keyed by userId; anonymous ones by ipHash. An
+			// authenticated row is deliberately NOT tagged with ipHash so it can
+			// never be swept into another (anonymous) actor's window by ipHash.
+			...(identity.userId ? { userId: identity.userId } : { ipHash: identity.ipHash })
 		});
 
 	try {

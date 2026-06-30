@@ -32,8 +32,10 @@ export async function logExportError(
 				name: err?.name ?? 'Error',
 				message: err?.message ?? String(e),
 				stack: err?.stack ?? null,
-				...(actor.userId ? { userId: actor.userId } : {}),
-				...(actor.ipHash ? { ipHash: actor.ipHash } : {})
+				// Key by userId when logged in, else by ipHash. A logged-in actor
+				// now also carries an ipHash (for rate-limit carry-over), but the
+				// error log keeps recording one identifier, not both.
+				...(actor.userId ? { userId: actor.userId } : { ipHash: actor.ipHash })
 			});
 	} catch {
 		// Best-effort: swallow so the original export error still propagates.
