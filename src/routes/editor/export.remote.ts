@@ -7,6 +7,7 @@ import { usageEvent } from '$lib/server/db/schema.app';
 import { resolveIdentity } from '$lib/server/identity';
 import { resolvePlan } from '$lib/server/plan';
 import { decide, windowStart, WINDOW_MS, type Tier } from '$lib/server/rate-limit';
+import { logExportError } from './export-error-log';
 import { validateExportInput } from './export-validate';
 
 const EXPORT_ACTION = 'export';
@@ -80,8 +81,12 @@ export const exportPdf = command('unchecked', async (input: unknown): Promise<Ui
 	} catch (e) {
 		if (e instanceof PdfBuildError) {
 			// 422: the input PDF was unusable (corrupt/encrypted/unsupported).
+			// Expected bad input, not a bug — `logExportError` skips it too.
 			error(422, e.message);
 		}
+		// Unexpected failure (becomes a 500). Record it for diagnosis before
+		// re-throwing; best-effort, so a logging failure never masks the error.
+		await logExportError(e, tier, identity);
 		throw e;
 	}
 });

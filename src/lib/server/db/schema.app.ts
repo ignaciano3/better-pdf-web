@@ -32,6 +32,32 @@ export const usageEvent = pgTable(
 );
 
 /**
+ * Append-only log of unexpected export failures. One row is written when
+ * `buildPdf` throws something other than a `PdfBuildError` — i.e. a genuine
+ * server-side bug (500), not an expected bad-input rejection (422). Used to
+ * diagnose "export sometimes errors" reports after the fact.
+ *
+ * Metadata only: no document content is stored. The actor is identified the
+ * same way as `usageEvent` — `userId` (logged-in) and/or `ipHash` (anonymous).
+ */
+export const exportError = pgTable(
+	'export_error',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id'),
+		ipHash: text('ip_hash'),
+		tierAtTime: text('tier_at_time').notNull(),
+		// Error class name (e.g. 'TypeError'); 'Error' when none is set.
+		name: text('name').notNull(),
+		message: text('message').notNull(),
+		// Full stack trace when available; null otherwise.
+		stack: text('stack'),
+		createdAt: timestamp('created_at').defaultNow().notNull()
+	},
+	(table) => [index('export_error_created_at_idx').on(table.createdAt)]
+);
+
+/**
  * Per-user subscription record. One row per user; absence of a row means the
  * user is on the free plan. Rows are written by the Lemon Squeezy webhook
  * handler (`/api/billing/webhook`). `providerId` holds the LS subscription id.
