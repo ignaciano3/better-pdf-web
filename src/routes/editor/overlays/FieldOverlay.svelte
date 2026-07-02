@@ -134,7 +134,7 @@
 		{#if field.field === 'text'}
 			{#if field.multiline}
 				<textarea
-					class="block h-full w-full resize-none rounded border border-slate-300 bg-white/90 px-1 text-xs"
+					class="block h-full w-full resize-none rounded border border-slate-300 bg-white/90 px-1 py-0 text-xs"
 					style={fieldStyle}
 					placeholder={field.placeholder ?? ''}
 					maxlength={field.maxLength}
@@ -147,7 +147,7 @@
 				     character centered in its cell so spacing matches the exported comb. -->
 				<input
 					type="text"
-					class="block h-full w-full rounded border border-slate-300 bg-white/90 text-xs"
+					class="block h-full w-full rounded border border-slate-300 bg-white/90 py-0 text-xs"
 					style="{fieldStyle} color:transparent; caret-color:rgb(100 116 139);"
 					placeholder={field.placeholder ?? ''}
 					maxlength={field.maxLength}
@@ -170,7 +170,7 @@
 			{:else}
 				<input
 					type="text"
-					class="block h-full w-full rounded border border-slate-300 bg-white/90 px-1 text-xs"
+					class="block h-full w-full rounded border border-slate-300 bg-white/90 px-1 py-0 text-xs"
 					style={fieldStyle}
 					placeholder={field.placeholder ?? ''}
 					maxlength={field.maxLength}
@@ -199,7 +199,7 @@
 			</button>
 		{:else if field.field === 'dropdown' || field.field === 'combo'}
 			<select
-				class="block h-full w-full rounded border border-slate-300 bg-white/90 px-1 text-xs"
+				class="block h-full w-full rounded border border-slate-300 bg-white/90 px-1 py-0 text-xs"
 				style={fieldStyle}
 				disabled={field.readOnly}
 				bind:value={field.value}
@@ -213,7 +213,7 @@
 		{:else if field.field === 'listbox'}
 			<select
 				multiple
-				class="block h-full w-full rounded border border-slate-300 bg-white/90 px-1 text-xs"
+				class="block h-full w-full rounded border border-slate-300 bg-white/90 px-1 py-0 text-xs"
 				style={fieldStyle}
 				disabled={field.readOnly}
 				onfocus={() => editor.select(el.id)}
