@@ -76,6 +76,26 @@
 					<input type="checkbox" bind:checked={editor.flatten} />
 					<span class="text-slate-700">Flatten fields on export (print-ready, non-editable)</span>
 				</label>
+				<label class="mt-1 flex items-start gap-2 text-sm" class:opacity-50={editor.flatten}>
+					<input
+						type="checkbox"
+						class="mt-0.5"
+						disabled={editor.flatten}
+						bind:checked={editor.optimizeSize}
+					/>
+					<span class="text-slate-700">
+						Optimize file size (smaller file, PDF 1.5+)
+						<span class="mt-0.5 block text-xs text-slate-500">
+							{#if editor.flatten}
+								Unavailable while flattening — flattened files can't use this optimization.
+							{:else}
+								Packs the PDF's internal objects into compressed streams, producing a noticeably
+								smaller file. Requires a PDF 1.5+ reader (all modern viewers) and is not suitable
+								for PDF/A archival.
+							{/if}
+						</span>
+					</span>
+				</label>
 			</div>
 
 			<div class="mt-5 flex justify-end gap-2">
