@@ -376,6 +376,31 @@ describe('buildPdf field authoring (D3 rebuild)', () => {
 		expect(selected).not.toContain('zzz');
 	});
 
+	it('objectStreams is a no-op for a multi-select export (getForm seals the doc)', async () => {
+		// A multi-select listbox with initial selections forces an in-session
+		// getForm()+selectMultiple, which seals the created doc onto the
+		// incremental save path — where objectStreams is ignored. The export
+		// still succeeds; it simply does not pack an object stream.
+		const state: EditState = {
+			pageSize: [400, 500],
+			objectStreams: true,
+			elements: [
+				field({
+					field: 'listbox',
+					name: 'langs',
+					x: 20,
+					y: 150,
+					height: 60,
+					options: ['ts', 'rs', 'py'],
+					multiSelect: true,
+					selectedValues: ['ts', 'py']
+				})
+			]
+		};
+		const bytes = await buildPdf(state);
+		expect(new TextDecoder('latin1').decode(bytes)).not.toContain('/ObjStm');
+	});
+
 	it('flatten still works for a multi-select listbox', async () => {
 		const state: EditState = {
 			pageSize: [400, 500],

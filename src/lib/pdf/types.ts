@@ -81,9 +81,11 @@ export interface EditState {
 	/**
 	 * When true, the export packs non-stream objects into PDF object streams +
 	 * cross-reference streams for a smaller file. Forces PDF 1.5+ and is NOT
-	 * PDF/A-1 conformant, so it is opt-in and defaults off. Applies to the
-	 * full-document save path (the export always rebuilds), including flattened
-	 * output.
+	 * PDF/A-1 conformant, so it is opt-in and defaults off. Honored ONLY on the
+	 * direct create-path save; it is a no-op for flattened or multi-select
+	 * exports, where `getForm()` seals the doc onto the incremental path that
+	 * ignores this flag (see the library's `SaveOptions.objectStreams`). The
+	 * editor omits the flag when flatten is on.
 	 */
 	objectStreams?: boolean;
 	/**
