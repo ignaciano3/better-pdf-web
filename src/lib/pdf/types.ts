@@ -79,6 +79,14 @@ export interface EditState {
 	 */
 	flatten?: boolean;
 	/**
+	 * When true, the export packs non-stream objects into PDF object streams +
+	 * cross-reference streams for a smaller file. Forces PDF 1.5+ and is NOT
+	 * PDF/A-1 conformant, so it is opt-in and defaults off. Applies to the
+	 * full-document save path (the export always rebuilds), including flattened
+	 * output.
+	 */
+	objectStreams?: boolean;
+	/**
 	 * Optional text watermark stamped on every output page at export. Omitted
 	 * when unset or when its text is empty.
 	 */

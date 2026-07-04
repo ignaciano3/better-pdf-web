@@ -27,19 +27,6 @@ export class PdfBuildError extends Error {
 }
 
 /**
- * Flatten every AcroForm field in `bytes` into static page content. Authored
- * fields are built with `FormBuilder` (no flatten method), so flattening is a
- * post-process pass: load the built bytes, flatten via the loaded `PdfForm`,
- * and re-save. The output has no interactive AcroForm.
- */
-async function flattenAllFields(bytes: Uint8Array): Promise<Uint8Array> {
-	const doc = await PdfDocument.load(bytes);
-	const form = doc.getForm();
-	form.flatten();
-	return await doc.save();
-}
-
-/**
  * Collect the multi-select list boxes that carry initial selections. Each entry
  * names a field and the option values to pre-select, filtered to valid options
  * (selectMultiple throws on an unknown value). Empty selections are skipped.
@@ -55,24 +42,6 @@ function collectMultiSelections(
 		if (values.length > 0) out.push({ name: el.name, values });
 	}
 	return out;
-}
-
-/**
- * Apply multi-select initial selections as a second load/save pass. The builder
- * authors the Multiselect flag but takes only a single `selected`, so multiple
- * initial values are written here via `selectMultiple` (sets the field's `/V`
- * array and `/I` indices).
- */
-async function applyMultiSelections(
-	bytes: Uint8Array,
-	selections: { name: string; values: string[] }[]
-): Promise<Uint8Array> {
-	const doc = await PdfDocument.load(bytes);
-	const form = doc.getForm();
-	for (const { name, values } of selections) {
-		form.getListBox(name).selectMultiple(values);
-	}
-	return await doc.save();
 }
 
 /**
@@ -97,21 +66,7 @@ async function applyMultiSelections(
 export async function buildPdf(state: EditState): Promise<Uint8Array> {
 	const sources = resolveSources(state);
 	const hasSource = sources.some((s) => s && s.byteLength > 0);
-	let bytes = hasSource ? await buildSourceRebuild(state, sources) : await buildBlankRebuild(state);
-
-	// Apply multi-select list-box initial selections (a second load/save pass; the
-	// builder's addListBox takes only a single `selected`). Runs before flatten so
-	// the selected appearance is baked when flattening.
-	const multi = collectMultiSelections(state.elements);
-	if (multi.length > 0) bytes = await applyMultiSelections(bytes, multi);
-
-	// Flatten is a second pass over the built (interactive) bytes. Skip when no
-	// fields exist — flattening nothing just costs a load/save round-trip.
-	const hasFields = state.elements.some((e) => e.type === 'field');
-	if (state.flatten && hasFields) {
-		return flattenAllFields(bytes);
-	}
-	return bytes;
+	return hasSource ? buildSourceRebuild(state, sources) : buildBlankRebuild(state);
 }
 
 /**
@@ -326,10 +281,19 @@ function addBlankPage(
 
 /**
  * Shared export tail for both rebuild paths: embed fonts, stamp non-field and
- * field elements, draw the watermark, apply metadata/outline, and serialize.
- * `pageWidths[i]`/`pageHeights[i]` are the un-rotated content box of output
- * page `i`. Keeping this in one place stops the two builders' element/watermark/
- * metadata ordering from drifting apart.
+ * field elements, draw the watermark, apply metadata/outline, finish the form
+ * in-session, and serialize once. `pageWidths[i]`/`pageHeights[i]` are the
+ * un-rotated content box of output page `i`. Keeping this in one place stops the
+ * two builders' element/watermark/metadata ordering from drifting apart.
+ *
+ * Form finishing runs here (not as post-build load/save passes) using 1.9.0's
+ * `getForm()`-on-created-doc: multi-select initial values are applied, then the
+ * form is flattened when requested. `getForm()` seals the document on first
+ * call, so it must come after every drawing and `createForm()` authoring step —
+ * which all complete above. Multi-select runs before flatten so the selected
+ * appearance is baked into the flattened content. A single final `save()` (the
+ * full-document create path) is what lets `objectStreams` reach flattened
+ * output.
  */
 async function finishDoc(
 	doc: PdfDocument,
@@ -341,7 +305,21 @@ async function finishDoc(
 	await stampAndAuthor(doc, state.elements, pageHeights, fonts);
 	if (state.watermark) await drawWatermark(doc, pageWidths, pageHeights, state.watermark);
 	applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
-	return doc.save();
+
+	// In-session form finishing. Only touch the form when there is form work to
+	// do — calling getForm() would otherwise seal an interactive doc needlessly.
+	const multi = collectMultiSelections(state.elements);
+	const hasFields = state.elements.some((e) => e.type === 'field');
+	const doFlatten = Boolean(state.flatten) && hasFields;
+	if (multi.length > 0 || doFlatten) {
+		const form = doc.getForm();
+		for (const { name, values } of multi) {
+			form.getListBox(name).selectMultiple(values);
+		}
+		if (doFlatten) form.flatten();
+	}
+
+	return doc.save(state.objectStreams ? { objectStreams: true } : {});
 }
 
 /** Build a fresh single (or page-ops driven) blank document with stamps + fields. */
