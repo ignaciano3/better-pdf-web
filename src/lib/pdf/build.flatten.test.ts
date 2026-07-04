@@ -54,7 +54,19 @@ describe('buildPdf flatten', () => {
 		expect(fields[0]?.name).toBe('applicant');
 	});
 
-	it('objectStreams + flatten yields a valid PDF with no interactive fields', async () => {
+	it('objectStreams packs objects into an object stream (structural compression)', async () => {
+		const state: EditState = { pageSize: A4, elements: [textField()] };
+		const plain = await buildPdf(state);
+		const packed = await buildPdf({ ...state, objectStreams: true });
+		const asText = (b: Uint8Array) => new TextDecoder('latin1').decode(b);
+		// Object streams require cross-reference streams; the /ObjStm marker is
+		// present only when packing actually happened. This is the working path
+		// (no getForm(): no flatten, no multi-select).
+		expect(asText(plain)).not.toContain('/ObjStm');
+		expect(asText(packed)).toContain('/ObjStm');
+	});
+
+	it('flatten with objectStreams still yields a valid flattened PDF (objectStreams is a no-op once getForm seals the doc)', async () => {
 		const state: EditState = {
 			pageSize: A4,
 			elements: [textField()],

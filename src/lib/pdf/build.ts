@@ -286,14 +286,19 @@ function addBlankPage(
  * un-rotated content box of output page `i`. Keeping this in one place stops the
  * two builders' element/watermark/metadata ordering from drifting apart.
  *
- * Form finishing runs here (not as post-build load/save passes) using 1.9.0's
- * `getForm()`-on-created-doc: multi-select initial values are applied, then the
- * form is flattened when requested. `getForm()` seals the document on first
- * call, so it must come after every drawing and `createForm()` authoring step —
- * which all complete above. Multi-select runs before flatten so the selected
- * appearance is baked into the flattened content. A single final `save()` (the
- * full-document create path) is what lets `objectStreams` reach flattened
- * output.
+ * Form finishing runs here (not as post-build load/save passes) using the
+ * library's `getForm()`-on-created-doc support: multi-select initial values are
+ * applied, then the form is flattened when requested. `getForm()` seals the
+ * document on first call, so it must come after every drawing and `createForm()`
+ * authoring step — which all complete above. Multi-select runs before flatten so
+ * the selected appearance is baked into the flattened content.
+ *
+ * `objectStreams` is passed to the final `save()` but is honored ONLY on the
+ * direct create-path save (no `getForm()`). Once we call `getForm()` here (for
+ * multi-select or flatten) the doc is sealed onto the incremental path, which
+ * ignores `objectStreams` — so it is a no-op for flattened / multi-select
+ * exports. The UI disables the "Optimize file size" toggle when flatten is on;
+ * passing the flag here regardless is harmless and keeps the engine defensive.
  */
 async function finishDoc(
 	doc: PdfDocument,
@@ -591,8 +596,8 @@ function authorField(form: FormBuilder, f: FieldElement, pageHeights: number[]):
 				options: f.options ?? [],
 				...(f.multiSelect ? { multiSelect: true } : {}),
 				// Single-select uses the single `selected`; multi-select initial
-				// values are applied in a post-build selectMultiple pass, since the
-				// builder accepts only one `selected`.
+				// values are applied in-session inside finishDoc (via selectMultiple),
+				// since the builder accepts only one `selected`.
 				...(!f.multiSelect && f.value ? { selected: f.value } : {}),
 				...(f.align ? { align: f.align } : {}),
 				...(f.fontSize !== undefined ? { fontSize: f.fontSize } : {}),
