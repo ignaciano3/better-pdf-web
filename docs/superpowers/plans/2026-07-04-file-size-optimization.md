@@ -66,7 +66,19 @@ Append these three cases to the `describe('buildPdf flatten', ...)` block in `sr
 		expect(fields[0]?.name).toBe('applicant');
 	});
 
-	it('objectStreams + flatten yields a valid PDF with no interactive fields', async () => {
+	it('objectStreams packs objects into an object stream (structural compression)', async () => {
+		const state: EditState = { pageSize: A4, elements: [textField()] };
+		const plain = await buildPdf(state);
+		const packed = await buildPdf({ ...state, objectStreams: true });
+		const asText = (b: Uint8Array) => new TextDecoder('latin1').decode(b);
+		// Object streams require cross-reference streams; the /ObjStm marker is
+		// present only when packing actually happened. This is the working path
+		// (no getForm(): no flatten, no multi-select).
+		expect(asText(plain)).not.toContain('/ObjStm');
+		expect(asText(packed)).toContain('/ObjStm');
+	});
+
+	it('flatten with objectStreams still yields a valid flattened PDF (objectStreams is a no-op once getForm seals the doc)', async () => {
 		const state: EditState = {
 			pageSize: A4,
 			elements: [textField()],
@@ -101,14 +113,19 @@ In `src/lib/pdf/build.ts`, replace the entire `finishDoc` function (currently li
  * un-rotated content box of output page `i`. Keeping this in one place stops the
  * two builders' element/watermark/metadata ordering from drifting apart.
  *
- * Form finishing runs here (not as post-build load/save passes) using 1.9.0's
- * `getForm()`-on-created-doc: multi-select initial values are applied, then the
- * form is flattened when requested. `getForm()` seals the document on first
- * call, so it must come after every drawing and `createForm()` authoring step —
- * which all complete above. Multi-select runs before flatten so the selected
- * appearance is baked into the flattened content. A single final `save()` (the
- * full-document create path) is what lets `objectStreams` reach flattened
- * output.
+ * Form finishing runs here (not as post-build load/save passes) using the
+ * library's `getForm()`-on-created-doc support: multi-select initial values are
+ * applied, then the form is flattened when requested. `getForm()` seals the
+ * document on first call, so it must come after every drawing and `createForm()`
+ * authoring step — which all complete above. Multi-select runs before flatten so
+ * the selected appearance is baked into the flattened content.
+ *
+ * `objectStreams` is passed to the final `save()` but is honored ONLY on the
+ * direct create-path save (no `getForm()`). Once we call `getForm()` here (for
+ * multi-select or flatten) the doc is sealed onto the incremental path, which
+ * ignores `objectStreams` — so it is a no-op for flattened / multi-select
+ * exports. The UI disables the "Optimize file size" toggle when flatten is on;
+ * passing the flag here regardless is harmless and keeps the engine defensive.
  */
 async function finishDoc(
 	doc: PdfDocument,
@@ -331,12 +348,30 @@ In `#applySnapshot()` (line 350), after `this.flatten = c.flatten;` add:
 		this.optimizeSize = c.optimizeSize;
 ```
 
-- [ ] **Step 8: Add it to the export state**
+- [ ] **Step 8: Add it to the export state (gated by !flatten)**
 
-In `export()` (line 1508), after `...(this.flatten ? { flatten: true } : {}),` add:
+`objectStreams` is a no-op once flatten routes through `getForm()` (library
+limitation), so never send it alongside flatten. In `export()` (line 1508),
+after `...(this.flatten ? { flatten: true } : {}),` add:
 
 ```ts
-				...(this.optimizeSize ? { objectStreams: true } : {}),
+				...(this.optimizeSize && !this.flatten ? { objectStreams: true } : {}),
+```
+
+The matching test above (`sends objectStreams: true when optimizeSize is
+enabled`) uses a default editor where `flatten` is `false`, so the guard passes.
+Add one more case asserting the guard suppresses the flag when flatten is on:
+
+```ts
+	it('omits objectStreams when flatten is also enabled (no-op combo)', async () => {
+		const e = new EditorState();
+		e.optimizeSize = true;
+		e.flatten = true;
+		await e.export();
+		const arg = vi.mocked(exportPdf).mock.calls.at(-1)?.[0];
+		expect(arg?.state.objectStreams).toBeUndefined();
+		expect(arg?.state.flatten).toBe(true);
+	});
 ```
 
 - [ ] **Step 9: Run the store tests**
@@ -375,21 +410,33 @@ In `src/routes/editor/DocumentPropertiesModal.svelte`, replace the existing flat
 				</label>
 ```
 
-with (the flatten label unchanged, followed by the new one):
+with (the flatten label unchanged, followed by the new one). The optimize
+checkbox is `disabled` while flatten is checked — `objectStreams` is a no-op
+once flatten seals the doc via `getForm()`, so we never offer it then. The
+disabled label is muted, and the helper text swaps to explain why:
 
 ```svelte
 				<label class="mt-1 flex items-center gap-2 text-sm">
 					<input type="checkbox" bind:checked={editor.flatten} />
 					<span class="text-slate-700">Flatten fields on export (print-ready, non-editable)</span>
 				</label>
-				<label class="mt-1 flex items-start gap-2 text-sm">
-					<input type="checkbox" class="mt-0.5" bind:checked={editor.optimizeSize} />
+				<label class="mt-1 flex items-start gap-2 text-sm" class:opacity-50={editor.flatten}>
+					<input
+						type="checkbox"
+						class="mt-0.5"
+						disabled={editor.flatten}
+						bind:checked={editor.optimizeSize}
+					/>
 					<span class="text-slate-700">
 						Optimize file size (smaller file, PDF 1.5+)
 						<span class="mt-0.5 block text-xs text-slate-500">
-							Packs the PDF's internal objects into compressed streams, producing a noticeably
-							smaller file. Requires a PDF 1.5+ reader (all modern viewers) and is not suitable
-							for PDF/A archival.
+							{#if editor.flatten}
+								Unavailable while flattening — flattened files can't use this optimization.
+							{:else}
+								Packs the PDF's internal objects into compressed streams, producing a noticeably
+								smaller file. Requires a PDF 1.5+ reader (all modern viewers) and is not suitable
+								for PDF/A archival.
+							{/if}
 						</span>
 					</span>
 				</label>

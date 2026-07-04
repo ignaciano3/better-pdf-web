@@ -15,8 +15,27 @@ The 1.10.0 release adds two output-size features to `save()`:
 
 The 1.9.0 release makes `getForm()` work on a `create()`d document in the same
 session (no save-and-reload round-trip). This lets us collapse the export's
-extra serialize passes and — critically — makes the `objectStreams` option
-actually reach flattened output.
+extra serialize passes into one final save.
+
+**Library limitation (verified against `document.d.ts` `SaveOptions` +
+empirically).** `objectStreams` is honored **only** when a created document is
+saved directly via `save()`. Any form finishing that goes through `getForm()`
+— our in-session `selectMultiple` and `flatten` — *materializes and seals* the
+created document, after which `save()` takes the incremental (append-only) path
+and **ignores `objectStreams`**. So the flag shrinks output for stamped and
+interactive-but-not-flattened exports, and is a **no-op for flattened output or
+any export carrying a multi-select listbox**. An earlier draft of this spec
+claimed collapsing the passes would make `objectStreams` reach flattened output;
+that claim was wrong and is retracted here.
+
+Consequence for UX: the "Optimize file size" toggle is **disabled while
+"Flatten fields" is checked**, so users are never offered an option that would
+silently do nothing. (The multi-select no-op is a rarer edge; it is not
+separately gated in the UI, and the export layer simply omits `objectStreams`
+when flatten is on.)
+
+Collapsing the passes (Part B) remains worthwhile on its own merits — fewer
+serialize round-trips and less code — independent of the retracted synergy.
 
 This spec covers two coupled changes. It explicitly does **not** touch the D3
 "always rebuild" export architecture (that was a separate, larger idea).
@@ -35,8 +54,13 @@ is visible on touch devices):
 ☐ Optimize file size (smaller file, PDF 1.5+)
     Packs the PDF's internal objects into compressed streams, producing a
     noticeably smaller file. Requires a PDF 1.5+ reader (all modern viewers)
-    and is not suitable for PDF/A archival.
+    and is not suitable for PDF/A archival. Unavailable when flattening.
 ```
+
+The checkbox is **`disabled` whenever "Flatten fields" is checked** (flattening
+routes through `getForm()`, which seals the document and makes `objectStreams` a
+no-op — see the library-limitation note above). When disabled it renders muted;
+the user's stored preference is preserved so unchecking flatten restores it.
 
 Off by default means existing users' output is byte-for-byte unchanged unless
 they opt in.
@@ -117,13 +141,17 @@ Multi-select gathering + application and flatten move into `finishDoc` so both
 the blank and source build paths share one code path. `buildPdf` no longer runs
 the post-passes; it just returns the finished bytes.
 
-### Synergy with Part A
+### Relationship to Part A (no synergy — correction)
 
-`flattenAllFields` was an incremental `load()` → `save()` pass, which ignores
-`objectStreams` (incremental saves are append-only). Moving flatten in-session
-makes the final save a full-document create-path save, so `objectStreams`
-reaches flattened output. Without Part B, the Part A toggle would silently
-no-op whenever flatten is enabled.
+An earlier draft claimed moving flatten in-session would let `objectStreams`
+reach flattened output. That is **false**: `form.flatten()` requires
+`getForm()`, which seals the created document onto the incremental save path,
+and incremental saves ignore `objectStreams` (per `SaveOptions` docs). So Part B
+does **not** extend `objectStreams` to flattened output. Part B still stands on
+its own — one serialize pass instead of three — and Part A handles the no-op
+honestly by disabling the toggle when flatten is on (Task 4). The engine remains
+defensive: `finishDoc` still passes `objectStreams` to `save()`, harmlessly
+ignored when the doc was sealed.
 
 ## Testing
 
