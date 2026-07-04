@@ -24,6 +24,13 @@ vi.mock('$lib/pdf/pdf-doc-store', () => {
 import { EditorState } from './editor.svelte';
 import { exportPdf } from './export.remote';
 import { SELECT_TOOL } from './constants';
+import type { EditState } from '$lib/pdf/types';
+
+/** `exportPdf` is mocked with a plain `vi.fn()`, which types its calls as
+ * `unknown[]`; cast back to the real command's input shape for assertions. */
+function lastExportArg(): { state: EditState } | undefined {
+	return vi.mocked(exportPdf).mock.calls.at(-1)?.[0] as { state: EditState } | undefined;
+}
 
 function fakePage(): HTMLElement {
 	return {
@@ -533,6 +540,34 @@ describe('EditorState export error reporting (#4)', () => {
 		await e.export();
 		expect(e.errorMessage).toBeNull();
 		expect(e.upsell).not.toBeNull();
+	});
+});
+
+describe('EditorState optimizeSize', () => {
+	it('defaults optimizeSize to false and omits objectStreams from export state', async () => {
+		const e = new EditorState();
+		await e.export();
+		const arg = lastExportArg();
+		expect(e.optimizeSize).toBe(false);
+		expect(arg?.state.objectStreams).toBeUndefined();
+	});
+
+	it('sends objectStreams: true when optimizeSize is enabled', async () => {
+		const e = new EditorState();
+		e.optimizeSize = true;
+		await e.export();
+		const arg = lastExportArg();
+		expect(arg?.state.objectStreams).toBe(true);
+	});
+
+	it('omits objectStreams when flatten is also enabled (no-op combo)', async () => {
+		const e = new EditorState();
+		e.optimizeSize = true;
+		e.flatten = true;
+		await e.export();
+		const arg = lastExportArg();
+		expect(arg?.state.objectStreams).toBeUndefined();
+		expect(arg?.state.flatten).toBe(true);
 	});
 });
 

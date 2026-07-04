@@ -81,6 +81,7 @@ interface DocSnapshot {
 	metadata: DocumentMetadataInput;
 	outline: OutlineItem[];
 	flatten: boolean;
+	optimizeSize: boolean;
 	watermark: Watermark | null;
 	embeddedFonts: Record<string, EmbeddedFontAsset>;
 	selectedId: string | null;
@@ -204,6 +205,11 @@ export class EditorState {
 	outline = $state<OutlineItem[]>([]);
 	/** When true, fields are flattened (baked) on export. */
 	flatten = $state(false);
+	/**
+	 * When true, the export uses object-stream compression for a smaller file
+	 * (PDF 1.5+, not PDF/A-1 conformant). Opt-in; defaults off.
+	 */
+	optimizeSize = $state(false);
 	/** Optional text watermark stamped on every page at export. */
 	watermark = $state<Watermark | null>(null);
 	/** True while the watermark editor modal is open. */
@@ -287,6 +293,7 @@ export class EditorState {
 				this.#track(this.watermark);
 				this.#track(this.embeddedFonts);
 				void this.flatten;
+				void this.optimizeSize;
 				if (this.#applying) return;
 				this.#history.record();
 			});
@@ -320,6 +327,7 @@ export class EditorState {
 			metadata: this.metadata,
 			outline: this.outline,
 			flatten: this.flatten,
+			optimizeSize: this.optimizeSize,
 			watermark: this.watermark,
 			embeddedFonts: this.embeddedFonts,
 			selectedId: this.selectedId
@@ -348,6 +356,7 @@ export class EditorState {
 		this.metadata = c.metadata;
 		this.outline = c.outline;
 		this.flatten = c.flatten;
+		this.optimizeSize = c.optimizeSize;
 		this.watermark = c.watermark;
 		this.embeddedFonts = c.embeddedFonts;
 		this.selectedId = c.selectedId;
@@ -1506,6 +1515,7 @@ export class EditorState {
 				...(metadata ? { metadata } : {}),
 				...(outline.length > 0 ? { outline } : {}),
 				...(this.flatten ? { flatten: true } : {}),
+				...(this.optimizeSize && !this.flatten ? { objectStreams: true } : {}),
 				...(this.watermark && this.watermark.text.trim().length > 0
 					? { watermark: $state.snapshot(this.watermark) as Watermark }
 					: {})
