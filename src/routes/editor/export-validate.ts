@@ -395,6 +395,10 @@ export function validateExportInput(input: unknown): ExportInput {
 		error(422, 'Invalid flatten flag');
 	}
 
+	if (state.objectStreams !== undefined && typeof state.objectStreams !== 'boolean') {
+		error(422, 'Invalid objectStreams flag');
+	}
+
 	if (state.watermark !== undefined) validateWatermark(state.watermark);
 
 	return { state: state as EditState, fingerprint };

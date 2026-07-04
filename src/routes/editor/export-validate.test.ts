@@ -409,6 +409,16 @@ describe('validateExportInput', () => {
 		expect(() => validateExportInput(input)).toThrow();
 	});
 
+	it('rejects a non-boolean objectStreams flag', () => {
+		const input = { fingerprint: 'fp', state: { pageSize: [300, 400], elements: [], objectStreams: 'yes' } };
+		expect(() => validateExportInput(input)).toThrow();
+	});
+
+	it('accepts a boolean objectStreams flag', () => {
+		const input = { fingerprint: 'fp', state: { pageSize: [300, 400], elements: [], objectStreams: true } };
+		expect(() => validateExportInput(input)).not.toThrow();
+	});
+
 	// --- watermark validation tests ---
 
 	const wmInput = (wm: unknown) => ({
