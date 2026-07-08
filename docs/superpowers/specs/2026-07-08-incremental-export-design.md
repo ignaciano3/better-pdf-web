@@ -37,7 +37,9 @@ mutation the editor needs: `drawText`/`drawImage`/vector drawing, page ops
   output is PDF 1.5+).
 - **Field-name collisions** (new field vs a field already present in the source
   PDF) are validated in the editor at naming time, never at export.
-- **Multi-source** documents are handled per-source incrementally, then merged.
+- **Multi-source** documents are assembled first (`PdfDocument.assemble` with
+  the output page selection), then the assembled document is loaded and mutated
+  incrementally like the single-source case.
 
 ## Export dispatch (`src/lib/pdf/build.ts`)
 
@@ -47,8 +49,8 @@ mutation the editor needs: `drawText`/`drawImage`/vector drawing, page ops
 |---|---|
 | Compact toggle ON (`state.objectStreams`) | Current full rebuild, unchanged |
 | No source | Current `create()` blank path, unchanged |
-| Source(s), toggle OFF, multi-source with interleaved page order | Full rebuild (fallback) |
-| Source(s), toggle OFF, otherwise | **New incremental path** |
+| Single source, toggle OFF | **New incremental path** |
+| Multiple sources, toggle OFF | **Assemble, then incremental path** |
 
 ### Incremental path, single source
 
@@ -67,25 +69,30 @@ mutation the editor needs: `drawText`/`drawImage`/vector drawing, page ops
 7. `doc.save()` — append-only. `objectStreams` is never passed here (the
    library ignores it on incremental saves anyway).
 
-### Incremental path, multiple sources
+### Multiple sources: assemble, then incremental
 
-Works when the output page order does not interleave pages from different
-sources (each source's pages form one contiguous, in-order-per-source run;
-within-source reorder is fine via `movePage`):
+Any output page order — including interleaving pages across sources — is
+handled by assembling first:
 
-1. For each source: load → apply that source's page ops, stamps, and fields
-   (steps 1–4 above, with output-page → source-page index mapping) → `save()`.
-2. `PdfDocument.merge([bytes...])` — full-document save.
-3. Load the merged bytes once more; apply document-wide metadata, outline
-   (indices are merged-document page indices), and flatten; incremental
-   `save()`.
+1. `PdfDocument.assemble(sources, selections)` where `selections` is the
+   output page order as `{ docIndex, pageIndex }` entries derived from
+   `state.pageOps`. Page removal and reordering are expressed by the selection
+   itself (no `removePage`/`movePage` needed afterwards).
+2. `PdfDocument.load(assembledBytes)`, then steps 2–7 of the single-source
+   path (rotations/resizes, stamps, watermark, new fields, metadata, outline,
+   flatten, save). Output page indices now map 1:1 to loaded page indices.
 
-If the page order interleaves sources, fall back to the full rebuild.
+Form fields on assembled pages stay interactive: the library rebuilds a
+working `/AcroForm` from the kept widgets (since better-pdf 0.15.0), renaming
+cross-source name collisions with per-source prefixes (`d0_`, `d1_`, …). A
+page selected twice in the assembly shares one field object (fields linked,
+not duplicated) — relevant if page duplication is ever exposed in the editor.
 
-**Verification gate:** a test must confirm `PdfDocument.merge` preserves
-AcroForm fields from its inputs (README implies it; not explicitly stated). If
-it does not, multi-source falls back to rebuild unconditionally and this spec's
-multi-source section is deferred.
+Trade-offs, inherent to combining files: `assemble` is a full-document save,
+so the output is not an append-only revision of any one source (existing
+digital signatures do not survive) and `/XFA` data is dropped (plain AcroForm
+output). Pre-existing fields still survive as interactive fields — which the
+old rebuild never provided.
 
 ## Toggle rename: "Compact PDF structure"
 
@@ -110,6 +117,10 @@ multi-source section is deferred.
   PDF."
 - Export therefore never hits the library's collision rejection; if it somehow
   does, the export error surfaces through the existing error path.
+- Multi-source note: `assemble` renames cross-source collisions among
+  *pre-existing* fields with `d0_`/`d1_` prefixes. Editor validation for *new*
+  field names checks against the union of all sources' field names plus their
+  possible prefixed forms, so a new field can never collide post-assembly.
 
 ## MissingGlyphError handling (1.11.0 behavioral change)
 
@@ -130,20 +141,24 @@ incremental paths wherever stamp text uses user-embedded fonts.
   plain/multiline text fields since 1.11.0; comb, dropdown, and listbox fields
   remain standard-14-fonts-only for fill. Export only creates fields (never
   fills), so this is documentation, not a code path.
-- Multi-source with interleaved page order uses the rebuild path (original
-  fields dropped there, as today).
+- Multi-source output is assembled (full-document save): existing digital
+  signatures do not survive and `/XFA` is dropped, though pre-existing fields
+  stay interactive.
 - `objectStreams` has no effect on incremental saves (append-only) — the
   toggle forces the rebuild precisely so it can apply.
 
 ## Testing
 
-1. **Dispatch:** toggle ON → rebuild; toggle OFF + source → incremental;
-   no source → blank create; interleaved multi-source → rebuild fallback.
+1. **Dispatch:** toggle ON → rebuild; toggle OFF + single source →
+   incremental; no source → blank create; multi-source → assemble +
+   incremental.
 2. **Field preservation:** fixture PDF that already contains fields → add a new
    field → export → reload → assert both original and new fields exist and are
    fillable.
-3. **Merge gate:** two sources with fields each → incremental + merge → reload
-   → all fields present. (If this fails, see verification gate above.)
+3. **Assemble:** two sources with fields each, interleaved page order →
+   assemble + incremental → reload → all original fields present and
+   interactive (cross-source collisions carry `d0_`/`d1_` prefixes), new
+   fields present.
 4. **Flatten on incremental:** flatten ON → original and new fields both
    flattened into page content.
 5. **Page ops on incremental:** rotate/resize/remove/move on a loaded source
