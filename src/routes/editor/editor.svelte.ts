@@ -674,7 +674,8 @@ export class EditorState {
 	uniqueFieldName(kind: FieldKind): string {
 		const taken = this.elements
 			.filter((e) => e.type === 'field')
-			.map((e) => (e as FieldElement).name);
+			.map((e) => (e as FieldElement).name)
+			.concat(this.sourceFieldNames.flat());
 		let n = 1;
 		while (taken.includes(`${kind}${n}`)) n++;
 		return `${kind}${n}`;
@@ -688,6 +689,14 @@ export class EditorState {
 		return this.elements.some(
 			(e) => e.type === 'field' && e.id !== exceptId && (e as FieldElement).name === name
 		);
+	}
+
+	/** Raw field-name lists per source doc (index = docIndex), for collision validation. */
+	sourceFieldNames = $state<string[][]>([]);
+
+	/** True if `name` exists in any loaded source PDF's original AcroForm. */
+	sourceNameTaken(name: string): boolean {
+		return this.sourceFieldNames.some((names) => names.includes(name));
 	}
 
 	/** Create a new field of `kind` at top-left PDF-point coords on a page. */
@@ -1227,8 +1236,10 @@ export class EditorState {
 			try {
 				const res = await extractFields({ bytes: exportCopy.slice() });
 				detected = res.fields as FieldElement[];
+				this.sourceFieldNames = [res.allNames ?? []];
 			} catch {
 				detected = [];
+				this.sourceFieldNames = [[]];
 			}
 			this.elements = detected;
 			// Deep copy: field props (border, radioLayout, options…) are mutated in
@@ -1255,6 +1266,7 @@ export class EditorState {
 		this.pageOps = [];
 		this.elements = [];
 		this.sourceFields = [];
+		this.sourceFieldNames = [];
 		this.selectedId = null;
 		this.errorMessage = null;
 		this.pendingSignature = null;
@@ -1308,6 +1320,14 @@ export class EditorState {
 					: this.pageOps;
 			this.pageOps = [...base, ...appended];
 			this.selectedId = null;
+			try {
+				const res = await extractFields({ bytes: exportCopy.slice() });
+				this.sourceFieldNames = [...this.sourceFieldNames];
+				this.sourceFieldNames[docIndex] = res.allNames ?? [];
+			} catch {
+				this.sourceFieldNames = [...this.sourceFieldNames];
+				this.sourceFieldNames[docIndex] = [];
+			}
 		} catch (e) {
 			this.errorMessage =
 				e instanceof PdfRenderError

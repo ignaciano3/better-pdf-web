@@ -31,6 +31,8 @@
 		if (n.length === 0) return 'Name is required.';
 		if (n.length > 256) return 'Name is too long.';
 		if (editor.fieldNameTaken(n, field.id)) return 'A field with this name already exists.';
+		if (editor.sourceNameTaken(n) && n !== field?.name)
+			return 'This name already exists in the original PDF.';
 		return null;
 	});
 

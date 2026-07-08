@@ -9,6 +9,10 @@ export interface ExtractFieldsResult {
 	fields: FieldElement[];
 	/** Per-page heights in PDF points, indexed by page. */
 	pageHeights: number[];
+	/** Every raw AcroForm field name in the document, including fields the
+	 *  mapper skips (hidden widgets, pushbuttons, unknown types). Drives
+	 *  editor-side collision validation for the incremental export. */
+	allNames: string[];
 }
 
 /**
@@ -28,16 +32,17 @@ export const extractFields = command(
 	async (input: unknown): Promise<ExtractFieldsResult> => {
 		const bytes = (input as { bytes?: unknown } | null)?.bytes;
 		if (!(bytes instanceof Uint8Array) || bytes.byteLength === 0) {
-			return { fields: [], pageHeights: [] };
+			return { fields: [], pageHeights: [], allNames: [] };
 		}
 		try {
 			const doc = await PdfDocument.load(bytes);
 			const pageHeights = doc.getPages().map((p) => p.height);
 			const infos = doc.getForm().getFields() as unknown as FieldInfoLike[];
 			const fields = mapFields(infos, pageHeights);
-			return { fields, pageHeights };
+			const allNames = infos.map((i) => i.name);
+			return { fields, pageHeights, allNames };
 		} catch {
-			return { fields: [], pageHeights: [] };
+			return { fields: [], pageHeights: [], allNames: [] };
 		}
 	}
 );

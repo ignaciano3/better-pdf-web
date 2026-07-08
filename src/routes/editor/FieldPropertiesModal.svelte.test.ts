@@ -86,6 +86,23 @@ describe('FieldPropertiesModal', () => {
 		expect(editor.selectedField!.name).not.toBe(firstName);
 	});
 
+	it('rejects a name that exists in the original PDF', async () => {
+		const user = userEvent.setup();
+		const editor = withField('text');
+		editor.sourceFieldNames = [['hidden_orig']];
+		render(FieldPropertiesModal, { props: { editor } });
+
+		const nameInput = screen.getByLabelText('Name') as HTMLInputElement;
+		await user.clear(nameInput);
+		await user.type(nameInput, 'hidden_orig');
+		flushSync();
+		expect(screen.getByRole('alert').textContent).toContain(
+			'This name already exists in the original PDF.'
+		);
+		const done = screen.getByRole('button', { name: 'Done' }) as HTMLButtonElement;
+		expect(done.disabled).toBe(true);
+	});
+
 	it('adds and removes options for a dropdown field', async () => {
 		const user = userEvent.setup();
 		const editor = withField('dropdown');
