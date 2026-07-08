@@ -71,6 +71,32 @@ describe('planExport', () => {
 		expect(planExport(base({ elements: [renamed], sourceFields: [snap] })).mode).toBe('rebuild');
 	});
 
+	it('nested-only change (border.width) on source field → rebuild', () => {
+		const snap = field({
+			field: 'text',
+			name: 'orig',
+			border: { color: { r: 0, g: 0, b: 0 }, width: 1 }
+		});
+		const edited = { ...snap, border: { color: { r: 0, g: 0, b: 0 }, width: 2 } };
+		expect(planExport(base({ elements: [edited], sourceFields: [snap] })).mode).toBe('rebuild');
+		const recolored = { ...snap, border: { color: { r: 1, g: 0, b: 0 }, width: 1 } };
+		expect(planExport(base({ elements: [recolored], sourceFields: [snap] })).mode).toBe('rebuild');
+	});
+
+	it('nested-equal source field → incremental with no fills', () => {
+		const snap = field({
+			field: 'text',
+			name: 'orig',
+			border: { color: { r: 0, g: 0, b: 0 }, width: 1 }
+		});
+		const same = { ...snap, border: { color: { r: 0, g: 0, b: 0 }, width: 1 } };
+		expect(planExport(base({ elements: [same], sourceFields: [snap] }))).toEqual({
+			mode: 'incremental',
+			newFields: [],
+			valueFills: []
+		});
+	});
+
 	it('deleted source field → rebuild', () => {
 		const snap = field({ field: 'text', name: 'orig' });
 		expect(planExport(base({ elements: [], sourceFields: [snap] })).mode).toBe('rebuild');

@@ -53,9 +53,43 @@ export function planExport(state: EditState): ExportPlan {
 	return { mode: 'incremental', newFields, valueFills };
 }
 
+/** Every structural (non-value) property of a FieldElement, compared explicitly.
+ * A JSON.stringify array-replacer drops nested keys (border.color, radioLayout
+ * entries), silently missing structural changes, so each value is serialized
+ * fully on its own instead. */
+const STRUCTURAL_KEYS = [
+	'field',
+	'name',
+	'x',
+	'y',
+	'width',
+	'height',
+	'page',
+	'required',
+	'readOnly',
+	'tooltip',
+	'maxLength',
+	'multiline',
+	'comb',
+	'align',
+	'fontSize',
+	'font',
+	'password',
+	'defaultValue',
+	'options',
+	'multiSelect',
+	'checkStyle',
+	'defaultChecked',
+	'defaultSelected',
+	'border',
+	'background',
+	'textColor',
+	'radioLayout'
+] as const satisfies readonly (keyof FieldElement)[];
+
 /** Everything except value/selectedValues must match for a source field to stay incremental. */
 function structurallyEqual(a: FieldElement, b: FieldElement): boolean {
-	return stripValues(a) === stripValues(b);
+	return STRUCTURAL_KEYS.every((k) => JSON.stringify(a[k]) === JSON.stringify(b[k]));
 }
 
 function valueEqual(a: FieldElement, b: FieldElement): boolean {
@@ -63,9 +97,4 @@ function valueEqual(a: FieldElement, b: FieldElement): boolean {
 		(a.value ?? '') === (b.value ?? '') &&
 		JSON.stringify(a.selectedValues ?? []) === JSON.stringify(b.selectedValues ?? [])
 	);
-}
-
-function stripValues(f: FieldElement): string {
-	const { value: _v, selectedValues: _s, ...rest } = f;
-	return JSON.stringify(rest, Object.keys(rest).sort());
 }
