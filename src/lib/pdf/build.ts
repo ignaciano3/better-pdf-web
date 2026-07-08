@@ -1,4 +1,4 @@
-import { PdfDocument, PdfError, PdfForm, rgb } from '@ignaciano3/better-pdf';
+import { MissingGlyphError, PdfDocument, PdfError, PdfForm, rgb } from '@ignaciano3/better-pdf';
 import type { Color, PdfFont } from '@ignaciano3/better-pdf/generate';
 import { StandardFonts } from '@ignaciano3/better-pdf';
 import type { FormBuilder } from '@ignaciano3/better-pdf/generate';
@@ -71,6 +71,25 @@ function collectMultiSelections(
  * the wasm core self-initializes on import.
  */
 export async function buildPdf(state: EditState): Promise<Uint8Array> {
+	try {
+		return await dispatchBuild(state);
+	} catch (cause) {
+		if (cause instanceof MissingGlyphError) {
+			throw new PdfBuildError(
+				'The selected font does not contain some of the characters in your text. Change the font or remove the unsupported characters.',
+				{ cause }
+			);
+		}
+		throw cause;
+	}
+}
+
+/**
+ * Dispatch on {@link planExport}'s classification. Extracted from `buildPdf`
+ * so the MissingGlyphError → friendly-message mapping above can wrap the
+ * whole dispatch in a single place.
+ */
+async function dispatchBuild(state: EditState): Promise<Uint8Array> {
 	const sources = resolveSources(state);
 	const plan = planExport(state);
 	if (plan.mode === 'blank') return buildBlankRebuild(state);
@@ -79,7 +98,7 @@ export async function buildPdf(state: EditState): Promise<Uint8Array> {
 		const result = await buildIncremental(state, sources, plan);
 		if (result) return result;
 	} catch (cause) {
-		if (cause instanceof PdfBuildError) throw cause;
+		if (cause instanceof PdfBuildError || cause instanceof MissingGlyphError) throw cause;
 		// Unexpected incremental failure: the rebuild path is the safe fallback.
 	}
 	return buildSourceRebuild(state, sources);
@@ -589,6 +608,7 @@ async function buildSourceRebuild(state: EditState, sources: Uint8Array[]): Prom
 		return await finishDoc(doc, state, pageWidths, pageHeights);
 	} catch (cause) {
 		if (cause instanceof PdfBuildError) throw cause;
+		if (cause instanceof MissingGlyphError) throw cause;
 		const detail = cause instanceof PdfError ? cause.message : '';
 		throw new PdfBuildError(
 			detail

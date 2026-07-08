@@ -1,8 +1,20 @@
 import { describe, it, expect, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { renderText } from './renderers/text';
 import type { RenderContext } from './renderers/types';
 import type { PdfFont, PdfPage } from '@ignaciano3/better-pdf/generate';
-import type { TextElement } from './types';
+import type { EditState, TextElement } from './types';
+
+// A real Latin-only TTF, borrowed from the already-installed pdfjs-dist
+// dependency, so tests can exercise a genuine `doc.embedFont` + `drawText`
+// round-trip without bundling a font fixture of our own. It has no glyph for
+// the unicorn emoji used below, which is exactly what the MissingGlyphError
+// test needs.
+const require = createRequire(import.meta.url);
+const FONT_BYTES = new Uint8Array(
+	readFileSync(require.resolve('pdfjs-dist/standard_fonts/LiberationSans-Regular.ttf'))
+);
 
 /**
  * No .ttf/.otf fixture is bundled, so rather than exercising a real
@@ -79,5 +91,20 @@ describe('buildPdf — font assets thread through', () => {
 			elements: [text({ fontId: 'missing', font: 'Times-Roman' })]
 		});
 		expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe('%PDF-');
+	});
+
+	it('maps MissingGlyphError to a friendly PdfBuildError', async () => {
+		const { buildPdf } = await import('./build');
+		const state: EditState = {
+			pageSize: [400, 500],
+			fonts: [{ id: 'f1', bytes: FONT_BYTES, name: 'Fixture' }],
+			elements: [
+				{ type: 'text', id: 't1', x: 20, y: 20, page: 0, text: '\u{1F984}', size: 14, fontId: 'f1' }
+			]
+		};
+		await expect(buildPdf(state)).rejects.toMatchObject({
+			name: 'PdfBuildError',
+			message: expect.stringContaining('does not contain some of the characters')
+		});
 	});
 });
