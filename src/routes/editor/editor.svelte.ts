@@ -1231,7 +1231,10 @@ export class EditorState {
 				detected = [];
 			}
 			this.elements = detected;
-			this.sourceFields = detected.map((f) => ({ ...f }));
+			// Deep copy: field props (border, radioLayout, options…) are mutated in
+			// place on the live elements, so the provenance baseline must not alias
+			// any nested object. `detected` is plain JSON off the remote call.
+			this.sourceFields = structuredClone(detected);
 			// A freshly loaded document is a new baseline: undo shouldn't reach back
 			// into whatever was open before (and across stale source references).
 			this.#history.reset();
