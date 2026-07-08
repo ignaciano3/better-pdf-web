@@ -47,6 +47,15 @@ export interface EditState {
 	 */
 	sources?: Uint8Array[];
 	/**
+	 * Snapshot of the field elements extracted from source 0 at load time
+	 * (provenance for the incremental export path). An element whose id appears
+	 * here originated in the source PDF: unchanged → skipped (the source already
+	 * has it), value-only change → filled via getForm(), structural change or
+	 * deletion → the export falls back to the full rebuild. Absent for blank
+	 * documents and legacy states.
+	 */
+	sourceFields?: FieldElement[];
+	/**
 	 * Document metadata applied on export via `doc.setTitle`/`setAuthor`/etc.
 	 * Any field left undefined is not written.
 	 */
