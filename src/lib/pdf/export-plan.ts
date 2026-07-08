@@ -38,7 +38,33 @@ export function planExport(state: EditState): ExportPlan {
 		}
 		seen.add(el.id);
 		if (structurallyEqual(el, snap)) {
-			if (!valueEqual(el, snap)) valueFills.push(el);
+			if (!valueEqual(el, snap)) {
+				// The incremental path cannot draw a signature image via fillField
+				// (fillField no-ops for signatures), so route to rebuild.
+				if (el.field === 'signature') return { mode: 'rebuild', reason: 'signature-value-fill' };
+				// fillField guards radio/dropdown/combo/listbox on `if (f.value)` and
+				// multi-select listbox on `values.length > 0`, so a cleared value is a
+				// silent no-op on the incremental path: route those to rebuild.
+				if (
+					(el.field === 'radio' ||
+						el.field === 'dropdown' ||
+						el.field === 'combo' ||
+						el.field === 'listbox') &&
+					!el.multiSelect &&
+					!el.value
+				) {
+					return { mode: 'rebuild', reason: 'value-clear' };
+				}
+				if (
+					el.field === 'listbox' &&
+					el.multiSelect &&
+					(el.selectedValues ?? []).length === 0 &&
+					(snap.selectedValues ?? []).length > 0
+				) {
+					return { mode: 'rebuild', reason: 'value-clear' };
+				}
+				valueFills.push(el);
+			}
 		} else {
 			return { mode: 'rebuild', reason: 'source-field-structural-change' };
 		}

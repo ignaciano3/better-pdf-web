@@ -45,15 +45,15 @@ mutation the editor needs: `drawText`/`drawImage`/vector drawing, page ops
 
 `buildPdf(state)` dispatches:
 
-| Condition | Path |
-|---|---|
-| Compact toggle ON (`state.objectStreams`) | Current full rebuild, unchanged |
-| A source-extracted field was structurally changed or deleted | Full rebuild (fallback) |
-| Any selected source page carries non-zero intrinsic `/Rotate` | Full rebuild (conservative fallback) |
-| Any page op carries a rotation or size override | Full rebuild (conservative v1 — coordinate conventions differ on loaded pages) |
-| No source | Current `create()` blank path, unchanged |
-| Single source, toggle OFF | **New incremental path** |
-| Multiple sources, toggle OFF | **Assemble, then incremental path** |
+| Condition                                                     | Path                                                                           |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Compact toggle ON (`state.objectStreams`)                     | Current full rebuild, unchanged                                                |
+| A source-extracted field was structurally changed or deleted  | Full rebuild (fallback)                                                        |
+| Any selected source page carries non-zero intrinsic `/Rotate` | Full rebuild (conservative fallback)                                           |
+| Any page op carries a rotation or size override               | Full rebuild (conservative v1 — coordinate conventions differ on loaded pages) |
+| No source                                                     | Current `create()` blank path, unchanged                                       |
+| Single source, toggle OFF                                     | **New incremental path**                                                       |
+| Multiple sources, toggle OFF                                  | **Assemble, then incremental path**                                            |
 
 ### Incremental path, single source
 
@@ -145,7 +145,7 @@ collide. The rule:
 - Extracted source fields already occupy their names as editor elements, so
   the existing `fieldNameTaken` duplicate check covers most collisions today.
 - The gap: fields the extractor skips (hidden widgets, pushbuttons, unknown
-  types) and fields of *appended* documents (`appendPdf` does not extract).
+  types) and fields of _appended_ documents (`appendPdf` does not extract).
   `extractFields` additionally returns the complete raw field-name list
   (`allNames`); the editor stores it per source doc — for doc 0 on `loadPdf`
   and for each appended doc on `appendPdf`.
@@ -155,9 +155,12 @@ collide. The rule:
 - Export therefore never hits the library's collision rejection; if it somehow
   does, the export error surfaces through the existing error path.
 - Multi-source note: `assemble` renames cross-source collisions among
-  *pre-existing* fields with `d0_`/`d1_` prefixes. Editor validation for *new*
-  field names checks against the union of all sources' field names plus their
-  possible prefixed forms, so a new field can never collide post-assembly.
+  _pre-existing_ fields with `d0_`/`d1_` prefixes. Editor validation checks
+  new field names only against the union of all sources' raw (unprefixed)
+  names — it does not pre-validate against the prefixed forms `assemble` may
+  produce. A new field whose name happens to collide with a post-assembly
+  prefixed name is not caught here; such an export instead falls back to the
+  rebuild path via the authoring-collision catch.
 
 ## MissingGlyphError handling (1.11.0 behavioral change)
 

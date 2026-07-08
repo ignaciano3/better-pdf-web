@@ -173,14 +173,19 @@ async function buildIncremental(
 	const multi = collectMultiSelections(
 		state.elements.filter((e) => e.type === 'field' && newIds.has(e.id))
 	);
-	const hasAnyField =
-		state.elements.some((e) => e.type === 'field') || Boolean(state.sourceFields?.length);
-	const doFlatten = Boolean(state.flatten) && hasAnyField;
+	const doFlatten = Boolean(state.flatten);
 	if (plan.valueFills.length > 0 || multi.length > 0 || doFlatten) {
 		const form = doc.getForm();
 		for (const f of plan.valueFills) fillField(form, f);
 		for (const { name, values } of multi) form.getListBox(name).selectMultiple(values);
-		if (doFlatten) form.flatten();
+		if (doFlatten) {
+			try {
+				form.flatten();
+			} catch {
+				// No form on this document (extraction found nothing to flatten) —
+				// flatten is a no-op rather than failing the whole export.
+			}
+		}
 	}
 	return doc.save(); // append-only; objectStreams intentionally never passed
 }

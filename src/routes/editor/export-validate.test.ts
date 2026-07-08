@@ -410,12 +410,18 @@ describe('validateExportInput', () => {
 	});
 
 	it('rejects a non-boolean objectStreams flag', () => {
-		const input = { fingerprint: 'fp', state: { pageSize: [300, 400], elements: [], objectStreams: 'yes' } };
+		const input = {
+			fingerprint: 'fp',
+			state: { pageSize: [300, 400], elements: [], objectStreams: 'yes' }
+		};
 		expect(() => validateExportInput(input)).toThrow();
 	});
 
 	it('accepts a boolean objectStreams flag', () => {
-		const input = { fingerprint: 'fp', state: { pageSize: [300, 400], elements: [], objectStreams: true } };
+		const input = {
+			fingerprint: 'fp',
+			state: { pageSize: [300, 400], elements: [], objectStreams: true }
+		};
 		expect(() => validateExportInput(input)).not.toThrow();
 	});
 
@@ -442,5 +448,57 @@ describe('validateExportInput', () => {
 
 	it('rejects a watermark with an unknown font', () => {
 		expect(() => validateExportInput(wmInput({ text: 'X', font: 'Comic Sans' }))).toThrow();
+	});
+
+	// --- sourceFields validation tests ---
+
+	function sourceField(over: Record<string, unknown> = {}) {
+		return {
+			type: 'field',
+			id: 'f0',
+			field: 'text',
+			name: 'name',
+			x: 1,
+			y: 2,
+			width: 100,
+			height: 20,
+			...over
+		};
+	}
+
+	it('rejects a non-array sourceFields', () => {
+		const input = {
+			fingerprint: 'fp',
+			state: { pageSize: [300, 400], elements: [], sourceFields: 'x' }
+		};
+		expect(() => validateExportInput(input)).toThrow();
+	});
+
+	it('rejects an oversized sourceFields array', () => {
+		const input = {
+			fingerprint: 'fp',
+			state: {
+				pageSize: [300, 400],
+				elements: [],
+				sourceFields: Array.from({ length: 5_001 }, (_, i) => sourceField({ name: `f${i}` }))
+			}
+		};
+		expect(() => validateExportInput(input)).toThrow();
+	});
+
+	it('rejects a malformed sourceFields entry', () => {
+		const input = {
+			fingerprint: 'fp',
+			state: { pageSize: [300, 400], elements: [], sourceFields: [sourceField({ field: 'bogus' })] }
+		};
+		expect(() => validateExportInput(input)).toThrow();
+	});
+
+	it('accepts a valid sourceFields array', () => {
+		const input = {
+			fingerprint: 'fp',
+			state: { pageSize: [300, 400], elements: [], sourceFields: [sourceField()] }
+		};
+		expect(() => validateExportInput(input)).not.toThrow();
 	});
 });

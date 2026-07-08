@@ -325,6 +325,16 @@ export function validateExportInput(input: unknown): ExportInput {
 		validateElement(el);
 	}
 
+	// Source-field provenance snapshot (spec: 2026-07-08 incremental export).
+	// Field-shaped, so it reuses the same per-element validation as `elements`.
+	if (state.sourceFields !== undefined) {
+		if (!Array.isArray(state.sourceFields)) error(422, 'Invalid source fields');
+		if (state.sourceFields.length > MAX_ELEMENTS) error(422, 'Too many source fields');
+		for (const el of state.sourceFields as EditElement[]) {
+			validateElement(el);
+		}
+	}
+
 	if (state.sourcePdf !== undefined) {
 		if (!(state.sourcePdf instanceof Uint8Array)) error(422, 'Invalid source PDF');
 		if (state.sourcePdf.byteLength > MAX_SOURCE_PDF_BYTES) error(413, 'Source PDF too large');

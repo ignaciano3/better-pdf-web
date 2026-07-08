@@ -116,4 +116,45 @@ describe('planExport', () => {
 		);
 		expect(plan.mode).toBe('rebuild');
 	});
+
+	it('signature value-only change on source field → rebuild (signature-value-fill)', () => {
+		const snap = field({ field: 'signature', name: 'sig' });
+		const edited = { ...snap, value: 'data:image/png;base64,AAAA' };
+		const plan = planExport(base({ elements: [edited], sourceFields: [snap] }));
+		expect(plan).toEqual({ mode: 'rebuild', reason: 'signature-value-fill' });
+	});
+
+	it('dropdown value cleared on source field → rebuild (value-clear)', () => {
+		const snap = field({ field: 'dropdown', name: 'dd', value: 'x', options: ['x', 'y'] });
+		const edited = { ...snap, value: '' };
+		const plan = planExport(base({ elements: [edited], sourceFields: [snap] }));
+		expect(plan).toEqual({ mode: 'rebuild', reason: 'value-clear' });
+	});
+
+	it('text value cleared on source field → incremental with the fill', () => {
+		const snap = field({ field: 'text', name: 'txt', value: 'x' });
+		const edited = { ...snap, value: '' };
+		const plan = planExport(base({ elements: [edited], sourceFields: [snap] }));
+		expect(plan).toEqual({ mode: 'incremental', newFields: [], valueFills: [edited] });
+	});
+
+	it('checkbox unchecked on source field → incremental with the fill', () => {
+		const snap = field({ field: 'checkbox', name: 'cb', value: 'true' });
+		const edited = { ...snap, value: '' };
+		const plan = planExport(base({ elements: [edited], sourceFields: [snap] }));
+		expect(plan).toEqual({ mode: 'incremental', newFields: [], valueFills: [edited] });
+	});
+
+	it('multi-select listbox cleared on source field → rebuild (value-clear)', () => {
+		const snap = field({
+			field: 'listbox',
+			name: 'lb',
+			multiSelect: true,
+			options: ['a', 'b'],
+			selectedValues: ['a']
+		});
+		const edited = { ...snap, selectedValues: [] };
+		const plan = planExport(base({ elements: [edited], sourceFields: [snap] }));
+		expect(plan).toEqual({ mode: 'rebuild', reason: 'value-clear' });
+	});
 });
