@@ -48,6 +48,8 @@ mutation the editor needs: `drawText`/`drawImage`/vector drawing, page ops
 | Condition | Path |
 |---|---|
 | Compact toggle ON (`state.objectStreams`) | Current full rebuild, unchanged |
+| A source-extracted field was structurally changed or deleted | Full rebuild (fallback) |
+| Any selected source page carries non-zero intrinsic `/Rotate` | Full rebuild (conservative fallback) |
 | No source | Current `create()` blank path, unchanged |
 | Single source, toggle OFF | **New incremental path** |
 | Multiple sources, toggle OFF | **Assemble, then incremental path** |
@@ -94,6 +96,34 @@ digital signatures do not survive) and `/XFA` data is dropped (plain AcroForm
 output). Pre-existing fields still survive as interactive fields — which the
 old rebuild never provided.
 
+## Source-field provenance (fill vs author vs rebuild)
+
+Discovered during planning: `loadPdf` extracts the source's AcroForm fields
+into editor elements (`extractFields` → `this.elements = detected`), and the
+rebuild re-authors all of them. On the incremental path the originals are
+still inside the loaded source, so re-authoring the extracted copies would
+collide. The rule:
+
+- On load, the editor snapshots the extracted fields (`EditState.sourceFields`,
+  keyed by element id) and ships the snapshot with the export state.
+- At export, each field element is classified against the snapshot:
+  - **Not in snapshot** (user-created) → author via `createForm()`.
+  - **In snapshot, unchanged** → skip; the source already contains it.
+  - **In snapshot, value-only change** (`value`/`selectedValues` differ,
+    everything else equal) → fill via `getForm()` (setText / check / select).
+  - **In snapshot, structural change** (name, geometry, options, flags) or
+    **deleted** (snapshot id missing from elements) → the incremental path
+    cannot express it: full-rebuild fallback for the whole export.
+- Fields the extractor skips (hidden/noView widgets, pushbuttons, unknown
+  types) are untouched in the source and survive incremental export — an
+  improvement over the rebuild, which drops them. Their names still count for
+  collision validation (see below).
+- Ordering per the 1.9.0 contract: all `createForm()` additions happen before
+  the first `getForm()` call; fills, multi-select, and flatten follow.
+- Value fills of source fields are supported single-source only; multi-source
+  with a changed source-field value falls back to rebuild (assemble may have
+  prefix-renamed the field).
+
 ## Toggle rename: "Compact PDF structure"
 
 - UI label changes from "Optimize file size" to **"Compact PDF structure"** in
@@ -108,13 +138,16 @@ old rebuild never provided.
 
 ## Editor collision validation
 
-- On PDF load, read the source's existing field names client-side (a separate
-  read-only `PdfDocument.load()` + form read; never the instance used for
-  export) and store them per source in editor state (`editor.svelte.ts`).
-- The field-properties panel validates a new/renamed field's name against
-  existing source field names, in addition to the current duplicate-among-new-
-  fields validation. Error copy: "This name already exists in the original
-  PDF."
+- Extracted source fields already occupy their names as editor elements, so
+  the existing `fieldNameTaken` duplicate check covers most collisions today.
+- The gap: fields the extractor skips (hidden widgets, pushbuttons, unknown
+  types) and fields of *appended* documents (`appendPdf` does not extract).
+  `extractFields` additionally returns the complete raw field-name list
+  (`allNames`); the editor stores it per source doc — for doc 0 on `loadPdf`
+  and for each appended doc on `appendPdf`.
+- The field-properties modal validates a new/renamed field's name against the
+  union of all sources' raw names, with error copy: "This name already exists
+  in the original PDF."
 - Export therefore never hits the library's collision rejection; if it somehow
   does, the export error surfaces through the existing error path.
 - Multi-source note: `assemble` renames cross-source collisions among
@@ -167,3 +200,6 @@ incremental paths wherever stamp text uses user-embedded fonts.
    source field; renaming to a unique name clears the error.
 7. **MissingGlyphError:** stamp text with a character absent from the embedded
    font → export fails with the friendly error (both paths).
+8. **Provenance:** unchanged extracted field → not re-authored, single copy in
+   output; value-only change → filled; structural change or deletion →
+   rebuild fallback (and the rebuild output drops/reshapes it as today).
