@@ -50,6 +50,7 @@ mutation the editor needs: `drawText`/`drawImage`/vector drawing, page ops
 | Compact toggle ON (`state.objectStreams`) | Current full rebuild, unchanged |
 | A source-extracted field was structurally changed or deleted | Full rebuild (fallback) |
 | Any selected source page carries non-zero intrinsic `/Rotate` | Full rebuild (conservative fallback) |
+| Any page op carries a rotation or size override | Full rebuild (conservative v1 — coordinate conventions differ on loaded pages) |
 | No source | Current `create()` blank path, unchanged |
 | Single source, toggle OFF | **New incremental path** |
 | Multiple sources, toggle OFF | **Assemble, then incremental path** |
@@ -57,8 +58,11 @@ mutation the editor needs: `drawText`/`drawImage`/vector drawing, page ops
 ### Incremental path, single source
 
 1. `PdfDocument.load(sourceBytes)`.
-2. Apply page ops on the loaded doc: `setRotation`, `setSize`/`setMediaBox`,
-   `insertPage`, `removePage`, `movePage`. (All supported incrementally.)
+2. Page structure: selection/reorder/removal/duplication is expressed via
+   `assemble` (skipped when the page ops are the identity over source 0);
+   blank pages via `insertPage`. Rotation and resize ops fall back to the
+   rebuild in v1 (coordinate conventions on loaded pages differ from the
+   rebuild's fresh pages; revisit with dedicated tests).
 3. Draw stamps (text/images/vector) and the watermark on the loaded pages using
    the existing renderer registry. Coordinates convert with the same
    `topLeftToPdfY` logic, using each loaded page's actual height.
