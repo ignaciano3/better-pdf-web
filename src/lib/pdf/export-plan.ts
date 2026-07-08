@@ -68,6 +68,7 @@ const STRUCTURAL_KEYS = [
 	'required',
 	'readOnly',
 	'tooltip',
+	'placeholder',
 	'maxLength',
 	'multiline',
 	'comb',

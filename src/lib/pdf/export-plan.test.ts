@@ -83,6 +83,12 @@ describe('planExport', () => {
 		expect(planExport(base({ elements: [recolored], sourceFields: [snap] })).mode).toBe('rebuild');
 	});
 
+	it('placeholder-only change on source field → rebuild', () => {
+		const snap = field({ field: 'text', name: 'orig', placeholder: 'old' });
+		const edited = { ...snap, placeholder: 'new' };
+		expect(planExport(base({ elements: [edited], sourceFields: [snap] })).mode).toBe('rebuild');
+	});
+
 	it('nested-equal source field → incremental with no fills', () => {
 		const snap = field({
 			field: 'text',
