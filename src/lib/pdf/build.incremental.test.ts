@@ -118,3 +118,89 @@ describe('buildPdf incremental path', () => {
 		expect(meta.title).toBe('Inc Title');
 	});
 });
+
+/** A one-page source with a single text field named `name`. */
+async function makeSourceNamed(name: string, pageW = 400): Promise<Uint8Array> {
+	const doc = await PdfDocument.create();
+	doc.addPage([pageW, 500]);
+	const form = doc.createForm();
+	form.addTextField(name, { page: 0, x: 20, y: 400, width: 120, height: 22 });
+	return doc.save();
+}
+
+describe('buildPdf incremental path — assemble', () => {
+	it('interleaves two sources keeping both fields interactive, plus a new field', async () => {
+		const a = await makeSourceNamed('fromA');
+		const b = await makeSourceNamed('fromB');
+		const state: EditState = {
+			pageSize: [400, 500],
+			sources: [a, b],
+			// B's page first, then A's page — interleaved order across docs.
+			pageOps: [
+				{ kind: 'source', sourceIndex: 0, rotation: 0, docIndex: 1 },
+				{ kind: 'source', sourceIndex: 0, rotation: 0, docIndex: 0 }
+			],
+			elements: [field({ field: 'text', name: 'added', page: 0 })]
+		};
+		const bytes = await buildPdf(state);
+		const doc = await PdfDocument.load(bytes);
+		expect(doc.getPageCount()).toBe(2);
+		const names = doc
+			.getForm()
+			.getFields()
+			.map((f) => f.name)
+			.sort();
+		expect(names).toEqual(['added', 'fromA', 'fromB']);
+	});
+
+	it('reordered single source goes through assemble and keeps its field', async () => {
+		const src = await (async () => {
+			const doc = await PdfDocument.create();
+			doc.addPage([400, 500]);
+			doc.addPage([400, 500]);
+			const form = doc.createForm();
+			form.addTextField('p0field', { page: 0, x: 20, y: 400, width: 120, height: 22 });
+			return doc.save();
+		})();
+		const state: EditState = {
+			pageSize: [400, 500],
+			sources: [src],
+			pageOps: [
+				{ kind: 'source', sourceIndex: 1, rotation: 0, docIndex: 0 },
+				{ kind: 'source', sourceIndex: 0, rotation: 0, docIndex: 0 }
+			],
+			elements: []
+		};
+		const bytes = await buildPdf(state);
+		const doc = await PdfDocument.load(bytes);
+		expect(doc.getPageCount()).toBe(2);
+		expect(
+			doc
+				.getForm()
+				.getFields()
+				.map((f) => f.name)
+		).toEqual(['p0field']);
+	});
+
+	it('blank page op inserts a drawable blank page', async () => {
+		const a = await makeSourceNamed('fromA');
+		const state: EditState = {
+			pageSize: [400, 500],
+			sources: [a],
+			pageOps: [
+				{ kind: 'source', sourceIndex: 0, rotation: 0, docIndex: 0 },
+				{ kind: 'blank', size: [300, 300], rotation: 0 }
+			],
+			elements: [field({ field: 'text', name: 'onBlank', page: 1, x: 10, y: 10 })]
+		};
+		const bytes = await buildPdf(state);
+		const doc = await PdfDocument.load(bytes);
+		expect(doc.getPageCount()).toBe(2);
+		const names = doc
+			.getForm()
+			.getFields()
+			.map((f) => f.name)
+			.sort();
+		expect(names).toEqual(['fromA', 'onBlank']);
+	});
+});

@@ -197,29 +197,74 @@ function fillField(form: PdfForm, f: FieldElement): void {
 
 /**
  * Open the document for the incremental path. Identity page structure over a
- * single source loads the bytes directly (fully append-only). Task 3 adds the
- * assemble path for multi-source / reordered structures.
+ * single source loads the bytes directly (fully append-only: signatures on
+ * the original revision survive). Any other pure-selection structure is
+ * assembled first (full-document save via `PdfDocument.assemble`: fields stay
+ * interactive, signatures do not survive — spec trade-off), then loaded.
+ *
+ * Blank page ops are folded into the SAME assemble call rather than applied
+ * via `insertPage()` afterwards: `insertPage()`'s restructuring only becomes
+ * visible to field authoring after a save+reload round-trip (confirmed by the
+ * blank-page test — a field authored on the freshly inserted page silently
+ * failed to attach). Each distinct blank size instead gets its own tiny
+ * one-page source document (created + saved once, reused for duplicate
+ * sizes), appended to the source list and selected like any other page. That
+ * keeps every page-structure change inside the single `assemble` call.
  */
 async function loadForIncremental(
 	state: EditState,
 	sources: Uint8Array[]
 ): Promise<PdfDocument | null> {
-	const ops = state.pageOps ?? [];
-	if (sources.length !== 1) return null; // Task 3 replaces this with the assemble path
-	const loaded = await PdfDocument.load(sources[0] as Uint8Array);
+	const primary = sources[0] as Uint8Array;
+	const ops: PageOp[] = state.pageOps && state.pageOps.length > 0 ? [...state.pageOps] : [];
+	if (ops.length === 0) return PdfDocument.load(primary);
+
+	const sourceOps = ops.filter((op) => op.kind === 'source');
 	const identity =
-		ops.length === 0 ||
-		(ops.every(
-			(op, i) =>
-				op.kind === 'source' &&
-				(op.docIndex ?? 0) === 0 &&
-				op.sourceIndex === i &&
-				!op.rotation &&
-				!op.size
-		) &&
-			ops.length === loaded.getPageCount());
-	if (!identity) return null; // Task 3 replaces this with the assemble path
-	return loaded;
+		sources.length === 1 &&
+		ops.length === sourceOps.length &&
+		sourceOps.every(
+			(op, i) => (op.docIndex ?? 0) === 0 && op.sourceIndex === i && !op.rotation && !op.size
+		);
+	if (identity) {
+		const doc = await PdfDocument.load(primary);
+		// Identity also requires covering every source page (no implicit removal).
+		if (doc.getPageCount() === sourceOps.length) return doc;
+		// Fall through to assemble via a fresh selection below.
+	}
+
+	// Build one small blank source PDF per distinct blank size, appended after
+	// the real sources, so blanks can be selected through the same assemble().
+	const blankDocIndex = new Map<string, number>();
+	const allSources = [...sources];
+	async function blankSourceIndex(size: [number, number]): Promise<number> {
+		const key = `${size[0]}x${size[1]}`;
+		const existing = blankDocIndex.get(key);
+		if (existing !== undefined) return existing;
+		const blankDoc = await PdfDocument.create();
+		blankDoc.addPage(size);
+		const bytes = await blankDoc.save();
+		const index = allSources.length;
+		allSources.push(bytes);
+		blankDocIndex.set(key, index);
+		return index;
+	}
+
+	const selections: { docIndex: number; pageIndex: number }[] = [];
+	for (const op of ops) {
+		if (op.kind === 'source') {
+			const docIndex = op.docIndex ?? 0;
+			if (!sources[docIndex]) {
+				throw new PdfBuildError('Referenced a source document that was not provided.');
+			}
+			selections.push({ docIndex, pageIndex: op.sourceIndex });
+		} else {
+			const docIndex = await blankSourceIndex(op.size);
+			selections.push({ docIndex, pageIndex: 0 });
+		}
+	}
+	const assembled = await PdfDocument.assemble(allSources, selections);
+	return PdfDocument.load(assembled);
 }
 
 /**
