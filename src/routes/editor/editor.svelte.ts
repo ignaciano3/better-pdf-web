@@ -118,6 +118,12 @@ export class EditorState {
 	renderedByDoc = $state<RenderedPage[][]>([]);
 	/** Raw bytes per source document, parallel to {@link renderedByDoc}. */
 	sources = $state<Uint8Array[]>([]);
+	/**
+	 * Snapshot of the fields extracted from source 0 at load time (provenance
+	 * for the incremental export path — see EditState.sourceFields). Never
+	 * mutated after load; cleared with the source.
+	 */
+	sourceFields = $state<FieldElement[]>([]);
 	/** Renders of the primary document. Back-compat alias for `renderedByDoc[0]`. */
 	rendered = $derived<RenderedPage[]>(this.renderedByDoc[0] ?? []);
 	/** Bytes of the primary document, or null in blank mode. */
@@ -1225,6 +1231,7 @@ export class EditorState {
 				detected = [];
 			}
 			this.elements = detected;
+			this.sourceFields = detected.map((f) => ({ ...f }));
 			// A freshly loaded document is a new baseline: undo shouldn't reach back
 			// into whatever was open before (and across stale source references).
 			this.#history.reset();
@@ -1244,6 +1251,7 @@ export class EditorState {
 		this.renderedByDoc = [];
 		this.pageOps = [];
 		this.elements = [];
+		this.sourceFields = [];
 		this.selectedId = null;
 		this.errorMessage = null;
 		this.pendingSignature = null;
@@ -1509,6 +1517,9 @@ export class EditorState {
 				// treats sources[0] as the primary (back-compat with sourcePdf).
 				...(this.sources.length > 0
 					? { sources: $state.snapshot(this.sources) as Uint8Array[] }
+					: {}),
+				...(this.sourceFields.length > 0
+					? { sourceFields: $state.snapshot(this.sourceFields) as FieldElement[] }
 					: {}),
 				...(this.pageOps.length > 0 ? { pageOps: $state.snapshot(this.pageOps) as PageOp[] } : {}),
 				...(fonts.length > 0 ? { fonts: $state.snapshot(fonts) as EmbeddedFontAsset[] } : {}),
