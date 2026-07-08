@@ -514,7 +514,7 @@ function addBlankPage(
  * direct create-path save (no `getForm()`). Once we call `getForm()` here (for
  * multi-select or flatten) the doc is sealed onto the incremental path, which
  * ignores `objectStreams` — so it is a no-op for flattened / multi-select
- * exports. The UI disables the "Optimize file size" toggle when flatten is on;
+ * exports. The UI disables the "Compact PDF structure" toggle when flatten is on;
  * passing the flag here regardless is harmless and keeps the engine defensive.
  */
 async function finishDoc(

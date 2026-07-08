@@ -94,7 +94,9 @@ export interface EditState {
 	 * direct create-path save; it is a no-op for flattened or multi-select
 	 * exports, where `getForm()` seals the doc onto the incremental path that
 	 * ignores this flag (see the library's `SaveOptions.objectStreams`). The
-	 * editor omits the flag when flatten is on.
+	 * editor omits the flag when flatten is on. Setting this flag also routes the
+	 * export onto the full-rebuild path (see planExport), since incremental saves
+	 * cannot use object streams.
 	 */
 	objectStreams?: boolean;
 	/**

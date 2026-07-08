@@ -84,14 +84,15 @@
 						bind:checked={editor.optimizeSize}
 					/>
 					<span class="text-slate-700">
-						Optimize file size (smaller file, PDF 1.5+)
+						Compact PDF structure (rebuilds file, PDF 1.5+)
 						<span class="mt-0.5 block text-xs text-slate-500">
 							{#if editor.flatten}
 								Unavailable while flattening — flattened files can't use this optimization.
 							{:else}
-								Packs the PDF's internal objects into compressed streams, producing a noticeably
-								smaller file. Requires a PDF 1.5+ reader (all modern viewers) and is not suitable
-								for PDF/A archival.
+								Rebuilds the document with its internal objects packed into compressed streams — a
+								marginally smaller file. The original PDF's interactive form fields are removed, and
+								a PDF 1.5+ reader is required (not suitable for PDF/A archival). Leave off to
+								preserve the original document.
 							{/if}
 						</span>
 					</span>
