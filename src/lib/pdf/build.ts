@@ -1,4 +1,4 @@
-import { PdfDocument, PdfError, rgb } from '@ignaciano3/better-pdf';
+import { PdfDocument, PdfError, PdfForm, rgb } from '@ignaciano3/better-pdf';
 import type { Color, PdfFont } from '@ignaciano3/better-pdf/generate';
 import { StandardFonts } from '@ignaciano3/better-pdf';
 import type { FormBuilder } from '@ignaciano3/better-pdf/generate';
@@ -13,6 +13,7 @@ import type {
 } from './types';
 import { renderElement } from './renderers';
 import { topLeftToPdfY } from './coords';
+import { planExport, type ExportPlan } from './export-plan';
 
 /**
  * Error thrown when a source PDF cannot be loaded or stamped. Carries a
@@ -59,14 +60,166 @@ function collectMultiSelections(
  * only fields in the output. Re-uploading the export re-detects them, so fields
  * round-trip.
  *
- * When there is no source PDF and no fields, a single fresh page is created
- * (blank mode). Runs server-side (Node/Bun) where the wasm core self-initializes
- * on import.
+ * `buildPdf` dispatches on {@link planExport}'s classification: a document with
+ * no source content is always the blank create-path; otherwise the plan is
+ * either a rebuild (D3, as above) or an **incremental** export that loads the
+ * source, authors only the new fields, fills value-only changes via
+ * `getForm()`, and saves append-only (no `objectStreams`). The incremental
+ * path falls back to the rebuild when a load-time guard rules the document
+ * out (e.g. intrinsic page `/Rotate`) or on any unexpected failure, so D3
+ * remains the safe compact/fallback path. Runs server-side (Node/Bun) where
+ * the wasm core self-initializes on import.
  */
 export async function buildPdf(state: EditState): Promise<Uint8Array> {
 	const sources = resolveSources(state);
-	const hasSource = sources.some((s) => s && s.byteLength > 0);
-	return hasSource ? buildSourceRebuild(state, sources) : buildBlankRebuild(state);
+	const plan = planExport(state);
+	if (plan.mode === 'blank') return buildBlankRebuild(state);
+	if (plan.mode === 'rebuild') return buildSourceRebuild(state, sources);
+	try {
+		const result = await buildIncremental(state, sources, plan);
+		if (result) return result;
+	} catch (cause) {
+		if (cause instanceof PdfBuildError) throw cause;
+		// Unexpected incremental failure: the rebuild path is the safe fallback.
+	}
+	return buildSourceRebuild(state, sources);
+}
+
+/**
+ * Incremental export (spec 2026-07-08): mutate the loaded source in place and
+ * save append-only. Preconditions guaranteed by planExport: no objectStreams,
+ * no rotation/resize page ops, no structural source-field changes. Returns
+ * null when a load-time guard (intrinsic page /Rotate) rules the document out,
+ * so the caller falls back to the rebuild.
+ */
+async function buildIncremental(
+	state: EditState,
+	sources: Uint8Array[],
+	plan: Extract<ExportPlan, { mode: 'incremental' }>
+): Promise<Uint8Array | null> {
+	const doc = await loadForIncremental(state, sources);
+	if (!doc) return null;
+
+	const pages = doc.getPages();
+	if (pages.some((p) => p.rotation !== 0)) return null; // conservative guard (spec)
+	const pageWidths = pages.map((p) => p.width);
+	const pageHeights = pages.map((p) => p.height);
+
+	const fonts = await embedFonts(doc, state.fonts);
+
+	// Stamp non-field elements and signature PNGs; author ONLY the new fields.
+	// (Source-origin fields are already inside the loaded document.)
+	const pageCount = pageHeights.length;
+	const newIds = new Set(plan.newFields.map((f) => f.id));
+	for (const element of state.elements) {
+		if (element.type === 'field') continue;
+		const pageIndex = element.page ?? 0;
+		if (pageIndex < 0 || pageIndex >= pageCount) continue;
+		const page = doc.getPage(pageIndex);
+		await renderElement(
+			{ doc, page, pageHeight: pageHeights[pageIndex] as number, fonts },
+			element
+		);
+	}
+	for (const f of plan.newFields) {
+		if (f.field !== 'signature') continue;
+		const bytes = dataUrlToBytes(f.value);
+		if (!bytes) continue;
+		const pageIndex = f.page ?? 0;
+		if (pageIndex < 0 || pageIndex >= pageCount) continue;
+		try {
+			const img = await doc.embedPng(bytes);
+			doc.getPage(pageIndex).drawImage(img, {
+				x: f.x,
+				y: topLeftToPdfY(f.y, f.height, pageHeights[pageIndex] as number),
+				width: f.width,
+				height: f.height
+			});
+		} catch {
+			// Undecodable signature PNG — skip drawing; the field is still authored.
+		}
+	}
+	if (plan.newFields.length > 0) {
+		const form = doc.createForm();
+		for (const f of plan.newFields) {
+			if ((f.page ?? 0) < 0 || (f.page ?? 0) >= pageCount) continue;
+			authorField(form, f, pageHeights);
+		}
+	}
+
+	if (state.watermark) await drawWatermark(doc, pageWidths, pageHeights, state.watermark);
+	applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
+
+	// getForm() comes strictly after every createForm() addition (1.9.0 contract).
+	const multi = collectMultiSelections(
+		state.elements.filter((e) => e.type === 'field' && newIds.has(e.id))
+	);
+	const hasAnyField =
+		state.elements.some((e) => e.type === 'field') || Boolean(state.sourceFields?.length);
+	const doFlatten = Boolean(state.flatten) && hasAnyField;
+	if (plan.valueFills.length > 0 || multi.length > 0 || doFlatten) {
+		const form = doc.getForm();
+		for (const f of plan.valueFills) fillField(form, f);
+		for (const { name, values } of multi) form.getListBox(name).selectMultiple(values);
+		if (doFlatten) form.flatten();
+	}
+	return doc.save(); // append-only; objectStreams intentionally never passed
+}
+
+/** Apply a value-only change to a field that already exists in the loaded doc. */
+function fillField(form: PdfForm, f: FieldElement): void {
+	switch (f.field) {
+		case 'text':
+			form.getTextField(f.name).setText(f.value ?? '');
+			break;
+		case 'checkbox':
+			f.value ? form.getCheckBox(f.name).check() : form.getCheckBox(f.name).uncheck();
+			break;
+		case 'radio':
+			if (f.value) form.getRadioGroup(f.name).select(f.value);
+			break;
+		case 'dropdown':
+		case 'combo':
+			if (f.value) form.getDropdown(f.name).select(f.value);
+			break;
+		case 'listbox':
+			if (f.multiSelect) {
+				const values = (f.selectedValues ?? []).filter((v) => (f.options ?? []).includes(v));
+				if (values.length > 0) form.getListBox(f.name).selectMultiple(values);
+			} else if (f.value) {
+				form.getListBox(f.name).select(f.value);
+			}
+			break;
+		case 'signature':
+			break; // no value fill for signature widgets
+	}
+}
+
+/**
+ * Open the document for the incremental path. Identity page structure over a
+ * single source loads the bytes directly (fully append-only). Task 3 adds the
+ * assemble path for multi-source / reordered structures.
+ */
+async function loadForIncremental(
+	state: EditState,
+	sources: Uint8Array[]
+): Promise<PdfDocument | null> {
+	const ops = state.pageOps ?? [];
+	if (sources.length !== 1) return null; // Task 3 replaces this with the assemble path
+	const loaded = await PdfDocument.load(sources[0] as Uint8Array);
+	const identity =
+		ops.length === 0 ||
+		(ops.every(
+			(op, i) =>
+				op.kind === 'source' &&
+				(op.docIndex ?? 0) === 0 &&
+				op.sourceIndex === i &&
+				!op.rotation &&
+				!op.size
+		) &&
+			ops.length === loaded.getPageCount());
+	if (!identity) return null; // Task 3 replaces this with the assemble path
+	return loaded;
 }
 
 /**
