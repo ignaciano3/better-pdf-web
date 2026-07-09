@@ -41,7 +41,8 @@ export const extractFields = command(
 			const fields = mapFields(infos, pageHeights);
 			const allNames = infos.map((i) => i.name);
 			return { fields, pageHeights, allNames };
-		} catch {
+		} catch (error) {
+			console.error('Error extracting fields:', error);
 			return { fields: [], pageHeights: [], allNames: [] };
 		}
 	}

@@ -5,6 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "NODE_OPTIONS=--max-http-header-size=65536 vite dev",
+		"web": "NODE_OPTIONS=--max-http-header-size=65536 vite dev",
 		"build": "vite build",
 		"preview": "NODE_OPTIONS=--max-http-header-size=65536 vite preview",
 		"prepare": "svelte-kit sync || echo ''",
@@ -57,7 +58,7 @@
 		"vitest": "^4.1.8"
 	},
 	"dependencies": {
-		"@ignaciano3/better-pdf": "^1.12.0",
+		"@ignaciano3/better-pdf": "^1.12.1",
 		"better-auth": "^1.6.20",
 		"drizzle-orm": "^0.45.2",
 		"pdfjs-dist": "^6.0.227",
