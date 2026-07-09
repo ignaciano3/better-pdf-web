@@ -134,6 +134,43 @@ describe('extract-fields mapper', () => {
 		expect(el!.value).toBeUndefined();
 	});
 
+	it('promotes a multi-state checkbox group to a radio field with all widgets', () => {
+		// A /Btn field without the radio flag but with several kid widgets and
+		// distinct on-states (e.g. "Si"/"No") is semantically a radio group.
+		const el = fieldInfoToElement(
+			info({
+				name: 'dislipemia',
+				type: 'checkbox',
+				value: 'Si',
+				states: ['Si', 'No'],
+				widgets: [
+					{ page: 0, rect: [180, 592, 189, 601] },
+					{ page: 0, rect: [234, 592, 243, 601] }
+				]
+			}),
+			pageHeights,
+			'field0'
+		);
+		expect(el).not.toBeNull();
+		expect(el!.field).toBe('radio');
+		expect(el!.options).toEqual(['Si', 'No']);
+		expect(el!.radioLayout).toEqual([
+			{ x: 180, y: 400 - 601 },
+			{ x: 234, y: 400 - 601 }
+		]);
+		expect(el!.value).toBe('Si');
+	});
+
+	it('keeps a single-state checkbox a checkbox', () => {
+		const el = fieldInfoToElement(
+			info({ name: 'agree', type: 'checkbox', states: ['Yes'] }),
+			pageHeights,
+			'field0'
+		);
+		expect(el!.field).toBe('checkbox');
+		expect(el!.radioLayout).toBeUndefined();
+	});
+
 	it('skips pushbutton and unknown types', () => {
 		expect(fieldInfoToElement(info({ type: 'pushbutton' }), pageHeights, 'field0')).toBeNull();
 		expect(fieldInfoToElement(info({ type: 'unknown' }), pageHeights, 'field0')).toBeNull();

@@ -73,7 +73,7 @@
 		class="order-1 flex shrink-0 items-center gap-2 sm:flex-col sm:items-start sm:gap-1 lg:flex-row lg:items-center lg:gap-2"
 	>
 		<!-- Upload + New blank. New blank stacks under Upload only on phones. -->
-		<div class="flex flex-col items-start gap-1 sm:flex-row sm:items-center">
+		<div class="flex flex-col items-start gap-1 2xl:flex-row 2xl:items-center">
 			<label
 				class="flex cursor-pointer items-center gap-1.5 rounded bg-slate-100 px-2.5 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200"
 				title="Upload a PDF"

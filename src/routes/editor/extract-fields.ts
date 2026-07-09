@@ -123,6 +123,11 @@ export function fieldInfoToElement(
 	if (widget.hidden || widget.noView) return null;
 	// An editable dropdown is our `combo` kind.
 	if (kind === 'dropdown' && info.editable) kind = 'combo';
+	// A /Btn field without the radio flag can still carry several kid widgets
+	// with distinct on-states (Acrobat's "checkbox group", e.g. Si/No). It holds
+	// a single /V among those states, so it behaves as a radio group; keeping it
+	// a checkbox would drop every widget but the first.
+	if (kind === 'checkbox' && info.states.filter((s) => s !== 'Off').length > 1) kind = 'radio';
 	const pageHeight = pageHeights[widget.page] ?? 0;
 	const box = rectToTopLeft(widget.rect, pageHeight);
 

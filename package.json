@@ -58,7 +58,7 @@
 		"vitest": "^4.1.8"
 	},
 	"dependencies": {
-		"@ignaciano3/better-pdf": "^1.12.1",
+		"@ignaciano3/better-pdf": "^1.13.0",
 		"better-auth": "^1.6.20",
 		"drizzle-orm": "^0.45.2",
 		"pdfjs-dist": "^6.0.227",
