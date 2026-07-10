@@ -124,12 +124,16 @@
 		style="left: {field.x * SCALE}px; top: {field.y * SCALE}px; width: {w}px; height: {h}px;"
 		title={field.tooltip ?? field.name}
 	>
-		<!-- Drag chrome strip across the top so the inner control stays usable. -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<span
-			class="absolute -top-3 left-0 h-3 w-full touch-none cursor-move bg-blue-300/70"
-			onpointerdown={onChromeDown}
-		></span>
+		{#if selected}
+			<!-- Drag chrome strip across the top so the inner control stays usable.
+			     Rendered only for the selected field (like the resize handle) so dense
+			     layouts don't drown in stacked blue strips. -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<span
+				class="absolute -top-3 left-0 h-3 w-full touch-none cursor-move bg-blue-300/70"
+				onpointerdown={onChromeDown}
+			></span>
+		{/if}
 
 		{#if field.field === 'text'}
 			{#if field.multiline}
