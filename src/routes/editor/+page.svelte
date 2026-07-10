@@ -81,7 +81,15 @@
 		const file = input.files?.[0];
 		if (file) {
 			await editor.loadPdf(file);
-			applyPendingIntent();
+			// loadPdf never throws: it reports failure by setting errorMessage (and
+			// leaving it null again is the only success signal it exposes). Only
+			// fire the deep-link intent once the PDF actually loaded, otherwise
+			// discard it so a bad file can't later open a tool over an empty canvas.
+			if (editor.errorMessage === null) {
+				applyPendingIntent();
+			} else {
+				pendingIntent = null;
+			}
 		}
 		input.value = '';
 		started = true;
