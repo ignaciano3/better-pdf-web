@@ -9,6 +9,7 @@ export type Cadence = 'monthly' | 'annual';
 export interface LemonSqueezyWebhook {
 	meta: {
 		event_name: string;
+		test_mode?: boolean;
 		custom_data?: { user_id?: string };
 	};
 	data: {

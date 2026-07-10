@@ -1,4 +1,5 @@
 import { json, text } from '@sveltejs/kit';
+import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { getDb } from '$lib/server/db';
 import { subscription } from '$lib/server/db/schema.app';
@@ -26,6 +27,10 @@ export const POST: RequestHandler = async ({ request }) => {
 	} catch {
 		return text('invalid json', { status: 400 });
 	}
+
+	// A test-mode webhook pointed at production (with a matching secret) must
+	// not be able to grant pro. Test events are only honored in dev.
+	if (event.meta?.test_mode && !dev) return json({ ignored: true });
 
 	const row = mapEventToRow(event);
 	if (!row) return json({ ignored: true }); // not a subscription event we act on
