@@ -14,6 +14,7 @@
 	import UpsellModal from './UpsellModal.svelte';
 	import { SHORTCUT_TO_DRAW, SELECT_SHORTCUT } from './constants';
 	import Seo from '$lib/components/Seo.svelte';
+	import { planOperation, type PostLoadIntent } from './operation-intent';
 
 	const editor = new EditorState();
 	// Free pdf.js worker memory (cached source documents) when leaving the editor.
@@ -25,6 +26,8 @@
 	let started = $state(false);
 	let emptyUploadInput = $state<HTMLInputElement | null>(null);
 	let promptedUpload = false;
+	let pendingIntent: PostLoadIntent | null = null;
+	let mergeInput = $state<HTMLInputElement | null>(null);
 	const showEmptyState = $derived(!editor.sourceBytes && !started && editor.elements.length === 0);
 
 	// On phones the Pages rail would steal half the canvas width, so default it
@@ -37,17 +40,38 @@
 		if (window.matchMedia('(max-width: 639px)').matches) editor.showPages = false;
 	});
 
-	// Deep-link from the home CTAs via `?operation=`:
-	//   new    → jump straight into a blank canvas (skip the empty state)
-	//   upload → open the file picker straight away so the user can choose a PDF
+	// Deep-link from the home CTAs and SEO tool pages via `?operation=`:
+	//   new                → blank canvas (skip the empty state)
+	//   upload/fill/edit   → open the file picker straight away
+	//   merge/split/sign/watermark → picker now + open the matching tool once loaded
 	$effect(() => {
-		const op = page.url.searchParams.get('operation');
-		if (op === 'new') started = true;
-		if (op === 'upload' && !promptedUpload && emptyUploadInput) {
+		const plan = planOperation(page.url.searchParams.get('operation'));
+		if (plan.startBlank) started = true;
+		if (plan.openPicker && !promptedUpload && emptyUploadInput) {
 			promptedUpload = true;
+			pendingIntent = plan.intent;
 			emptyUploadInput.click();
 		}
 	});
+
+	// One-shot: fires after the deep-linked upload finishes loading.
+	function applyPendingIntent() {
+		const intent = pendingIntent;
+		pendingIntent = null;
+		if (intent === 'merge') {
+			editor.showPages = true;
+			// Chain straight into picking the second document. If the browser
+			// blocks the programmatic click, the user still lands on an open
+			// Pages panel with the Document menu one click away.
+			mergeInput?.click();
+		} else if (intent === 'split') {
+			editor.showPages = true;
+		} else if (intent === 'sign') {
+			showSignaturePad = true;
+		} else if (intent === 'watermark') {
+			editor.watermarkModalOpen = true;
+		}
+	}
 
 	function startBlank() {
 		started = true;
@@ -55,9 +79,19 @@
 	async function onEmptyUpload(event: Event) {
 		const input = event.currentTarget as HTMLInputElement;
 		const file = input.files?.[0];
-		if (file) await editor.loadPdf(file);
+		if (file) {
+			await editor.loadPdf(file);
+			applyPendingIntent();
+		}
 		input.value = '';
 		started = true;
+	}
+
+	async function onMergeUpload(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (file) await editor.appendPdf(file);
+		input.value = '';
 	}
 
 	function onSignatureDrawn(png: Uint8Array, aspect: number) {
@@ -276,5 +310,14 @@
 	<DocumentPropertiesModal {editor} />
 	<OutlineEditor {editor} />
 	<WatermarkModal {editor} />
+	<!-- Hidden picker for the `merge` deep-link intent: appends a second PDF
+	     right after the first one loads. -->
+	<input
+		type="file"
+		accept="application/pdf,.pdf"
+		class="hidden"
+		bind:this={mergeInput}
+		onchange={onMergeUpload}
+	/>
 	<UpsellModal {editor} {signedIn} />
 </div>
