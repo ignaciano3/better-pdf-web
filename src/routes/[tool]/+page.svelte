@@ -9,7 +9,6 @@
 	const tool = $derived(data.tool);
 	const otherTools = $derived(TOOLS.filter((t) => t.slug !== tool.slug));
 
-	const editorHref = $derived(`${resolve('/editor')}?operation=${tool.operation}`);
 	const origin = $derived(page.url.origin);
 
 	const faqJsonLd = $derived({
@@ -48,7 +47,7 @@
 			<p class="mt-5 text-lg leading-relaxed text-slate-600">{tool.heroCopy}</p>
 			<div class="mt-8">
 				<a
-					href={editorHref}
+					href="{resolve('/editor')}?operation={tool.operation}"
 					class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:bg-blue-700"
 				>
 					Choose your PDF
@@ -163,7 +162,7 @@
 			</p>
 			<div class="mt-8 flex flex-wrap justify-center gap-3">
 				<a
-					href={editorHref}
+					href="{resolve('/editor')}?operation={tool.operation}"
 					class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:bg-blue-700"
 				>
 					Choose your PDF
