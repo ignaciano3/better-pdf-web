@@ -48,10 +48,15 @@ Each entry:
 **Dynamic route.** `src/routes/[tool]/+page.ts` looks the slug up in
 the registry and throws 404 on miss. SvelteKit matches static routes
 (`/pricing`, `/login`, …) before the `[tool]` param, so no shadowing.
-The route is **SSR, not prerendered**: the root layout's server `load`
-resolves the signed-in user, so prerendering would bake a logged-out header
-into the static HTML. The registry lookup is trivially cheap; SSR matches
-every other page (nothing in the repo prerenders today).
+The route is **prerendered** (amended 2026-07-10; originally SSR):
+`prerender = true` plus an `entries()` generator over the registry emits one
+static HTML file per tool at build time. The root layout's server `load`
+runs at build with no cookies, so the static pages bake in a logged-out
+header; to compensate, the root layout runs a one-time client-side session
+check (`authClient.getSession()`) on tool pages that hydrate without a user
+and calls `invalidateAll()` only when a real session exists. The session
+cookie is httpOnly, so asking the auth server is the only way to detect it
+from the client.
 
 `src/routes/[tool]/+page.svelte` renders the shared page layout from the
 registry data.

@@ -1,7 +1,9 @@
 <script lang="ts">
 	import './layout.css';
+	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import favicon from '$lib/assets/favicon.svg';
+	import { authClient } from '$lib/auth-client';
 	import Header from '$lib/components/Header.svelte';
 	import { isToolPath } from '$lib/seo/tools';
 
@@ -13,6 +15,20 @@
 	// The landing page and the SEO tool pages are full-bleed (their own section
 	// padding); other routes get the padded main.
 	const isHome = $derived(page.url.pathname === '/' || isToolPath(page.url.pathname));
+
+	// The SEO tool pages are prerendered, so their layout data bakes in a
+	// logged-out header (the layout load runs at build time with no cookies —
+	// see [tool]/+page.ts). The session cookie is httpOnly and invisible to
+	// JS, so when a tool page hydrates without a user we ask the auth server
+	// once; only if a real session exists do we refetch layout data.
+	let sessionRecoveryDone = false;
+	$effect(() => {
+		if (sessionRecoveryDone || data.user || !isToolPath(page.url.pathname)) return;
+		sessionRecoveryDone = true;
+		authClient.getSession().then(({ data: session }) => {
+			if (session) invalidateAll();
+		});
+	});
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>

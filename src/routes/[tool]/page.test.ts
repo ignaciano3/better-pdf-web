@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { load } from './+page';
+import { load, entries, prerender } from './+page';
+import { TOOLS } from '$lib/seo/tools';
 
 function loadFor(slug: string) {
 	// Only `params` is read by this load function.
@@ -21,5 +22,18 @@ describe('[tool] page load', () => {
 		} catch (e) {
 			expect((e as { status: number }).status).toBe(404);
 		}
+	});
+});
+
+describe('[tool] prerendering', () => {
+	it('is marked prerenderable', () => {
+		expect(prerender).toBe(true);
+	});
+
+	it('entries lists every registered tool exactly once', async () => {
+		const bySlug = (a: { tool: string }, b: { tool: string }) => a.tool.localeCompare(b.tool);
+		expect([...(await entries())].sort(bySlug)).toEqual(
+			TOOLS.map((t) => ({ tool: t.slug })).sort(bySlug)
+		);
 	});
 });
