@@ -2,6 +2,8 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import Seo, { SITE_NAME } from '$lib/components/Seo.svelte';
+	import { TOOLS } from '$lib/seo/tools';
+	import ToolCards from '$lib/components/ToolCards.svelte';
 
 	const user = $derived(page.data['user'] as { email: string } | null | undefined);
 
@@ -379,6 +381,23 @@
 		</div>
 	</section>
 
+	<!-- TOOLS -->
+	<section class="border-t border-slate-200">
+		<div class="mx-auto max-w-6xl px-6 pt-20 pb-21">
+			<h2
+				class="font-display max-w-md text-[clamp(1.75rem,3.4vw,2.5rem)] leading-tight font-bold tracking-tight text-balance"
+			>
+				Jump straight to a tool
+			</h2>
+			<p class="mt-4 max-w-lg text-base leading-relaxed text-slate-600">
+				Each one opens the editor with the right tool ready to go.
+			</p>
+			<div class="mt-10">
+				<ToolCards tools={TOOLS} />
+			</div>
+		</div>
+	</section>
+
 	<!-- HOW IT WORKS -->
 	<section class="border-t border-slate-200 bg-slate-50">
 		<div class="mx-auto max-w-6xl px-6 pt-20 pb-21">
@@ -526,6 +545,15 @@
 			</div>
 
 			<div class="my-7 h-px bg-slate-200"></div>
+
+			<nav class="mb-7 flex flex-wrap gap-x-6 gap-y-2">
+				{#each TOOLS as t (t.slug)}
+					<a
+						href={resolve('/[tool]', { tool: t.slug })}
+						class="text-[13px] text-slate-500 transition hover:text-slate-900">{t.h1}</a
+					>
+				{/each}
+			</nav>
 
 			<div class="flex flex-wrap items-center justify-between gap-3.5">
 				<span class="text-[13px] text-slate-400">© 2026 Better PDF Web</span>

@@ -2,9 +2,12 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import Seo, { SITE_NAME } from '$lib/components/Seo.svelte';
+	import { TOOLS } from '$lib/seo/tools';
+	import ToolCards from '$lib/components/ToolCards.svelte';
 
 	let { data } = $props();
 	const tool = $derived(data.tool);
+	const otherTools = $derived(TOOLS.filter((t) => t.slug !== tool.slug));
 
 	const editorHref = $derived(`${resolve('/editor')}?operation=${tool.operation}`);
 	const origin = $derived(page.url.origin);
@@ -132,6 +135,18 @@
 					{/each}
 				</div>
 			</div>
+		</div>
+	</section>
+
+	<!-- MORE TOOLS -->
+	<section class="mx-auto max-w-6xl px-6 pt-20 pb-21">
+		<h2
+			class="font-display max-w-md text-[clamp(1.75rem,3.4vw,2.5rem)] leading-tight font-bold tracking-tight text-balance"
+		>
+			More PDF tools
+		</h2>
+		<div class="mt-10">
+			<ToolCards tools={otherTools} />
 		</div>
 	</section>
 
