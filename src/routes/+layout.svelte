@@ -3,14 +3,16 @@
 	import { page } from '$app/state';
 	import favicon from '$lib/assets/favicon.svg';
 	import Header from '$lib/components/Header.svelte';
+	import { isToolPath } from '$lib/seo/tools';
 
 	let { children, data } = $props();
 
 	// The editor manages its own full-height, full-bleed layout; every other route
 	// gets the standard padded, scrollable main.
 	const isEditor = $derived(page.url.pathname.startsWith('/editor'));
-	// The landing page is full-bleed (its own section padding); other routes get padded main.
-	const isHome = $derived(page.url.pathname === '/');
+	// The landing page and the SEO tool pages are full-bleed (their own section
+	// padding); other routes get the padded main.
+	const isHome = $derived(page.url.pathname === '/' || isToolPath(page.url.pathname));
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
