@@ -1,10 +1,12 @@
 import type { RequestHandler } from './$types';
+import { TOOLS } from '$lib/seo/tools';
 
 // Public, indexable pages only. App/auth routes (/editor, /login, /signup,
 // /admin) are intentionally excluded — they're noindex and robots-disallowed.
 const PAGES = [
 	{ path: '/', changefreq: 'weekly', priority: '1.0' },
-	{ path: '/pricing', changefreq: 'monthly', priority: '0.8' }
+	{ path: '/pricing', changefreq: 'monthly', priority: '0.8' },
+	...TOOLS.map((t) => ({ path: `/${t.slug}`, changefreq: 'weekly', priority: '0.9' }))
 ];
 
 export const GET: RequestHandler = ({ url }) => {
