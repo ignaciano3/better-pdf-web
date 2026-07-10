@@ -48,8 +48,10 @@ Each entry:
 **Dynamic route.** `src/routes/[tool]/+page.server.ts` looks the slug up in
 the registry and throws 404 on miss. SvelteKit matches static routes
 (`/pricing`, `/login`, …) before the `[tool]` param, so no shadowing.
-`export const prerender = true` with `entries()` derived from the registry —
-six static HTML files at build time, zero server cost on Netlify.
+The route is **SSR, not prerendered**: the root layout's server `load`
+resolves the signed-in user, so prerendering would bake a logged-out header
+into the static HTML. The registry lookup is trivially cheap; SSR matches
+every other page (nothing in the repo prerenders today).
 
 `src/routes/[tool]/+page.svelte` renders the shared page layout from the
 registry data.
