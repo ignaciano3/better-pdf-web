@@ -521,7 +521,7 @@
 						servers, only used to generate your PDF.
 					</p>
 				</div>
-				<nav class="flex flex-wrap gap-6">
+				<nav class="flex flex-wrap gap-6" aria-label="Site">
 					<a
 						href={resolve('/pricing')}
 						class="text-sm font-medium text-slate-600 transition hover:text-slate-900">Pricing</a
@@ -546,7 +546,7 @@
 
 			<div class="my-7 h-px bg-slate-200"></div>
 
-			<nav class="mb-7 flex flex-wrap gap-x-6 gap-y-2">
+			<nav class="mb-7 flex flex-wrap gap-x-6 gap-y-2" aria-label="PDF tools">
 				{#each TOOLS as t (t.slug)}
 					<a
 						href={resolve('/[tool]', { tool: t.slug })}

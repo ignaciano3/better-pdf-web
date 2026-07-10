@@ -51,17 +51,17 @@ export const TOOLS: ToolPage[] = [
 	{
 		slug: 'fill-pdf-form',
 		operation: 'fill',
-		title: 'Fill a PDF form online, free - Better PDF Web',
+		title: 'Fill a PDF form online, free — Better PDF Web',
 		metaDescription:
-			'Fill out PDF forms online for free. Text fields, checkboxes, radio buttons and dropdowns are detected automatically - complete, sign and download with no watermarks.',
+			'Fill out PDF forms online for free. Text fields, checkboxes, radio buttons and dropdowns are detected automatically — complete, sign and download with no watermarks.',
 		h1: 'Fill a PDF form online',
 		heroCopy:
-			'Upload a PDF and its form fields are detected automatically. Type into text boxes, tick checkboxes, pick from dropdowns - then download the finished file. Free, no sign-up, no watermarks.',
+			'Upload a PDF and its form fields are detected automatically. Type into text boxes, tick checkboxes, pick from dropdowns — then download the finished file. Free, no sign-up, no watermarks.',
 		cardBlurb: 'Complete text fields, checkboxes and dropdowns in any PDF form.',
 		steps: [
 			{
 				title: 'Upload your form',
-				text: 'Drop in the PDF. Fillable AcroForm fields - text, checkboxes, radios, dropdowns - are detected and made editable automatically.'
+				text: 'Drop in the PDF. Fillable AcroForm fields — text, checkboxes, radios, dropdowns — are detected and made editable automatically.'
 			},
 			{
 				title: 'Fill it in',
@@ -69,7 +69,7 @@ export const TOOLS: ToolPage[] = [
 			},
 			{
 				title: 'Download',
-				text: 'Export the completed form as a PDF. No account needed and no watermark added - ever.'
+				text: 'Export the completed form as a PDF. No account needed and no watermark added — ever.'
 			}
 		],
 		faq: [
@@ -80,7 +80,7 @@ export const TOOLS: ToolPage[] = [
 			},
 			{
 				q: 'What if my PDF has no fillable fields?',
-				a: 'You can still complete it: add text boxes anywhere on the page, place checkmarks, and draw a signature - the result looks the same when you download.'
+				a: 'You can still complete it: add text boxes anywhere on the page, place checkmarks, and draw a signature — the result looks the same when you download.'
 			},
 			{
 				q: 'Can I sign the form too?',
@@ -92,9 +92,9 @@ export const TOOLS: ToolPage[] = [
 	{
 		slug: 'sign-pdf',
 		operation: 'sign',
-		title: 'Sign a PDF online, free - Better PDF Web',
+		title: 'Sign a PDF online, free — Better PDF Web',
 		metaDescription:
-			'Sign PDF documents online for free. Draw your signature with a mouse or finger, place it on the page, and download - no account, no watermarks.',
+			'Sign PDF documents online for free. Draw your signature with a mouse or finger, place it on the page, and download — no account, no watermarks.',
 		h1: 'Sign a PDF online',
 		heroCopy:
 			'Draw your signature with a mouse, trackpad or finger, place it exactly where it belongs, and download the signed document. Free, no sign-up, no watermarks.',
@@ -102,7 +102,7 @@ export const TOOLS: ToolPage[] = [
 		steps: [
 			{
 				title: 'Upload your PDF',
-				text: 'Open the document you need to sign - a contract, an approval, a permission slip. It renders right in your browser.'
+				text: 'Open the document you need to sign — a contract, an approval, a permission slip. It renders right in your browser.'
 			},
 			{
 				title: 'Draw and place your signature',
@@ -117,7 +117,7 @@ export const TOOLS: ToolPage[] = [
 			PRIVACY_FAQ,
 			{
 				q: 'Is this a certified digital signature?',
-				a: 'No - it places a visual signature image on the page, which is what most everyday paperwork expects. It is not a cryptographic certificate-based signature.'
+				a: 'No — it places a visual signature image on the page, which is what most everyday paperwork expects. It is not a cryptographic certificate-based signature.'
 			},
 			{
 				q: 'Can I sign on my phone?',
@@ -133,7 +133,7 @@ export const TOOLS: ToolPage[] = [
 	{
 		slug: 'merge-pdf',
 		operation: 'merge',
-		title: 'Merge PDF files online, free - Better PDF Web',
+		title: 'Merge PDF files online, free — Better PDF Web',
 		metaDescription:
 			'Combine multiple PDFs into one document online, free. Append files, reorder and rotate pages, then download the merged PDF with no watermarks.',
 		h1: 'Merge PDF files online',
@@ -147,7 +147,7 @@ export const TOOLS: ToolPage[] = [
 			},
 			{
 				title: 'Append the others',
-				text: 'Add each additional PDF - its pages are appended to the document. Reorder, rotate or remove pages in the Pages panel until the sequence is right.'
+				text: 'Add each additional PDF — its pages are appended to the document. Reorder, rotate or remove pages in the Pages panel until the sequence is right.'
 			},
 			{
 				title: 'Download the merged PDF',
@@ -158,15 +158,15 @@ export const TOOLS: ToolPage[] = [
 			PRIVACY_FAQ,
 			{
 				q: 'How many PDFs can I merge?',
-				a: 'You can append multiple documents up to a combined 60 MB per export - more than enough for typical contracts, scans and reports.'
+				a: 'You can append multiple documents up to a combined 60 MB per export — more than enough for typical contracts, scans and reports.'
 			},
 			{
 				q: 'Can I change the page order after merging?',
-				a: "Yes. The Pages panel shows every page as a thumbnail - move pages up or down, rotate them, or delete the ones you don't need before exporting."
+				a: 'Yes. The Pages panel shows every page as a thumbnail — move pages up or down, rotate them, or delete the ones you don’t need before exporting.'
 			},
 			{
 				q: 'Can I edit the merged document too?',
-				a: "Yes. Before exporting you can fill fields, add text, images and signatures - it's a full editor, not just a merger."
+				a: 'Yes. Before exporting you can fill fields, add text, images and signatures — it’s a full editor, not just a merger.'
 			},
 			COST_FAQ
 		]
@@ -174,13 +174,13 @@ export const TOOLS: ToolPage[] = [
 	{
 		slug: 'split-pdf',
 		operation: 'split',
-		title: 'Split a PDF online, free - Better PDF Web',
+		title: 'Split a PDF online, free — Better PDF Web',
 		metaDescription:
-			"Extract or remove pages from a PDF online, free. Delete the pages you don't need, reorder the rest, and download the result - no watermarks.",
+			'Extract or remove pages from a PDF online, free. Delete the pages you don’t need, reorder the rest, and download the result — no watermarks.',
 		h1: 'Split a PDF online',
 		heroCopy:
-			"Pull the pages you need out of any PDF. Delete the rest, reorder what's left, and download a clean document. Free, no sign-up, no watermarks.",
-		cardBlurb: "Extract the pages you need and drop the ones you don't.",
+			'Pull the pages you need out of any PDF. Delete the rest, reorder what’s left, and download a clean document. Free, no sign-up, no watermarks.',
+		cardBlurb: 'Extract the pages you need and drop the ones you don’t.',
 		steps: [
 			{
 				title: 'Upload your PDF',
@@ -199,7 +199,7 @@ export const TOOLS: ToolPage[] = [
 			PRIVACY_FAQ,
 			{
 				q: 'How do I extract just a few pages?',
-				a: "Delete every page you don't want in the Pages panel and export - the download contains only the pages you kept. To produce several outputs, repeat with the same source file."
+				a: 'Delete every page you don’t want in the Pages panel and export — the download contains only the pages you kept. To produce several outputs, repeat with the same source file.'
 			},
 			{
 				q: 'Can I reorder or rotate pages too?',
@@ -215,12 +215,12 @@ export const TOOLS: ToolPage[] = [
 	{
 		slug: 'watermark-pdf',
 		operation: 'watermark',
-		title: 'Add a watermark to a PDF online, free - Better PDF Web',
+		title: 'Add a watermark to a PDF online, free — Better PDF Web',
 		metaDescription:
-			'Watermark a PDF online, free. Stamp text like DRAFT or CONFIDENTIAL - or your logo - across every page with adjustable opacity, then download.',
+			'Watermark a PDF online, free. Stamp text like DRAFT or CONFIDENTIAL — or your logo — across every page with adjustable opacity, then download.',
 		h1: 'Add a watermark to a PDF',
 		heroCopy:
-			'Stamp "DRAFT", "CONFIDENTIAL" or your own text - or an image like a logo - across every page, with adjustable opacity. Free, no sign-up, and we never add watermarks of our own.',
+			'Stamp "DRAFT", "CONFIDENTIAL" or your own text — or an image like a logo — across every page, with adjustable opacity. Free, no sign-up, and we never add watermarks of our own.',
 		cardBlurb: 'Stamp text or a logo across every page, with adjustable opacity.',
 		steps: [
 			{
@@ -240,7 +240,7 @@ export const TOOLS: ToolPage[] = [
 			PRIVACY_FAQ,
 			{
 				q: 'Can I use an image as the watermark?',
-				a: "Yes. Upload a PNG or JPEG - your logo, a stamp - and it's placed across the pages instead of text. You can resize it and adjust its opacity."
+				a: 'Yes. Upload a PNG or JPEG — your logo, a stamp — and it’s placed across the pages instead of text. You can resize it and adjust its opacity.'
 			},
 			{
 				q: 'Does it apply to every page?',
@@ -248,7 +248,7 @@ export const TOOLS: ToolPage[] = [
 			},
 			{
 				q: 'Do you add your own watermark on the free tier?',
-				a: 'Never. Unlike many free PDF tools, exports are clean on every tier - the only watermark on your document is the one you choose to add.'
+				a: 'Never. Unlike many free PDF tools, exports are clean on every tier — the only watermark on your document is the one you choose to add.'
 			},
 			COST_FAQ
 		]
@@ -256,12 +256,12 @@ export const TOOLS: ToolPage[] = [
 	{
 		slug: 'edit-pdf',
 		operation: 'edit',
-		title: 'Edit a PDF online, free - Better PDF Web',
+		title: 'Edit a PDF online, free — Better PDF Web',
 		metaDescription:
-			'Edit PDFs online, free. Add text, images, shapes, links and signatures, fill forms, and manage pages - right in your browser, with no watermarks.',
+			'Edit PDFs online, free. Add text, images, shapes, links and signatures, fill forms, and manage pages — right in your browser, with no watermarks.',
 		h1: 'Edit a PDF online',
 		heroCopy:
-			'Add text, images, shapes, links and signatures. Fill forms, manage pages, set a watermark - a full PDF editor that runs in your browser. Free, no sign-up, no watermarks.',
+			'Add text, images, shapes, links and signatures. Fill forms, manage pages, set a watermark — a full PDF editor that runs in your browser. Free, no sign-up, no watermarks.',
 		cardBlurb: 'Add text, images, shapes, links and signatures to any PDF.',
 		steps: [
 			{
@@ -270,7 +270,7 @@ export const TOOLS: ToolPage[] = [
 			},
 			{
 				title: 'Make your changes',
-				text: 'Add text blocks, images, shapes and links. Fill form fields, draw a signature, reorder pages - with undo/redo for every step.'
+				text: 'Add text blocks, images, shapes and links. Fill form fields, draw a signature, reorder pages — with undo/redo for every step.'
 			},
 			{
 				title: 'Download',
@@ -280,8 +280,8 @@ export const TOOLS: ToolPage[] = [
 		faq: [
 			PRIVACY_FAQ,
 			{
-				q: "Can I change text that's already in the PDF?",
-				a: "Not yet. You add new content on top of the existing pages - text, images, shapes, links, fields and signatures - but existing text can't be rewritten in place."
+				q: 'Can I change text that’s already in the PDF?',
+				a: 'Not yet. You add new content on top of the existing pages — text, images, shapes, links, fields and signatures — but existing text can’t be rewritten in place.'
 			},
 			{
 				q: 'Can I use my own fonts?',

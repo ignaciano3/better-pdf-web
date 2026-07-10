@@ -45,7 +45,7 @@ Each entry:
 - `operation` — value for the editor deep link.
 - `cardBlurb` — one-liner for cross-link cards.
 
-**Dynamic route.** `src/routes/[tool]/+page.server.ts` looks the slug up in
+**Dynamic route.** `src/routes/[tool]/+page.ts` looks the slug up in
 the registry and throws 404 on miss. SvelteKit matches static routes
 (`/pricing`, `/login`, …) before the `[tool]` param, so no shadowing.
 The route is **SSR, not prerendered**: the root layout's server `load`
