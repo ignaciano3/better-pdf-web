@@ -22,7 +22,7 @@ import { PdfDocStore } from '$lib/pdf/pdf-doc-store';
 import { HistoryTimeline } from './editor-history.svelte';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { exportPdf } from './export.remote';
-import { extractFields } from './extractFields.remote';
+import { extractFieldsFromBytes } from './extract-fields-client';
 import {
 	DEFAULT_PAGE,
 	SCALE,
@@ -1230,11 +1230,12 @@ export class EditorState {
 			}));
 			this.sources = [exportCopy];
 			this.selectedId = null;
-			// Detect AcroForm fields (D1, server-side). Failures are swallowed: the
-			// editor still opens for stamping with no fields surfaced.
+			// Detect AcroForm fields (client-side WASM; bytes never leave the browser).
+			// Failures are swallowed: the editor still opens for stamping with no
+			// fields surfaced.
 			let detected: FieldElement[] = [];
 			try {
-				const res = await extractFields({ bytes: exportCopy.slice() });
+				const res = await extractFieldsFromBytes(exportCopy.slice());
 				detected = res.fields as FieldElement[];
 				this.sourceFieldNames = [res.allNames ?? []];
 			} catch {
@@ -1321,7 +1322,7 @@ export class EditorState {
 			this.pageOps = [...base, ...appended];
 			this.selectedId = null;
 			try {
-				const res = await extractFields({ bytes: exportCopy.slice() });
+				const res = await extractFieldsFromBytes(exportCopy.slice());
 				this.sourceFieldNames = [...this.sourceFieldNames];
 				this.sourceFieldNames[docIndex] = res.allNames ?? [];
 			} catch {

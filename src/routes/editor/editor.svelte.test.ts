@@ -4,7 +4,9 @@ import { flushSync } from 'svelte';
 // EditorState imports the export command, which pulls the $app/server + db/auth
 // graph. The model layer never calls it in these tests, so mock it out.
 vi.mock('./export.remote', () => ({ exportPdf: vi.fn() }));
-vi.mock('./extractFields.remote', () => ({ extractFields: vi.fn() }));
+vi.mock('./extract-fields-client', () => ({
+	extractFieldsFromBytes: vi.fn(async () => ({ fields: [], pageHeights: [], allNames: [] }))
+}));
 vi.mock('$lib/pdf/pdf-doc-store', () => {
 	const getDoc = vi.fn(async () => ({ destroy: vi.fn() }));
 	const destroyAll = vi.fn(async () => {});
