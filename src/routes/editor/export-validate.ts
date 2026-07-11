@@ -9,8 +9,9 @@ import {
 } from '$lib/pdf/types';
 
 // Server-side hard limits. These cap the attack surface of the WASM/PDF
-// parsers for the export endpoint. Kept in a non-remote module so they can be
-// unit-tested directly (a `.remote.ts` file may only export remote functions).
+// parsers for the client build path (and any server caller). Kept in a
+// non-remote module so they can be unit-tested directly (a `.remote.ts` file
+// may only export remote functions).
 const MAX_SOURCE_PDF_BYTES = 25 * 1024 * 1024; // 25 MB
 const MAX_ELEMENTS = 5_000;
 const MAX_TEXT_LEN = 20_000;
@@ -293,22 +294,14 @@ export interface ExportInput {
 }
 
 /**
- * Reject malformed or oversized payloads before they reach the PDF parsers.
- * Throws a SvelteKit `error()` (413/422) on violation; returns the validated
- * `EditState` and fingerprint otherwise.
+ * Validate the edit state (elements, sources, page ops, metadata, fonts,
+ * watermark, outline) before it reaches the PDF renderers. Throws a SvelteKit
+ * `error()` (413/422) on violation. Runs client-side now that build is local;
+ * the caps still bound the WASM parser's input surface.
  */
-export function validateExportInput(input: unknown): ExportInput {
-	if (typeof input !== 'object' || input === null) error(422, 'Invalid request body');
-	const body = input as Partial<ExportInput>;
-
-	const fingerprint = body.fingerprint;
-	if (typeof fingerprint !== 'string' || fingerprint.length === 0) {
-		error(422, 'Invalid fingerprint');
-	}
-	if (fingerprint.length > MAX_FINGERPRINT_LEN) error(422, 'Fingerprint too large');
-
-	if (typeof body.state !== 'object' || body.state === null) error(422, 'Invalid request body');
-	const state = body.state as Partial<EditState>;
+export function validateExportState(stateInput: unknown): void {
+	if (typeof stateInput !== 'object' || stateInput === null) error(422, 'Invalid request body');
+	const state = stateInput as Partial<EditState>;
 
 	const size = state.pageSize;
 	if (
@@ -410,6 +403,22 @@ export function validateExportInput(input: unknown): ExportInput {
 	}
 
 	if (state.watermark !== undefined) validateWatermark(state.watermark);
+}
 
-	return { state: state as EditState, fingerprint };
+/**
+ * Wire-shape validator retained for the fingerprint-bearing payloads: validates
+ * the fingerprint, then delegates to {@link validateExportState}.
+ */
+export function validateExportInput(input: unknown): ExportInput {
+	if (typeof input !== 'object' || input === null) error(422, 'Invalid request body');
+	const body = input as Partial<ExportInput>;
+
+	const fingerprint = body.fingerprint;
+	if (typeof fingerprint !== 'string' || fingerprint.length === 0) {
+		error(422, 'Invalid fingerprint');
+	}
+	if (fingerprint.length > MAX_FINGERPRINT_LEN) error(422, 'Fingerprint too large');
+
+	validateExportState(body.state);
+	return { state: body.state as EditState, fingerprint };
 }
