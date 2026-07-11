@@ -3,6 +3,10 @@ import { render, screen, fireEvent } from '@testing-library/svelte';
 
 vi.mock('./export.remote', () => ({ exportPdf: vi.fn() }));
 vi.mock('./extractFields.remote', () => ({ extractFields: vi.fn() }));
+vi.mock('./gate.remote', () => ({
+	checkExportAllowance: vi.fn(async () => ({ ok: true })),
+	reportExportError: vi.fn(async () => {})
+}));
 vi.mock('$lib/pdf/pdf-doc-store', () => {
 	class MockPdfDocStore {
 		get = vi.fn(async () => ({ destroy: vi.fn() }));

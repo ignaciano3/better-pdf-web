@@ -4,6 +4,10 @@ import { flushSync } from 'svelte';
 
 vi.mock('./export.remote', () => ({ exportPdf: vi.fn() }));
 vi.mock('./extractFields.remote', () => ({ extractFields: vi.fn() }));
+vi.mock('./gate.remote', () => ({
+	checkExportAllowance: vi.fn(async () => ({ ok: true })),
+	reportExportError: vi.fn(async () => {})
+}));
 
 // Capture every viewport scale the component requests.
 const requestedScales: number[] = [];

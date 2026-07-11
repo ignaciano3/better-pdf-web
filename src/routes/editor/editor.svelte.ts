@@ -21,7 +21,8 @@ import { renderSourcePdf, type RenderedPage, PdfRenderError } from '$lib/pdf/ren
 import { PdfDocStore } from '$lib/pdf/pdf-doc-store';
 import { HistoryTimeline } from './editor-history.svelte';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { exportPdf } from './export.remote';
+import { checkExportAllowance, reportExportError } from './gate.remote';
+import { validateExportState } from './export-validate';
 import { extractFieldsFromBytes } from './extract-fields-client';
 import {
 	DEFAULT_PAGE,
@@ -1555,9 +1556,31 @@ export class EditorState {
 					? { watermark: $state.snapshot(this.watermark) as Watermark }
 					: {})
 			};
-			const bytes = await exportPdf({ state, fingerprint: getFingerprint() });
-			downloadPdf(bytes);
+			validateExportState(state);
+			await checkExportAllowance({ fingerprint: getFingerprint() });
+
+			const { buildPdf, PdfBuildError } = await import('$lib/pdf/build');
+			try {
+				const bytes = await buildPdf(state);
+				downloadPdf(bytes);
+			} catch (e) {
+				this.errorMessage = exportErrorMessage(e);
+				if (!(e instanceof PdfBuildError)) {
+					// Genuine bug (not bad input): report metadata only, never bytes.
+					const err = e instanceof Error ? e : undefined;
+					void reportExportError({
+						fingerprint: getFingerprint(),
+						name: err?.name ?? 'Error',
+						message: err?.message ?? String(e),
+						stack: err?.stack,
+						pageCount: this.pages.length,
+						fieldCount: this.elements.filter((el) => el.type === 'field').length,
+						stamping: this.sources.length > 0
+					});
+				}
+			}
 		} catch (e) {
+			// Gate (429) or validation failure — before any local build ran.
 			const upsell = parseUpsell(e);
 			if (upsell) {
 				this.upsell = upsell;

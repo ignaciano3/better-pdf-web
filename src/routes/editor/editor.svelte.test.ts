@@ -1,9 +1,15 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { flushSync } from 'svelte';
 
-// EditorState imports the export command, which pulls the $app/server + db/auth
-// graph. The model layer never calls it in these tests, so mock it out.
-vi.mock('./export.remote', () => ({ exportPdf: vi.fn() }));
+// EditorState imports the export gate command, which pulls the $app/server +
+// db/auth graph. The model layer never calls it in these tests, so mock it out.
+vi.mock('./gate.remote', () => ({
+	checkExportAllowance: vi.fn(async () => ({ ok: true })),
+	reportExportError: vi.fn(async () => {})
+}));
+class FakePdfBuildError extends Error {}
+const buildPdf = vi.fn(async () => new Uint8Array([37, 80, 68, 70, 45])); // %PDF-
+vi.mock('$lib/pdf/build', () => ({ buildPdf, PdfBuildError: FakePdfBuildError }));
 vi.mock('./extract-fields-client', () => ({
 	extractFieldsFromBytes: vi.fn(async () => ({ fields: [], pageHeights: [], allNames: [] }))
 }));
@@ -24,14 +30,14 @@ vi.mock('$lib/pdf/pdf-doc-store', () => {
 });
 
 import { EditorState } from './editor.svelte';
-import { exportPdf } from './export.remote';
+import { checkExportAllowance, reportExportError } from './gate.remote';
 import { SELECT_TOOL } from './constants';
 import type { EditState } from '$lib/pdf/types';
 
-/** `exportPdf` is mocked with a plain `vi.fn()`, which types its calls as
- * `unknown[]`; cast back to the real command's input shape for assertions. */
-function lastExportArg(): { state: EditState } | undefined {
-	return vi.mocked(exportPdf).mock.calls.at(-1)?.[0] as { state: EditState } | undefined;
+/** `buildPdf` is mocked with a plain `vi.fn()`, which types its calls as
+ * `unknown[]`; cast back to the real `EditState` input for assertions. */
+function lastBuildArg(): EditState | undefined {
+	return (buildPdf.mock.calls.at(-1) as unknown[] | undefined)?.[0] as EditState | undefined;
 }
 
 function fakePage(): HTMLElement {
@@ -518,8 +524,8 @@ describe('EditorState duplicatePage', () => {
 });
 
 describe('EditorState export error reporting (#4)', () => {
-	it('surfaces the server error detail and status', async () => {
-		vi.mocked(exportPdf).mockRejectedValueOnce({
+	it('surfaces the gate error detail and status', async () => {
+		vi.mocked(checkExportAllowance).mockRejectedValueOnce({
 			status: 422,
 			body: { message: 'This PDF is encrypted.' }
 		});
@@ -530,14 +536,17 @@ describe('EditorState export error reporting (#4)', () => {
 	});
 
 	it('falls back to a generic message when no detail is present', async () => {
-		vi.mocked(exportPdf).mockRejectedValueOnce({});
+		vi.mocked(checkExportAllowance).mockRejectedValueOnce({});
 		const e = new EditorState();
 		await e.export();
 		expect(e.errorMessage).toBe('Export failed. Please try again.');
 	});
 
 	it('routes a 429 to the upsell modal, not the error banner', async () => {
-		vi.mocked(exportPdf).mockRejectedValueOnce({ status: 429, body: { message: 'nope' } });
+		vi.mocked(checkExportAllowance).mockRejectedValueOnce({
+			status: 429,
+			body: { message: 'nope' }
+		});
 		const e = new EditorState();
 		await e.export();
 		expect(e.errorMessage).toBeNull();
@@ -545,21 +554,72 @@ describe('EditorState export error reporting (#4)', () => {
 	});
 });
 
+describe('EditorState.export (client build)', () => {
+	beforeEach(() => {
+		buildPdf.mockClear();
+		vi.mocked(checkExportAllowance).mockClear();
+		vi.mocked(reportExportError).mockClear();
+		vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+		globalThis.URL.createObjectURL = vi.fn(() => 'blob:x');
+		globalThis.URL.revokeObjectURL = vi.fn();
+	});
+
+	it('gates, builds locally, and downloads when allowed', async () => {
+		const e = new EditorState();
+		await e.export();
+		expect(checkExportAllowance).toHaveBeenCalledTimes(1);
+		expect(buildPdf).toHaveBeenCalledTimes(1);
+		expect(e.upsell).toBeNull();
+		expect(e.errorMessage).toBeNull();
+	});
+
+	it('shows the upsell and does NOT build when the gate returns 429', async () => {
+		vi.mocked(checkExportAllowance).mockRejectedValueOnce({
+			status: 429,
+			body: { message: JSON.stringify({ reason: 'rate_limited', limit: 2 }) }
+		});
+		const e = new EditorState();
+		await e.export();
+		expect(e.upsell).toEqual({ limit: 2 });
+		expect(buildPdf).not.toHaveBeenCalled();
+	});
+
+	it('surfaces a PdfBuildError locally and does NOT report it', async () => {
+		buildPdf.mockRejectedValueOnce(new FakePdfBuildError('encrypted'));
+		const e = new EditorState();
+		await e.export();
+		expect(e.errorMessage).toContain('encrypted');
+		expect(reportExportError).not.toHaveBeenCalled();
+	});
+
+	it('reports an unexpected build failure as metadata', async () => {
+		buildPdf.mockRejectedValueOnce(new TypeError('undefined is not a function'));
+		const e = new EditorState();
+		await e.export();
+		expect(e.errorMessage).toBeTruthy();
+		expect(reportExportError).toHaveBeenCalledTimes(1);
+		const arg = (vi.mocked(reportExportError).mock.calls[0] as unknown[])[0] as {
+			name: string;
+		};
+		expect(arg.name).toBe('TypeError');
+	});
+});
+
 describe('EditorState optimizeSize', () => {
 	it('defaults optimizeSize to false and omits objectStreams from export state', async () => {
 		const e = new EditorState();
 		await e.export();
-		const arg = lastExportArg();
+		const arg = lastBuildArg();
 		expect(e.optimizeSize).toBe(false);
-		expect(arg?.state.objectStreams).toBeUndefined();
+		expect(arg?.objectStreams).toBeUndefined();
 	});
 
 	it('sends objectStreams: true when optimizeSize is enabled', async () => {
 		const e = new EditorState();
 		e.optimizeSize = true;
 		await e.export();
-		const arg = lastExportArg();
-		expect(arg?.state.objectStreams).toBe(true);
+		const arg = lastBuildArg();
+		expect(arg?.objectStreams).toBe(true);
 	});
 
 	it('omits objectStreams when flatten is also enabled (no-op combo)', async () => {
@@ -567,9 +627,9 @@ describe('EditorState optimizeSize', () => {
 		e.optimizeSize = true;
 		e.flatten = true;
 		await e.export();
-		const arg = lastExportArg();
-		expect(arg?.state.objectStreams).toBeUndefined();
-		expect(arg?.state.flatten).toBe(true);
+		const arg = lastBuildArg();
+		expect(arg?.objectStreams).toBeUndefined();
+		expect(arg?.flatten).toBe(true);
 	});
 });
 
