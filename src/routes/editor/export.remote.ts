@@ -7,7 +7,7 @@ import { usageEvent } from '$lib/server/db/schema.app';
 import { resolveIdentity } from '$lib/server/identity';
 import { resolvePlan } from '$lib/server/plan';
 import { decide, windowStart, WINDOW_MS, type Tier } from '$lib/server/rate-limit';
-import { logExportError } from './export-error-log';
+import { recordExportError } from './export-error-log';
 import { validateExportInput } from './export-validate';
 
 const EXPORT_ACTION = 'export';
@@ -90,12 +90,33 @@ export const exportPdf = command('unchecked', async (input: unknown): Promise<Ui
 	} catch (e) {
 		if (e instanceof PdfBuildError) {
 			// 422: the input PDF was unusable (corrupt/encrypted/unsupported).
-			// Expected bad input, not a bug — `logExportError` skips it too.
+			// Expected bad input, not a bug — never recorded as an export error.
 			error(422, e.message);
 		}
 		// Unexpected failure (becomes a 500). Record it for diagnosis before
 		// re-throwing; best-effort, so a logging failure never masks the error.
-		await logExportError(e, tier, identity);
+		// This legacy path is superseded by the client-classified
+		// `reportExportError` command once the editor moves to local building
+		// (Task 4); doc-shape counts are approximated from `state` here.
+		const err = e instanceof Error ? e : undefined;
+		const fieldCount = Array.isArray(state.elements)
+			? state.elements.filter((el) => el.type === 'field').length
+			: 0;
+		const pageCount = Array.isArray(state.pageOps) ? state.pageOps.length : 0;
+		const stamping =
+			state.sourcePdf !== undefined || (Array.isArray(state.sources) && state.sources.length > 0);
+		await recordExportError(
+			{
+				name: err?.name ?? 'Error',
+				message: err?.message ?? String(e),
+				...(err?.stack ? { stack: err.stack } : {}),
+				pageCount,
+				fieldCount,
+				stamping
+			},
+			tier,
+			identity
+		);
 		throw e;
 	}
 });
