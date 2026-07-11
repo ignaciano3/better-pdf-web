@@ -9,7 +9,12 @@ vi.mock('./gate.remote', () => ({
 }));
 class FakePdfBuildError extends Error {}
 const buildPdf = vi.fn(async () => new Uint8Array([37, 80, 68, 70, 45])); // %PDF-
-vi.mock('$lib/pdf/build', () => ({ buildPdf, PdfBuildError: FakePdfBuildError }));
+const initializeWasm = vi.fn(async () => {});
+vi.mock('$lib/pdf/build', () => ({
+	buildPdf,
+	PdfBuildError: FakePdfBuildError,
+	initializeWasm
+}));
 vi.mock('./extract-fields-client', () => ({
 	extractFieldsFromBytes: vi.fn(async () => ({ fields: [], pageHeights: [], allNames: [] }))
 }));
@@ -702,5 +707,19 @@ describe('EditorState pdf-doc-store wiring', () => {
 		destroyAll.mockClear();
 		editor.clearSource();
 		expect(destroyAll).toHaveBeenCalled();
+	});
+});
+
+describe('EditorState.warmExportEngine', () => {
+	it('warmExportEngine initializes the WASM once', async () => {
+		initializeWasm.mockClear();
+		const e = new EditorState();
+		e.warmExportEngine();
+		e.warmExportEngine();
+		// Let the dynamic import resolve and its `.then((m) => m.initializeWasm())`
+		// callback run before asserting.
+		await import('$lib/pdf/build');
+		await Promise.resolve();
+		expect(vi.mocked(initializeWasm)).toHaveBeenCalledTimes(1);
 	});
 });

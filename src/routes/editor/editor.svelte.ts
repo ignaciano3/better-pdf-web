@@ -1596,6 +1596,22 @@ export class EditorState {
 		this.upsell = null;
 	}
 
+	/** Guards {@link warmExportEngine} so only its first call does work. */
+	#warmed = false;
+
+	/** Preload the export WASM on idle so the first export is instant. Safe to
+	 *  call repeatedly; only the first call does work. */
+	warmExportEngine(): void {
+		if (this.#warmed) return;
+		this.#warmed = true;
+		void import('$lib/pdf/build')
+			.then((m) => m.initializeWasm())
+			.catch(() => {
+				// Warming is best-effort; export re-imports and retries on demand.
+				this.#warmed = false;
+			});
+	}
+
 	/**
 	 * Snapshot {@link metadata} keeping only non-empty fields, or null when every
 	 * field is blank (so the export omits the metadata block entirely).

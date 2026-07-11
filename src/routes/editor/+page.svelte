@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { page } from '$app/state';
 	import SignaturePad from '$lib/components/SignaturePad.svelte';
 	import { EditorState } from './editor.svelte';
@@ -19,6 +19,17 @@
 	const editor = new EditorState();
 	// Free pdf.js worker memory (cached source documents) when leaving the editor.
 	onDestroy(() => editor.dispose());
+	// Warm the export WASM (~2.1 MB) once the browser is idle so the first
+	// export doesn't stall on fetching + instantiating it. onMount only runs
+	// client-side, so `window` is always available here.
+	onMount(() => {
+		const warm = () => editor.warmExportEngine();
+		if ('requestIdleCallback' in window) {
+			(window as Window & typeof globalThis).requestIdleCallback(warm);
+		} else {
+			setTimeout(warm, 1500);
+		}
+	});
 
 	let showSignaturePad = $state(false);
 	const signedIn = $derived(Boolean(page.data['user']));
