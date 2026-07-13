@@ -39,7 +39,7 @@
 
 <Seo
 	title="Pricing — Better PDF Web"
-	description="Free PDF editing in your browser with no account. Go Pro for $6/mo ($48/year) for unlimited exports and priority processing, or grab a $3 day pass."
+	description="Free PDF editing in your browser with no account. Go Pro for $6/mo ($48/year) for unlimited exports, or grab a $3 day pass."
 />
 
 <main class="mx-auto max-w-5xl px-6 py-16">
@@ -104,7 +104,6 @@
 			<ul class="mt-4 flex-1 space-y-2 text-sm text-gray-600">
 				<li>✓ Everything in Free</li>
 				<li>✓ Unlimited exports</li>
-				<li>✓ Priority processing</li>
 				<li>✓ Heavy ops (OCR / compress) as they ship</li>
 			</ul>
 			{#if data.plan === 'pro' || data.plan === 'root'}

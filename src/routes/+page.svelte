@@ -63,7 +63,7 @@
 		},
 		{
 			q: 'What does it cost?',
-			a: 'The editor is free. Pro is $6/mo (or $48/year — that’s $4/mo) for unlimited exports and priority processing. A $3 day pass is coming soon.'
+			a: 'The editor is free. Pro is $6/mo (or $48/year — that’s $4/mo) for unlimited exports. A $3 day pass is coming soon.'
 		},
 		{
 			q: 'What can I edit?',
