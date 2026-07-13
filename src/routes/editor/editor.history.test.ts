@@ -2,8 +2,6 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 
 // EditorState pulls the export/extract remote graph; the history layer never
 // calls them, so mock them out (mirrors editor.svelte.test.ts).
-vi.mock('./export.remote', () => ({ exportPdf: vi.fn() }));
-vi.mock('./extractFields.remote', () => ({ extractFields: vi.fn() }));
 vi.mock('./gate.remote', () => ({
 	checkExportAllowance: vi.fn(async () => ({ ok: true })),
 	reportExportError: vi.fn(async () => {})
