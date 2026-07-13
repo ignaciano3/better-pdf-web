@@ -12,7 +12,7 @@ Secondary: developers/evaluators who land via the `better-pdf` library and use t
 
 ## Product Purpose
 
-A client-heavy, server-gated visual PDF editor (Sejda-like) that lets anyone edit and create PDFs directly in the browser. Interactive editing runs entirely client-side (free, no server cost); only finalize/export and heavy operations route through a server gate (identity → plan → rate-check → finalize). It also dogfoods the `better-pdf` library.
+A fully client-side visual PDF editor (Sejda-like) that lets anyone edit and create PDFs directly in the browser. All processing — interactive editing, building, and export — runs entirely in the browser, so document bytes never leave the user's device. Export is guarded by a metadata-only server gate (identity → plan → rate-check) that receives an anonymous fingerprint to enforce free-tier limits — never the document's contents. It also dogfoods the `better-pdf` library.
 
 Success looks like: a user completes their document task and exports without friction, hits no spam/upsell walls, and trusts the result enough to send it. Monetization is a freemium funnel (anon → registered free → pro) where the free tier is genuinely useful and never watermarks output — the upgrade is earned by volume and heavy features, not by crippling the base experience.
 

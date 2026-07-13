@@ -59,7 +59,7 @@
 		},
 		{
 			q: 'Are my files private?',
-			a: 'Yes. Files are never stored on our servers — they’re only sent to build your export, then discarded. We never add watermarks.'
+			a: 'Yes. Your PDFs are opened, edited and exported entirely in your browser — they never leave your device. The only thing our server receives is an anonymous usage count (to enforce free-tier limits) and, if an export fails, an anonymous error report — never your document’s contents. We never add watermarks.'
 		},
 		{
 			q: 'What does it cost?',
@@ -146,7 +146,7 @@
 				</div>
 
 				<p class="mt-4.5 font-mono text-xs text-slate-400">
-					No sign-up required · no watermarks · files are never stored on our servers
+					No sign-up required · no watermarks · your files never leave your browser
 				</p>
 			</div>
 
@@ -346,9 +346,11 @@
 					class="absolute top-0 left-1 h-2 w-2 rounded-t-md border-[1.6px] border-b-0 border-blue-600"
 				></span>
 			</span>
-			<span class="text-[15px] text-slate-700">
-				<span class="font-semibold text-slate-900">Private by design</span> — your files are never stored
-				on our servers, only used to generate your PDF, and we never add watermarks.
+			<span class="max-w-3xl text-[15px] text-slate-700">
+				<span class="font-semibold text-slate-900">Your files never leave your device.</span> PDFs are
+				opened, edited and exported entirely in your browser. The only data we receive is an anonymous
+				usage count — to enforce free-tier limits — and, if an export fails, an anonymous error report.
+				Never your document’s contents, and never a watermark.
 			</span>
 		</div>
 	</section>
@@ -363,8 +365,8 @@
 					Everything you need to work with PDFs
 				</h2>
 				<p class="mt-4 text-base leading-relaxed text-slate-600">
-					A full editing toolkit that runs in your browser. Your files are only sent to build the
-					export — never stored on our servers.
+					A full editing toolkit that runs entirely in your browser. Your files never leave your
+					device — not even to export.
 				</p>
 			</div>
 
@@ -517,8 +519,8 @@
 						<span class="font-display text-[15px] font-bold">Better PDF Web</span>
 					</div>
 					<p class="mt-3.5 max-w-xs text-sm leading-relaxed text-slate-600">
-						Edit &amp; create PDFs in your browser — privately. Your files are never stored on our
-						servers, only used to generate your PDF.
+						Edit &amp; create PDFs in your browser — privately. Everything runs client-side, so your
+						files never leave your device.
 					</p>
 				</div>
 				<nav class="flex flex-wrap gap-6" aria-label="Site">
