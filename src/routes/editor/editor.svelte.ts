@@ -1568,6 +1568,8 @@ export class EditorState {
 				if (!(e instanceof PdfBuildError)) {
 					// Genuine bug (not bad input): report metadata only, never bytes.
 					const err = e instanceof Error ? e : undefined;
+					// Fire-and-forget: telemetry must never surface a network error to
+					// the user, so swallow a failed report POST (offline, 5xx, …).
 					void reportExportError({
 						fingerprint: getFingerprint(),
 						name: err?.name ?? 'Error',
@@ -1576,7 +1578,7 @@ export class EditorState {
 						pageCount: this.pages.length,
 						fieldCount: this.elements.filter((el) => el.type === 'field').length,
 						stamping: this.sources.length > 0
-					});
+					}).catch(() => {});
 				}
 			}
 		} catch (e) {
