@@ -44,13 +44,15 @@ describe('TOOLS registry', () => {
 		}
 	});
 
-	it('never claims files do not leave the browser', () => {
-		// Uploads and exports DO send bytes to the server; this claim is banned.
+	it('states the client-side privacy promise and bans the old server-processing euphemisms', () => {
+		// Processing is fully client-side: document bytes never leave the browser.
+		// The copy must make that strong claim and must NOT imply bytes reach the
+		// server (the pre-client-side "processed in memory / never stored" framing).
 		const all = JSON.stringify(TOOLS).toLowerCase();
-		expect(all).not.toContain('never leave your browser');
-		expect(all).not.toContain('never leaves your browser');
-		expect(all).not.toContain('never sent to a server');
-		expect(all).not.toContain('never uploaded');
+		expect(all).toContain('never leave your device');
+		expect(all).not.toContain('processed in memory');
+		expect(all).not.toContain('on our server'); // euphemism implying bytes are sent
+		expect(all).not.toContain('sent to the server');
 	});
 
 	it('getTool finds known slugs and rejects unknown ones', () => {

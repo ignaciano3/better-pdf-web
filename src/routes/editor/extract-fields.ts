@@ -1,6 +1,18 @@
 import type { FieldElement, FieldKind, StandardFontName } from '$lib/pdf/types';
 import { rectToTopLeft, type PdfRect } from '$lib/pdf/coords';
 
+/** Result of reading the AcroForm fields out of an uploaded PDF. */
+export interface ExtractFieldsResult {
+	/** Detected fields as editor elements (top-left coords). */
+	fields: FieldElement[];
+	/** Per-page heights in PDF points, indexed by page. */
+	pageHeights: number[];
+	/** Every raw AcroForm field name in the document, including fields the
+	 *  mapper skips (hidden widgets, pushbuttons, unknown types). Drives
+	 *  editor-side collision validation for the incremental export. */
+	allNames: string[];
+}
+
 /**
  * The subset of better-pdf's `FieldInfo` the mapper relies on. Declared locally
  * (rather than imported) so this pure module stays unit-testable without pulling

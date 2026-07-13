@@ -1,8 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { flushSync } from 'svelte';
 
-vi.mock('./export.remote', () => ({ exportPdf: vi.fn() }));
-vi.mock('./extractFields.remote', () => ({ extractFields: vi.fn() }));
+vi.mock('./gate.remote', () => ({
+	checkExportAllowance: vi.fn(async () => ({ ok: true })),
+	reportExportError: vi.fn(async () => {})
+}));
 // Render the source PDF to a couple of fake pages without touching pdf.js.
 vi.mock('$lib/pdf/render', async (orig) => {
 	const actual = (await orig()) as object;

@@ -3,8 +3,10 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { flushSync } from 'svelte';
 
-vi.mock('./export.remote', () => ({ exportPdf: vi.fn() }));
-vi.mock('./extractFields.remote', () => ({ extractFields: vi.fn() }));
+vi.mock('./gate.remote', () => ({
+	checkExportAllowance: vi.fn(async () => ({ ok: true })),
+	reportExportError: vi.fn(async () => {})
+}));
 
 import ZoomControls from './ZoomControls.svelte';
 import { EditorState } from './editor.svelte';

@@ -51,3 +51,24 @@ test('upload-less core flow: edit a blank page and export a PDF', async ({ page 
 	const bytes = await fs.readFile(path);
 	expect(bytes.subarray(0, 5).toString('latin1')).toBe('%PDF-');
 });
+
+test('privacy: no document bytes are sent to the server on export', async ({ page }) => {
+	await gotoEditorWithFingerprint(page, `e2e-privacy-${randomUUID()}`);
+	await addTextElement(page);
+
+	const remotePosts: number[] = [];
+	page.on('request', (req) => {
+		if (req.method() === 'POST' && req.url().includes('/_app/remote/')) {
+			remotePosts.push((req.postData() ?? '').length);
+		}
+	});
+
+	const downloadPromise = page.waitForEvent('download');
+	await page.getByRole('button', { name: 'Export PDF' }).click();
+	await downloadPromise;
+
+	// The allowance ping carries only a fingerprint. No request may be large
+	// enough to contain a PDF (fingerprint payload is well under 4 KB).
+	expect(remotePosts.length).toBeGreaterThan(0);
+	for (const size of remotePosts) expect(size).toBeLessThan(4096);
+});

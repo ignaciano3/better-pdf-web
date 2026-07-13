@@ -4,8 +4,11 @@
  * footer. Adding a tool page = adding one entry here.
  *
  * Copy rules (see docs/superpowers/specs/2026-07-09-seo-tool-landing-pages-design.md):
- * never claim files don't leave the browser — uploads/exports DO send bytes
- * to the server. The honest claim is "processed in memory, never stored".
+ * processing is now fully client-side — editing, building and export all run
+ * in the browser, so document bytes never leave the device. The honest, strong
+ * claim is "your files never leave your device". The server receives only an
+ * anonymous usage count (free-tier limits) and, on export failure, an
+ * anonymous error report — never document contents.
  */
 
 export interface ToolStep {
@@ -39,7 +42,7 @@ export interface ToolPage {
 
 const PRIVACY_FAQ: ToolFaq = {
 	q: 'Are my files stored on your servers?',
-	a: 'No. Editing happens in your browser, and when you export, your file is only processed in memory to build the PDF, then discarded. We never store your documents and never add watermarks.'
+	a: 'No — your files never leave your device. Editing, building and export all run in your browser, so your document is never uploaded anywhere. The only data our server receives is an anonymous usage count (to enforce free-tier limits) and, if an export fails, an anonymous error report — never your document’s contents. We never add watermarks.'
 };
 
 const COST_FAQ: ToolFaq = {

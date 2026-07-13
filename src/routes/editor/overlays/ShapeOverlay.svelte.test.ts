@@ -1,8 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 
-vi.mock('../export.remote', () => ({ exportPdf: vi.fn() }));
-vi.mock('../extractFields.remote', () => ({ extractFields: vi.fn() }));
+vi.mock('../gate.remote', () => ({
+	checkExportAllowance: vi.fn(async () => ({ ok: true })),
+	reportExportError: vi.fn(async () => {})
+}));
 
 import ShapeOverlay from './ShapeOverlay.svelte';
 import { EditorState } from '../editor.svelte';

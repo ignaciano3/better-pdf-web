@@ -2,7 +2,7 @@
  * Pure rule for which `usage_event` rows count toward an actor's rate-limit
  * window. Kept I/O-free and unit-testable, like `rate-limit.ts`. This is the
  * SOURCE OF TRUTH for the matching rule; `countInWindow` in
- * `routes/editor/export.remote.ts` builds the equivalent SQL `where` clause and
+ * `routes/editor/gate.remote.ts` builds the equivalent SQL `where` clause and
  * must stay in sync with it.
  */
 

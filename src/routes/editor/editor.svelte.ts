@@ -21,8 +21,9 @@ import { renderSourcePdf, type RenderedPage, PdfRenderError } from '$lib/pdf/ren
 import { PdfDocStore } from '$lib/pdf/pdf-doc-store';
 import { HistoryTimeline } from './editor-history.svelte';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { exportPdf } from './export.remote';
-import { extractFields } from './extractFields.remote';
+import { checkExportAllowance, reportExportError } from './gate.remote';
+import { validateExportState } from './export-validate';
+import { extractFieldsFromBytes } from './extract-fields-client';
 import {
 	DEFAULT_PAGE,
 	SCALE,
@@ -1230,11 +1231,12 @@ export class EditorState {
 			}));
 			this.sources = [exportCopy];
 			this.selectedId = null;
-			// Detect AcroForm fields (D1, server-side). Failures are swallowed: the
-			// editor still opens for stamping with no fields surfaced.
+			// Detect AcroForm fields (client-side WASM; bytes never leave the browser).
+			// Failures are swallowed: the editor still opens for stamping with no
+			// fields surfaced.
 			let detected: FieldElement[] = [];
 			try {
-				const res = await extractFields({ bytes: exportCopy.slice() });
+				const res = await extractFieldsFromBytes(exportCopy.slice());
 				detected = res.fields as FieldElement[];
 				this.sourceFieldNames = [res.allNames ?? []];
 			} catch {
@@ -1321,7 +1323,7 @@ export class EditorState {
 			this.pageOps = [...base, ...appended];
 			this.selectedId = null;
 			try {
-				const res = await extractFields({ bytes: exportCopy.slice() });
+				const res = await extractFieldsFromBytes(exportCopy.slice());
 				this.sourceFieldNames = [...this.sourceFieldNames];
 				this.sourceFieldNames[docIndex] = res.allNames ?? [];
 			} catch {
@@ -1554,9 +1556,33 @@ export class EditorState {
 					? { watermark: $state.snapshot(this.watermark) as Watermark }
 					: {})
 			};
-			const bytes = await exportPdf({ state, fingerprint: getFingerprint() });
-			downloadPdf(bytes);
+			validateExportState(state);
+			await checkExportAllowance({ fingerprint: getFingerprint() });
+
+			const { buildPdf, PdfBuildError } = await import('$lib/pdf/build');
+			try {
+				const bytes = await buildPdf(state);
+				downloadPdf(bytes);
+			} catch (e) {
+				this.errorMessage = exportErrorMessage(e);
+				if (!(e instanceof PdfBuildError)) {
+					// Genuine bug (not bad input): report metadata only, never bytes.
+					const err = e instanceof Error ? e : undefined;
+					// Fire-and-forget: telemetry must never surface a network error to
+					// the user, so swallow a failed report POST (offline, 5xx, …).
+					void reportExportError({
+						fingerprint: getFingerprint(),
+						name: err?.name ?? 'Error',
+						message: err?.message ?? String(e),
+						stack: err?.stack,
+						pageCount: this.pages.length,
+						fieldCount: this.elements.filter((el) => el.type === 'field').length,
+						stamping: this.sources.length > 0
+					}).catch(() => {});
+				}
+			}
 		} catch (e) {
+			// Gate (429) or validation failure — before any local build ran.
 			const upsell = parseUpsell(e);
 			if (upsell) {
 				this.upsell = upsell;
@@ -1570,6 +1596,22 @@ export class EditorState {
 
 	dismissUpsell() {
 		this.upsell = null;
+	}
+
+	/** Guards {@link warmExportEngine} so only its first call does work. */
+	#warmed = false;
+
+	/** Preload the export WASM on idle so the first export is instant. Safe to
+	 *  call repeatedly; only the first call does work. */
+	warmExportEngine(): void {
+		if (this.#warmed) return;
+		this.#warmed = true;
+		void import('$lib/pdf/build')
+			.then((m) => m.initializeWasm())
+			.catch(() => {
+				// Warming is best-effort; export re-imports and retries on demand.
+				this.#warmed = false;
+			});
 	}
 
 	/**

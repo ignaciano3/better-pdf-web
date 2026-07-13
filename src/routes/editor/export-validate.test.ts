@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateExportInput } from './export-validate';
+import { validateExportInput, validateExportState } from './export-validate';
 
 describe('validateExportInput', () => {
 	it('accepts a rich text element', () => {
@@ -500,5 +500,14 @@ describe('validateExportInput', () => {
 			state: { pageSize: [300, 400], elements: [], sourceFields: [sourceField()] }
 		};
 		expect(() => validateExportInput(input)).not.toThrow();
+	});
+});
+
+describe('validateExportState', () => {
+	it('accepts a minimal valid state', () => {
+		expect(() => validateExportState({ pageSize: [612, 792], elements: [] })).not.toThrow();
+	});
+	it('rejects a bad page size with a 422', () => {
+		expect(() => validateExportState({ pageSize: [0, 0], elements: [] })).toThrowError();
 	});
 });

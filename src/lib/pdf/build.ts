@@ -16,6 +16,18 @@ import { topLeftToPdfY } from './coords';
 import { planExport, type ExportPlan } from './export-plan';
 
 /**
+ * Re-exported so the editor can warm the WASM (see `EditorState.warmExportEngine`)
+ * through the SAME dynamic `import('$lib/pdf/build')` used to build — one chunk,
+ * not two separately-fetched copies of the WASM. `initializeWasm` only exists on
+ * the browser build's types (Node self-initializes on import, per the package's
+ * own docs), and this file's other imports from the bare `@ignaciano3/better-pdf`
+ * specifier resolve to that same browser build once bundled for the client — the
+ * explicit `/browser` subpath here is purely to satisfy `tsc`'s default (non-
+ * "browser"-conditioned) type resolution; it is the identical module at runtime.
+ */
+export { initializeWasm } from '@ignaciano3/better-pdf/browser';
+
+/**
  * Error thrown when a source PDF cannot be loaded or stamped. Carries a
  * human-friendly message so the export seam can surface it without leaking
  * core internals or crashing.
