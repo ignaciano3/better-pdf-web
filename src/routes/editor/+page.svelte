@@ -267,11 +267,11 @@
 							Start blank
 						</button>
 					</div>
-					<!-- Close the trust loop up front: editing is local; export builds the
-					     PDF on the server in memory and streams it back — nothing is stored. -->
+					<!-- Close the trust loop up front: editing AND export are fully local —
+					     the document never leaves this browser. -->
 					<p class="max-w-xs text-center text-xs text-slate-500">
-						Your file stays in this browser while you edit. Exporting builds the PDF on our server
-						and sends it straight back — your document isn’t stored.
+						Your file stays in this browser the whole time — editing and export both run here, so
+						your document never leaves your device.
 					</p>
 				</div>
 			</div>

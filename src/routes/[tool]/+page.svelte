@@ -55,7 +55,7 @@
 				</a>
 			</div>
 			<p class="mt-4.5 font-mono text-xs text-slate-400">
-				Free · no sign-up required · no watermarks · files are never stored
+				Free · no sign-up required · no watermarks · your files never leave your browser
 			</p>
 		</div>
 	</section>
@@ -65,9 +65,10 @@
 		<div
 			class="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-3 px-6 py-4.5 text-center"
 		>
-			<span class="text-[15px] text-slate-700">
-				<span class="font-semibold text-slate-900">Private by design</span> — editing happens in your
-				browser, and when you export, your files are processed in memory and never stored.
+			<span class="max-w-3xl text-[15px] text-slate-700">
+				<span class="font-semibold text-slate-900">Your files never leave your device.</span> Editing,
+				building and export all run in your browser — your document is never uploaded. The only data we
+				receive is an anonymous usage count and, if an export fails, an anonymous error report.
 			</span>
 		</div>
 	</section>
