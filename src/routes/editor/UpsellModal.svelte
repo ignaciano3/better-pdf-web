@@ -6,6 +6,20 @@
 
 	const info = $derived(editor.upsell);
 	const minutes = $derived(info?.window ? Math.round(info.window / 60000) : 60);
+
+	// When the gate tells us the reset instant, turn it into "in ~N minutes" plus a
+	// wall-clock time so the user knows exactly when they can export again.
+	function untilLabel(ts: number): string {
+		const ms = ts - Date.now();
+		if (ms <= 30_000) return 'in less than a minute';
+		const mins = Math.round(ms / 60000);
+		if (mins < 60) return `in about ${mins} minute${mins === 1 ? '' : 's'}`;
+		const hrs = Math.round(mins / 60);
+		return `in about ${hrs} hour${hrs === 1 ? '' : 's'}`;
+	}
+	function clockLabel(ts: number): string {
+		return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+	}
 </script>
 
 {#if info}
@@ -22,8 +36,15 @@
 		<div class="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
 			<h2 class="text-lg font-semibold text-slate-900">Export limit reached</h2>
 			<p class="mt-2 text-sm text-slate-600">
-				You've used your {info.limit ?? ''} free export{info.limit === 1 ? '' : 's'} for the last
-				{minutes} minutes. Your edits are still here — try again later, or get more now.
+				{#if info.retryAt}
+					You've used your {info.limit ?? ''} free export{info.limit === 1 ? '' : 's'} for the last
+					{minutes} minutes. Your edits are still here — you can export again {untilLabel(
+						info.retryAt
+					)} (around {clockLabel(info.retryAt)}), or get more now.
+				{:else}
+					You've used your {info.limit ?? ''} free export{info.limit === 1 ? '' : 's'} for the last
+					{minutes} minutes. Your edits are still here — try again later, or get more now.
+				{/if}
 			</p>
 			<div class="mt-5 flex flex-col gap-2">
 				{#if signedIn}

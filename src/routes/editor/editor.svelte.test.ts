@@ -442,6 +442,24 @@ describe('EditorState vector tools', () => {
 		// …and it moves that option's layout slot by delta / SCALE.
 		expect(f.radioLayout?.[0]).toEqual({ x: 8 / 0.8, y: 16 / 0.8 });
 	});
+
+	it('scrollToPage scrolls the matching page anchor into view', () => {
+		const e = new EditorState();
+		const anchor = document.createElement('div');
+		anchor.setAttribute('data-editor-page', '2');
+		const spy = vi.fn();
+		anchor.scrollIntoView = spy;
+		document.body.appendChild(anchor);
+		try {
+			e.scrollToPage(2);
+			expect(spy).toHaveBeenCalledTimes(1);
+			// Wrong index shouldn't reach this anchor.
+			e.scrollToPage(0);
+			expect(spy).toHaveBeenCalledTimes(1);
+		} finally {
+			document.body.removeChild(anchor);
+		}
+	});
 });
 
 function dragLine(e: EditorState, from: { x: number; y: number }, to: { x: number; y: number }) {
@@ -637,6 +655,17 @@ describe('EditorState.export (client build)', () => {
 		await e.export();
 		expect(e.upsell).toEqual({ limit: 2 });
 		expect(buildPdf).not.toHaveBeenCalled();
+	});
+
+	it('carries the retryAt reset time from the 429 payload into the upsell info', async () => {
+		const retryAt = 1_700_000_000_000;
+		vi.mocked(checkExportAllowance).mockRejectedValueOnce({
+			status: 429,
+			body: { message: JSON.stringify({ reason: 'rate_limited', limit: 5, retryAt }) }
+		});
+		const e = new EditorState();
+		await e.export();
+		expect(e.upsell).toEqual({ limit: 5, retryAt });
 	});
 
 	it('surfaces a PdfBuildError locally and does NOT report it', async () => {

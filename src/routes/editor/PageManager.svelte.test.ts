@@ -43,6 +43,18 @@ describe('PageManager accessibility', () => {
 	});
 });
 
+describe('PageManager navigation', () => {
+	it('clicking a page thumbnail navigates the canvas to that page', async () => {
+		const editor = new EditorState();
+		editor.insertBlankPage(0); // now two pages
+		const spy = vi.spyOn(editor, 'scrollToPage');
+		render(PageManager, { props: { editor } });
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Go to page 2' }));
+		expect(spy).toHaveBeenCalledWith(1);
+	});
+});
+
 describe('PageManager per-page resize', () => {
 	it('reflects the page size and overrides one page on change', async () => {
 		const editor = new EditorState();

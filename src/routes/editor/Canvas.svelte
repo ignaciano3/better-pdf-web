@@ -115,6 +115,7 @@
 					? 'cursor-crosshair touch-none'
 					: ''}"
 				style="width: {page.width * SCALE}px; height: {page.height * SCALE}px;"
+				data-editor-page={pageIndex}
 				onclick={(e) => onPageClick(e, pageIndex)}
 				ondblclick={onPageDblClick}
 				onpointerdown={(e) => onPagePointerDown(e, pageIndex)}

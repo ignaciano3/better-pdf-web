@@ -220,9 +220,24 @@
 				ondragover={(e) => e.preventDefault()}
 				ondrop={() => onDrop(i)}
 			>
+				<!-- Click the thumbnail to jump the main canvas to this page. It holds
+				     block-level preview content, so it's an interactive div (role=button
+				     with keyboard support) rather than a <button>, and stays distinct
+				     from the drag-reorder gesture on the row. -->
 				<div
-					class="relative flex items-center justify-center overflow-hidden bg-white shadow-sm"
+					class="relative flex cursor-pointer items-center justify-center overflow-hidden bg-white shadow-sm ring-blue-400 hover:ring-2 focus-visible:ring-2 focus-visible:outline-none"
 					style={thumbStyle(page.width, page.height)}
+					role="button"
+					tabindex="0"
+					title="Go to page {i + 1}"
+					aria-label="Go to page {i + 1}"
+					onclick={() => editor.scrollToPage(i)}
+					onkeydown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') {
+							e.preventDefault();
+							editor.scrollToPage(i);
+						}
+					}}
 				>
 					<!-- Scaled, inert mirror of the page: the source raster plus every
 					     element overlay, so thumbnails reflect edits (text, shapes…) and

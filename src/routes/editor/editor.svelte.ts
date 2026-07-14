@@ -66,6 +66,8 @@ function getFingerprint(): string {
 export interface UpsellInfo {
 	limit?: number;
 	window?: number;
+	/** Epoch ms when the actor can export again (oldest in-window event ages out). */
+	retryAt?: number;
 	upgradeUrl?: string;
 }
 
@@ -1606,6 +1608,19 @@ export class EditorState {
 		this.upsell = null;
 	}
 
+	/**
+	 * Scroll the main canvas so page `index` is in view — the left-panel page list
+	 * clicks call this to navigate. Matches the `data-editor-page` anchor Canvas
+	 * renders per page; guarded so it's a no-op without a DOM (SSR/tests).
+	 */
+	scrollToPage(index: number) {
+		if (typeof document === 'undefined') return;
+		const el = document.querySelector(`[data-editor-page="${index}"]`);
+		if (el && typeof (el as HTMLElement).scrollIntoView === 'function') {
+			el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		}
+	}
+
 	/** Guards {@link warmExportEngine} so only its first call does work. */
 	#warmed = false;
 
@@ -1722,6 +1737,7 @@ function parseUpsell(e: unknown): UpsellInfo | null {
 				return {
 					...(body.limit !== undefined ? { limit: body.limit } : {}),
 					...(body.window !== undefined ? { window: body.window } : {}),
+					...(body.retryAt !== undefined ? { retryAt: body.retryAt } : {}),
 					...(body.upgradeUrl !== undefined ? { upgradeUrl: body.upgradeUrl } : {})
 				};
 			}

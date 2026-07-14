@@ -1,6 +1,6 @@
 import { command, getRequestEvent } from '$app/server';
 import { error } from '@sveltejs/kit';
-import { and, count, eq, gte, isNull, or } from 'drizzle-orm';
+import { and, count, eq, gte, isNull, or, type SQL } from 'drizzle-orm';
 import { getDb } from '$lib/server/db';
 import { usageEvent } from '$lib/server/db/schema.app';
 import { resolveIdentity } from '$lib/server/identity';
@@ -11,22 +11,57 @@ import { recordExportError } from './export-error-log';
 const EXPORT_ACTION = 'export';
 const UPGRADE_URL = '/pricing';
 
-/** Count this actor's prior export events in the current window (SQL mirror of
+/** SQL predicate matching this actor's in-window export events (SQL mirror of
  *  `countsTowardWindow`: own userId events plus anonymous events by ipHash). */
+function windowWhere(
+	userId: string | undefined,
+	ipHash: string | undefined,
+	since: Date
+): SQL | undefined {
+	const anonMatch = and(isNull(usageEvent.userId), eq(usageEvent.ipHash, ipHash!));
+	const who = userId ? or(eq(usageEvent.userId, userId), anonMatch) : anonMatch;
+	return and(eq(usageEvent.action, EXPORT_ACTION), who, gte(usageEvent.createdAt, since));
+}
+
+/** Count this actor's prior export events in the current window. */
 async function countInWindow(
 	userId: string | undefined,
 	ipHash: string | undefined,
 	now: Date
 ): Promise<number> {
 	const db = getDb();
-	const since = windowStart(now);
-	const anonMatch = and(isNull(usageEvent.userId), eq(usageEvent.ipHash, ipHash!));
-	const who = userId ? or(eq(usageEvent.userId, userId), anonMatch) : anonMatch;
 	const rows = await db
 		.select({ value: count() })
 		.from(usageEvent)
-		.where(and(eq(usageEvent.action, EXPORT_ACTION), who, gte(usageEvent.createdAt, since)));
+		.where(windowWhere(userId, ipHash, windowStart(now)));
 	return rows[0]?.value ?? 0;
+}
+
+/**
+ * Epoch ms at which the actor can export again, given they're currently capped.
+ * The window slides, so a slot frees up once enough of the oldest in-window
+ * events age out: with `priorCount` events and cap `limit`, `priorCount-limit+1`
+ * must expire, so the reset is that many-th oldest event's time + WINDOW_MS.
+ * Returns null for an unlimited tier or when nothing is on record.
+ */
+async function nextExportAllowedAt(
+	userId: string | undefined,
+	ipHash: string | undefined,
+	now: Date,
+	limit: number,
+	priorCount: number
+): Promise<number | null> {
+	const need = priorCount - limit + 1;
+	if (!Number.isFinite(limit) || need < 1) return null;
+	const db = getDb();
+	const rows = await db
+		.select({ createdAt: usageEvent.createdAt })
+		.from(usageEvent)
+		.where(windowWhere(userId, ipHash, windowStart(now)))
+		.orderBy(usageEvent.createdAt) // oldest first
+		.limit(need);
+	const pivot = rows[rows.length - 1]?.createdAt;
+	return pivot ? pivot.getTime() + WINDOW_MS : null;
 }
 
 /**
@@ -50,12 +85,20 @@ export const checkExportAllowance = command(
 		const priorCount = await countInWindow(identity.userId, identity.ipHash, now);
 		const verdict = decide(tier, priorCount);
 		if (!verdict.allowed) {
+			const retryAt = await nextExportAllowedAt(
+				identity.userId,
+				identity.ipHash,
+				now,
+				verdict.limit,
+				priorCount
+			);
 			error(
 				429,
 				JSON.stringify({
 					reason: 'rate_limited',
 					limit: verdict.limit,
 					window: WINDOW_MS,
+					...(retryAt !== null ? { retryAt } : {}),
 					upgradeUrl: UPGRADE_URL
 				})
 			);
