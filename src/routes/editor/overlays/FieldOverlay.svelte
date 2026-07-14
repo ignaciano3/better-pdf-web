@@ -16,6 +16,22 @@
 		const n = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 255);
 		return `rgb(${n(c.r)} ${n(c.g)} ${n(c.b)})`;
 	}
+	// Map a PDF base-14 standard font to CSS so the editor preview matches export.
+	// The name encodes family + weight/style (e.g. `Times-BoldItalic`).
+	function fontCss(name: string | undefined): string {
+		if (!name) return '';
+		const family = name.startsWith('Times')
+			? 'Times, "Times New Roman", serif'
+			: name.startsWith('Courier')
+				? '"Courier New", Courier, monospace'
+				: 'Helvetica, Arial, sans-serif';
+		const bold = /Bold/.test(name);
+		const italic = /Italic|Oblique/.test(name);
+		let s = `font-family:${family};`;
+		if (bold) s += 'font-weight:bold;';
+		if (italic) s += 'font-style:italic;';
+		return s;
+	}
 	const fieldStyle = $derived.by(() => {
 		let s = '';
 		if (field.border)
@@ -26,6 +42,7 @@
 		// PDF points; scale to canvas px like the rest of the overlay geometry.
 		if (field.align) s += `text-align:${field.align};`;
 		if (field.fontSize !== undefined) s += `font-size:${field.fontSize * SCALE}px;`;
+		s += fontCss(field.font);
 		return s;
 	});
 
@@ -61,7 +78,8 @@
 		(field.fontSize !== undefined
 			? `font-size:${field.fontSize * SCALE}px;`
 			: 'font-size:0.75rem;') +
-			(field.textColor ? `color:${rgbCss(field.textColor)};` : 'color:rgb(15 23 42);')
+			(field.textColor ? `color:${rgbCss(field.textColor)};` : 'color:rgb(15 23 42);') +
+			fontCss(field.font)
 	);
 	const radioPositions = $derived(
 		(field.options ?? []).map(
