@@ -1,0 +1,8 @@
+- Clickear checkbox lo selecciona sin haber sido previamente seleccionado
+- Radio groups no se pueden seleccionar
+- Multi Select no esta guardando nada
+- Signature se ve borroso / baja calidad (Draw se ve mucho mejor)
+- Apretar page (panel izquierda) te tiene q llevar a la pagina
+- Operation Split no hace nada
+- Export Limit Reached: When can I export again?
+- Polygon, selecciona otros fields mientras escribis

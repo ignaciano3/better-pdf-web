@@ -37,7 +37,7 @@ vi.mock('$lib/pdf/pdf-doc-store', () => {
 import { EditorState } from './editor.svelte';
 import { checkExportAllowance, reportExportError } from './gate.remote';
 import { SELECT_TOOL } from './constants';
-import type { EditState } from '$lib/pdf/types';
+import type { EditState, FieldElement } from '$lib/pdf/types';
 
 /** `buildPdf` is mocked with a plain `vi.fn()`, which types its calls as
  * `unknown[]`; cast back to the real `EditState` input for assertions. */
@@ -391,6 +391,56 @@ describe('EditorState vector tools', () => {
 		expect(poly?.type === 'polygon' && poly.points[0]?.x).toBe(10 + 8 / 0.8);
 		expect(poly?.type === 'polygon' && poly.points[0]?.y).toBe(10 + 16 / 0.8);
 		window.dispatchEvent(new Event('pointerup'));
+	});
+
+	it('startRadioDrag: a plain click (no drag) selects that option value', () => {
+		const e = new EditorState();
+		const f = {
+			type: 'field' as const,
+			id: 'r',
+			field: 'radio' as const,
+			name: 'r',
+			x: 0,
+			y: 0,
+			width: 12,
+			height: 12,
+			options: ['A', 'B', 'C'],
+			value: ''
+		};
+		e.elements = [f];
+		const down = { clientX: 5, clientY: 5 } as unknown as PointerEvent;
+		e.startRadioDrag(down, f, 1);
+		// No pointermove past the threshold → treated as a click on option index 1.
+		window.dispatchEvent(new Event('pointerup'));
+		expect(f.value).toBe('B');
+	});
+
+	it('startRadioDrag: an actual drag repositions the button and leaves value unchanged', () => {
+		const e = new EditorState();
+		const f = {
+			type: 'field' as const,
+			id: 'r',
+			field: 'radio' as const,
+			name: 'r',
+			x: 0,
+			y: 0,
+			width: 12,
+			height: 12,
+			options: ['A', 'B'],
+			value: 'A'
+		} satisfies FieldElement as FieldElement;
+		e.elements = [f];
+		const down = { clientX: 0, clientY: 0 } as unknown as PointerEvent;
+		e.startRadioDrag(down, f, 0);
+		window.dispatchEvent(
+			new MouseEvent('pointermove', { clientX: 8, clientY: 16 }) as unknown as PointerEvent
+		);
+		flushSync();
+		window.dispatchEvent(new Event('pointerup'));
+		// Dragging must not change the selected value…
+		expect(f.value).toBe('A');
+		// …and it moves that option's layout slot by delta / SCALE.
+		expect(f.radioLayout?.[0]).toEqual({ x: 8 / 0.8, y: 16 / 0.8 });
 	});
 });
 

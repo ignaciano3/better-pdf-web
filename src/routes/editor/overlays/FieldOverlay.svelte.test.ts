@@ -64,4 +64,34 @@ describe('FieldOverlay live preview', () => {
 		// Exactly one option (the selected 'A') renders the star.
 		expect((container.textContent?.match(/★/g) ?? []).length).toBe(1);
 	});
+
+	it('clicking an unselected checkbox selects the field without checking it', async () => {
+		const editor = new EditorState();
+		const el = field({ field: 'checkbox', value: '' });
+		const { container } = render(FieldOverlay, { props: { el, editor } });
+		const button = container.querySelector('button') as HTMLButtonElement;
+
+		button.click();
+		// First click only selects — value stays empty.
+		expect(el.value).toBe('');
+		expect(editor.selectedId).toBe(el.id);
+
+		// A second click, now that it's selected, toggles it on.
+		button.click();
+		expect(el.value).toBe('Yes');
+	});
+
+	it('multi-select listbox persists choices into selectedValues, not value', async () => {
+		const editor = new EditorState();
+		const el = field({ field: 'listbox', multiSelect: true, options: ['A', 'B', 'C'] });
+		const { container } = render(FieldOverlay, { props: { el, editor } });
+		const select = container.querySelector('select[multiple]') as HTMLSelectElement;
+
+		(select.options[0] as HTMLOptionElement).selected = true;
+		(select.options[2] as HTMLOptionElement).selected = true;
+		select.dispatchEvent(new Event('change', { bubbles: true }));
+
+		expect(el.selectedValues).toEqual(['A', 'C']);
+		expect(el.value).toBeUndefined();
+	});
 });

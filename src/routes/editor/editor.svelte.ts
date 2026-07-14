@@ -800,7 +800,15 @@ export class EditorState {
 				i === index ? { x: origin.x + dx, y: origin.y + dy } : p
 			);
 		};
-		this.#trackGesture(move);
+		// A plain click (no drag past the threshold) selects that option — this is
+		// the only way to set a radio group's value; export reads it from field.value.
+		const end = () => {
+			if (!dragging) {
+				const opt = field.options?.[index];
+				if (opt !== undefined) field.value = opt;
+			}
+		};
+		this.#trackGesture(move, end);
 	}
 
 	/** Clamp a top-left PDF point to its page bounds so nothing is placed or drawn

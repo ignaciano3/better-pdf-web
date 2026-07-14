@@ -195,8 +195,11 @@
 				disabled={field.readOnly}
 				aria-pressed={!!field.value}
 				onclick={() => {
-					field.value = field.value ? '' : 'Yes';
-					editor.select(el.id);
+					// First click just selects the field for editing; only toggle the
+					// value once it's already the selected field, so selecting a box
+					// doesn't silently check it.
+					if (selected) field.value = field.value ? '' : 'Yes';
+					else editor.select(el.id);
 				}}
 			>
 				{field.value ? checkGlyph : ''}
@@ -225,12 +228,21 @@
 					const sel = Array.from((e.currentTarget as HTMLSelectElement).selectedOptions).map(
 						(o) => o.value
 					);
-					field.value = sel[0] ?? '';
+					// Export reads multi-select state from `selectedValues` (the /V array)
+					// and single-select from `value` — write whichever the field uses so
+					// the choice actually persists.
+					if (field.multiSelect) field.selectedValues = sel;
+					else field.value = sel[0] ?? '';
 					editor.select(el.id);
 				}}
 			>
 				{#each field.options ?? [] as opt (opt)}
-					<option value={opt} selected={field.value === opt}>{opt}</option>
+					<option
+						value={opt}
+						selected={field.multiSelect
+							? (field.selectedValues?.includes(opt) ?? false)
+							: field.value === opt}>{opt}</option
+					>
 				{/each}
 			</select>
 		{:else if field.field === 'signature'}

@@ -11,8 +11,14 @@
 
 	const { onuse, oncancel }: Props = $props();
 
+	// Logical drawing space. All pointer math, stroke coords, and the ink bounding
+	// box are kept in these units.
 	const WIDTH = 480;
 	const HEIGHT = 200;
+	// Supersample the backing store so the exported PNG has enough pixels to stay
+	// sharp when placed at ~180pt (~2.5in) in the PDF. At 1x the ≤480px capture
+	// gets upscaled and looks blurry; 3x gives a print-quality raster.
+	const OVERSAMPLE = 3;
 
 	let canvas: HTMLCanvasElement;
 	let drawing = false;
@@ -28,6 +34,16 @@
 		if (!c) throw new Error('2D canvas context unavailable');
 		return c;
 	}
+
+	// Size the backing store to the oversampled resolution and scale the context so
+	// every draw call can keep working in logical WIDTH×HEIGHT units. Runs once the
+	// canvas is bound; setting width/height also resets the transform, so scale after.
+	$effect(() => {
+		if (!canvas) return;
+		canvas.width = WIDTH * OVERSAMPLE;
+		canvas.height = HEIGHT * OVERSAMPLE;
+		ctx().scale(OVERSAMPLE, OVERSAMPLE);
+	});
 
 	function pos(e: PointerEvent): { x: number; y: number } {
 		const rect = canvas.getBoundingClientRect();
@@ -92,13 +108,25 @@
 		const w = Math.max(1, x1 - x0);
 		const h = Math.max(1, y1 - y0);
 
+		// Emit at the full backing resolution: the bbox is in logical units, but the
+		// canvas pixels are OVERSAMPLE× denser, so read/write in device pixels.
 		const out = document.createElement('canvas');
-		out.width = w;
-		out.height = h;
+		out.width = w * OVERSAMPLE;
+		out.height = h * OVERSAMPLE;
 		const oc = out.getContext('2d');
 		if (!oc) throw new Error('2D canvas context unavailable');
 		// Transparent background is preserved: we never fillRect, just copy ink.
-		oc.drawImage(canvas, x0, y0, w, h, 0, 0, w, h);
+		oc.drawImage(
+			canvas,
+			x0 * OVERSAMPLE,
+			y0 * OVERSAMPLE,
+			w * OVERSAMPLE,
+			h * OVERSAMPLE,
+			0,
+			0,
+			w * OVERSAMPLE,
+			h * OVERSAMPLE
+		);
 
 		const blob = await new Promise<Blob | null>((resolve) => out.toBlob(resolve, 'image/png'));
 		if (!blob) return;
@@ -112,8 +140,6 @@
 		<h2 class="mb-2 text-sm font-semibold text-gray-800">Draw your signature</h2>
 		<canvas
 			bind:this={canvas}
-			width={WIDTH}
-			height={HEIGHT}
 			class="w-full touch-none rounded border border-dashed border-gray-300 bg-gray-50"
 			style="aspect-ratio: {WIDTH} / {HEIGHT};"
 			onpointerdown={start}
