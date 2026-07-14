@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Watermark } from '$lib/pdf/types';
 	import { SCALE } from '../constants';
+	import { fontFamily, fontWeight } from '../font-css';
 
 	// `pageWidth`/`pageHeight` are unzoomed canvas px (already × SCALE by caller).
 	let {
@@ -44,12 +45,7 @@
 		const n = (x: number) => Math.round(Math.max(0, Math.min(1, x)) * 255);
 		return `rgb(${n(v.r)} ${n(v.g)} ${n(v.b)})`;
 	}
-	function fontFamily(f: string | undefined): string {
-		if (f?.startsWith('Times')) return 'Georgia, "Times New Roman", serif';
-		if (f?.startsWith('Courier')) return 'monospace';
-		return 'Helvetica, Arial, sans-serif';
-	}
-	const weight = $derived(watermark.font?.includes('Bold') ? 700 : 400);
+	const weight = $derived(fontWeight(watermark.font));
 </script>
 
 {#if imageUrl}
