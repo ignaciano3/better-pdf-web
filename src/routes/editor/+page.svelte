@@ -11,6 +11,7 @@
 	import DocumentPropertiesModal from './DocumentPropertiesModal.svelte';
 	import OutlineEditor from './OutlineEditor.svelte';
 	import WatermarkModal from './WatermarkModal.svelte';
+	import AttachmentsModal from './AttachmentsModal.svelte';
 	import UpsellModal from './UpsellModal.svelte';
 	import { SHORTCUT_TO_DRAW, SELECT_SHORTCUT } from './constants';
 	import Seo from '$lib/components/Seo.svelte';
@@ -329,6 +330,7 @@
 	<DocumentPropertiesModal {editor} />
 	<OutlineEditor {editor} />
 	<WatermarkModal {editor} />
+	<AttachmentsModal {editor} />
 	<!-- Hidden picker for the `merge` deep-link intent: appends a second PDF
 	     right after the first one loads. -->
 	<input
