@@ -3,6 +3,7 @@ import type { Color, PdfFont } from '@ignaciano3/better-pdf/generate';
 import { StandardFonts } from '@ignaciano3/better-pdf';
 import type { FormBuilder } from '@ignaciano3/better-pdf/generate';
 import type {
+	AttachmentInput,
 	DocumentMetadataInput,
 	EditElement,
 	EditState,
@@ -180,6 +181,9 @@ async function buildIncremental(
 
 	if (state.watermark) await drawWatermark(doc, pageWidths, pageHeights, state.watermark);
 	applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
+	// Loaded document already carries its source attachments — attach only the new
+	// ones (re-attaching a source name would throw DuplicateAttachmentError).
+	applyAttachments(doc, state.attachments, new Set(state.sourceAttachmentNames ?? []));
 
 	// getForm() comes strictly after every createForm() addition (1.9.0 contract).
 	const multi = collectMultiSelections(
@@ -335,6 +339,34 @@ function applyDocumentProps(
 	if (outline && outline.length > 0) {
 		const clamped = clampOutline(outline, pageCount);
 		if (clamped.length > 0) doc.setOutline(clamped);
+	}
+}
+
+/**
+ * Attach queued files to the document. `skipNames` lists attachments already
+ * embedded in the loaded source (the incremental path) — re-attaching one
+ * throws DuplicateAttachmentError, so they are skipped. On a rebuild the fresh
+ * document has none, so `skipNames` is empty and every attachment is written.
+ * A single bad/duplicate attachment is skipped rather than failing the export.
+ */
+function applyAttachments(
+	doc: PdfDocument,
+	attachments: AttachmentInput[] | undefined,
+	skipNames: ReadonlySet<string>
+): void {
+	if (!attachments) return;
+	for (const a of attachments) {
+		if (skipNames.has(a.name)) continue;
+		if (!(a.bytes instanceof Uint8Array) || a.bytes.byteLength === 0) continue;
+		try {
+			doc.attach(a.bytes, a.name, {
+				...(a.mimeType ? { mimeType: a.mimeType } : {}),
+				...(a.description ? { description: a.description } : {}),
+				...(a.afRelationship ? { afRelationship: a.afRelationship } : {})
+			});
+		} catch {
+			// Duplicate or invalid attachment — skip it; the export still succeeds.
+		}
 	}
 }
 
@@ -544,6 +576,8 @@ async function finishDoc(
 	await stampAndAuthor(doc, state.elements, pageHeights, fonts);
 	if (state.watermark) await drawWatermark(doc, pageWidths, pageHeights, state.watermark);
 	applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
+	// Fresh document: it has no attachments yet, so write every one (skip set empty).
+	applyAttachments(doc, state.attachments, new Set());
 
 	// In-session form finishing. Only touch the form when there is form work to
 	// do — calling getForm() would otherwise seal an interactive doc needlessly.
