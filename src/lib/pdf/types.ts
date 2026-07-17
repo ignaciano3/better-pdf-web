@@ -16,16 +16,22 @@ export interface DocumentMetadataInput {
 }
 
 /** /AFRelationship values (PDF 2.0 / PDF/A-3 associated files). Mirrors the
- * library's `AfRelationship`. */
-export type AfRelationship =
-	| 'Source'
-	| 'Data'
-	| 'Alternative'
-	| 'Supplement'
-	| 'EncryptedPayload'
-	| 'FormData'
-	| 'Schema'
-	| 'Unspecified';
+ * library's `AfRelationship`. Single source of truth for both the
+ * {@link AfRelationship} type and the runtime list used by the export
+ * validator and the attachments UI (mirrors the {@link STANDARD_FONTS}
+ * pattern below). */
+export const AF_RELATIONSHIPS = [
+	'Source',
+	'Data',
+	'Alternative',
+	'Supplement',
+	'EncryptedPayload',
+	'FormData',
+	'Schema',
+	'Unspecified'
+] as const;
+
+export type AfRelationship = (typeof AF_RELATIONSHIPS)[number];
 
 /**
  * A file embedded in the exported PDF (document-level; not page-positioned).

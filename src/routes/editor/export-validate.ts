@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import {
+	AF_RELATIONSHIPS,
 	STANDARD_FONTS,
 	type DocumentMetadataInput,
 	type EditElement,
@@ -43,16 +44,6 @@ const MAX_ATTACHMENTS = 100;
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024; // 25 MB per embedded file
 const MAX_TOTAL_ATTACHMENT_BYTES = 60 * 1024 * 1024; // 60 MB across all attachments
 const MAX_ATTACHMENT_NAME_LEN = 260;
-const AF_RELATIONSHIPS = [
-	'Source',
-	'Data',
-	'Alternative',
-	'Supplement',
-	'EncryptedPayload',
-	'FormData',
-	'Schema',
-	'Unspecified'
-];
 
 const FIELD_KINDS = ['text', 'checkbox', 'radio', 'dropdown', 'signature', 'listbox', 'combo'];
 
@@ -303,7 +294,10 @@ function validateAttachments(list: unknown): void {
 		if (a.description !== undefined && typeof a.description !== 'string') {
 			error(422, 'Invalid attachment description');
 		}
-		if (a.afRelationship !== undefined && !AF_RELATIONSHIPS.includes(a.afRelationship as string)) {
+		if (
+			a.afRelationship !== undefined &&
+			!(AF_RELATIONSHIPS as readonly string[]).includes(a.afRelationship as string)
+		) {
 			error(422, 'Invalid attachment afRelationship');
 		}
 	}

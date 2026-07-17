@@ -1,22 +1,15 @@
 <script lang="ts">
 	import type { EditorState } from './editor.svelte';
-	import type { AfRelationship } from '$lib/pdf/types';
+	import { AF_RELATIONSHIPS } from '$lib/pdf/types';
 
 	let { editor }: { editor: EditorState } = $props();
 
 	const open = $derived(editor.attachmentsModalOpen);
 	const sourceNames = $derived(new Set(editor.sourceAttachmentNames));
 
-	const REL: AfRelationship[] = [
-		'Unspecified',
-		'Source',
-		'Data',
-		'Alternative',
-		'Supplement',
-		'EncryptedPayload',
-		'FormData',
-		'Schema'
-	];
+	// `Unspecified` is surfaced first as the dropdown default, matching the
+	// existing UX; the rest follow in AF_RELATIONSHIPS order.
+	const REL = ['Unspecified', ...AF_RELATIONSHIPS.filter((r) => r !== 'Unspecified')];
 
 	function fmtSize(n: number): string {
 		if (n < 1024) return `${n} B`;
