@@ -158,3 +158,35 @@ describe('planExport', () => {
 		expect(plan).toEqual({ mode: 'rebuild', reason: 'value-clear' });
 	});
 });
+
+function baseState(over: Partial<EditState> = {}): EditState {
+	return { pageSize: [200, 200], elements: [], sources: [new Uint8Array([1])], ...over };
+}
+
+describe('planExport attachments', () => {
+	it('stays incremental when only new attachments are added', () => {
+		const state = baseState({
+			attachments: [{ id: 'a1', name: 'new.xml', bytes: new Uint8Array([1]) }],
+			sourceAttachmentNames: []
+		});
+		expect(planExport(state).mode).toBe('incremental');
+	});
+
+	it('rebuilds when a pre-existing (source) attachment is removed', () => {
+		const state = baseState({
+			attachments: [], // was seeded with data.xml, now removed
+			sourceAttachmentNames: ['data.xml']
+		});
+		const plan = planExport(state);
+		expect(plan.mode).toBe('rebuild');
+		expect(plan).toMatchObject({ reason: 'attachment-removed' });
+	});
+
+	it('stays incremental when a source attachment is kept', () => {
+		const state = baseState({
+			attachments: [{ id: 'a1', name: 'data.xml', bytes: new Uint8Array([1]) }],
+			sourceAttachmentNames: ['data.xml']
+		});
+		expect(planExport(state).mode).toBe('incremental');
+	});
+});

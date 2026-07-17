@@ -20,6 +20,14 @@ export function planExport(state: EditState): ExportPlan {
 				: [];
 	if (!sources.some((s) => s && s.byteLength > 0)) return { mode: 'blank' };
 	if (state.objectStreams) return { mode: 'rebuild', reason: 'compact-structure' };
+	// A pre-existing attachment can only be dropped by rebuilding — the loaded
+	// document keeps its /EmbeddedFiles and the library has no remove API.
+	const currentAttachmentNames = new Set((state.attachments ?? []).map((a) => a.name));
+	for (const name of state.sourceAttachmentNames ?? []) {
+		if (!currentAttachmentNames.has(name)) {
+			return { mode: 'rebuild', reason: 'attachment-removed' };
+		}
+	}
 	for (const op of state.pageOps ?? []) {
 		if (op.rotation) return { mode: 'rebuild', reason: 'page-rotation' };
 		if (op.kind === 'source' && op.size) return { mode: 'rebuild', reason: 'page-resize' };

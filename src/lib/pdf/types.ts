@@ -15,6 +15,38 @@ export interface DocumentMetadataInput {
 	producer?: string;
 }
 
+/** /AFRelationship values (PDF 2.0 / PDF/A-3 associated files). Mirrors the
+ * library's `AfRelationship`. */
+export type AfRelationship =
+	| 'Source'
+	| 'Data'
+	| 'Alternative'
+	| 'Supplement'
+	| 'EncryptedPayload'
+	| 'FormData'
+	| 'Schema'
+	| 'Unspecified';
+
+/**
+ * A file embedded in the exported PDF (document-level; not page-positioned).
+ * Applied at export via `doc.attach(bytes, name, options)`. Detected attachments
+ * (read from an uploaded PDF) and authored ones share this shape.
+ */
+export interface AttachmentInput {
+	/** Editor-stable id. */
+	id: string;
+	/** Filespec name; unique within the document. */
+	name: string;
+	/** Raw file bytes. */
+	bytes: Uint8Array;
+	/** MIME type (embedded stream `/Subtype`). Maps to the lib's `mimeType`. */
+	mimeType?: string;
+	/** Human-readable description (filespec `/Desc`). Maps to the lib's `description`. */
+	description?: string;
+	/** Associated-file relationship; also appends to the catalog `/AF` array. */
+	afRelationship?: AfRelationship;
+}
+
 /**
  * Editor document state. Coordinates use a top-left origin in PDF points
  * (the canvas convention); the PDF builder flips the Y axis to the
@@ -104,6 +136,20 @@ export interface EditState {
 	 * when unset or when its text is empty.
 	 */
 	watermark?: Watermark;
+	/**
+	 * Files embedded in the exported PDF via `doc.attach()`. Document-level, so
+	 * they are applied once at export regardless of page layout.
+	 */
+	attachments?: AttachmentInput[];
+	/**
+	 * Names of the attachments already embedded in source 0 at load time
+	 * (provenance for the incremental path, mirroring {@link sourceFields}). An
+	 * attachment whose name appears here already lives in the loaded document:
+	 * kept → skipped on the incremental path (re-attaching throws
+	 * DuplicateAttachmentError); removed → the export falls back to the full
+	 * rebuild (the library has no attachment-removal API).
+	 */
+	sourceAttachmentNames?: string[];
 }
 
 /**
