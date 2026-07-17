@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { validateExportInput, validateExportState } from './export-validate';
+import type { EditState } from '$lib/pdf/types';
 
 describe('validateExportInput', () => {
 	it('accepts a rich text element', () => {
@@ -509,5 +510,48 @@ describe('validateExportState', () => {
 	});
 	it('rejects a bad page size with a 422', () => {
 		expect(() => validateExportState({ pageSize: [0, 0], elements: [] })).toThrowError();
+	});
+});
+
+describe('validateExportState attachments', () => {
+	const ok = (): EditState => ({ pageSize: [200, 200], elements: [] });
+
+	it('accepts a well-formed attachment', () => {
+		expect(() =>
+			validateExportState({
+				...ok(),
+				attachments: [
+					{ id: 'a1', name: 'data.xml', bytes: new Uint8Array([1]), mimeType: 'text/xml' }
+				],
+				sourceAttachmentNames: ['data.xml']
+			})
+		).not.toThrow();
+	});
+
+	it('rejects a bad afRelationship', () => {
+		expect(() =>
+			validateExportState({
+				...ok(),
+				attachments: [{ id: 'a1', name: 'x', bytes: new Uint8Array([1]), afRelationship: 'Nope' }]
+			})
+		).toThrow();
+	});
+
+	it('rejects non-Uint8Array bytes', () => {
+		expect(() =>
+			validateExportState({
+				...ok(),
+				attachments: [{ id: 'a1', name: 'x', bytes: 'not-bytes' }]
+			})
+		).toThrow();
+	});
+
+	it('rejects an empty name', () => {
+		expect(() =>
+			validateExportState({
+				...ok(),
+				attachments: [{ id: 'a1', name: '', bytes: new Uint8Array([1]) }]
+			})
+		).toThrow();
 	});
 });

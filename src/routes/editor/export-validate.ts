@@ -38,6 +38,21 @@ const MAX_KEYWORDS = 1_000;
 const MAX_OUTLINE_ITEMS = 5_000;
 const MAX_OUTLINE_DEPTH = 32;
 const MAX_OUTLINE_TITLE_LEN = 2_000;
+// Attachment caps.
+const MAX_ATTACHMENTS = 100;
+const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024; // 25 MB per embedded file
+const MAX_TOTAL_ATTACHMENT_BYTES = 60 * 1024 * 1024; // 60 MB across all attachments
+const MAX_ATTACHMENT_NAME_LEN = 260;
+const AF_RELATIONSHIPS = [
+	'Source',
+	'Data',
+	'Alternative',
+	'Supplement',
+	'EncryptedPayload',
+	'FormData',
+	'Schema',
+	'Unspecified'
+];
 
 const FIELD_KINDS = ['text', 'checkbox', 'radio', 'dropdown', 'signature', 'listbox', 'combo'];
 
@@ -256,6 +271,45 @@ function validateWatermark(wm: unknown): void {
 	}
 }
 
+/** Validate the attachment list: bounded count/size, string name + optional
+ * metadata, and a known afRelationship. */
+function validateAttachments(list: unknown): void {
+	if (!Array.isArray(list)) error(422, 'Invalid attachments');
+	if (list.length > MAX_ATTACHMENTS) error(422, 'Too many attachments');
+	let total = 0;
+	for (const raw of list) {
+		if (!raw || typeof raw !== 'object') error(422, 'Invalid attachment');
+		const a = raw as {
+			id?: unknown;
+			name?: unknown;
+			bytes?: unknown;
+			mimeType?: unknown;
+			description?: unknown;
+			afRelationship?: unknown;
+		};
+		if (typeof a.id !== 'string' || a.id.length === 0) error(422, 'Invalid attachment id');
+		if (typeof a.name !== 'string' || a.name.length === 0) error(422, 'Invalid attachment name');
+		if ((a.name as string).length > MAX_ATTACHMENT_NAME_LEN) {
+			error(422, 'Attachment name too large');
+		}
+		if (!(a.bytes instanceof Uint8Array)) error(422, 'Invalid attachment bytes');
+		if ((a.bytes as Uint8Array).byteLength > MAX_ATTACHMENT_BYTES) {
+			error(413, 'Attachment too large');
+		}
+		total += (a.bytes as Uint8Array).byteLength;
+		if (a.mimeType !== undefined && typeof a.mimeType !== 'string') {
+			error(422, 'Invalid attachment mimeType');
+		}
+		if (a.description !== undefined && typeof a.description !== 'string') {
+			error(422, 'Invalid attachment description');
+		}
+		if (a.afRelationship !== undefined && !AF_RELATIONSHIPS.includes(a.afRelationship as string)) {
+			error(422, 'Invalid attachment afRelationship');
+		}
+	}
+	if (total > MAX_TOTAL_ATTACHMENT_BYTES) error(413, 'Attachments too large');
+}
+
 /**
  * Validate an outline tree: bounded total item count + depth, string titles, and
  * page indices that are finite non-negative integers (and, when the output page
@@ -403,6 +457,18 @@ export function validateExportState(stateInput: unknown): void {
 	}
 
 	if (state.watermark !== undefined) validateWatermark(state.watermark);
+
+	if (state.attachments !== undefined) validateAttachments(state.attachments);
+	if (state.sourceAttachmentNames !== undefined) {
+		if (!Array.isArray(state.sourceAttachmentNames)) error(422, 'Invalid source attachment names');
+		if (state.sourceAttachmentNames.length > MAX_ATTACHMENTS) {
+			error(422, 'Too many source attachment names');
+		}
+		for (const n of state.sourceAttachmentNames) {
+			if (typeof n !== 'string') error(422, 'Invalid source attachment name');
+			if (n.length > MAX_ATTACHMENT_NAME_LEN) error(422, 'Source attachment name too large');
+		}
+	}
 }
 
 /**
