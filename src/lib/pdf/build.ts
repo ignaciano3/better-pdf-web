@@ -345,9 +345,22 @@ function applyDocumentProps(
 /**
  * Attach queued files to the document. `skipNames` lists attachments already
  * embedded in the loaded source (the incremental path) — re-attaching one
- * throws DuplicateAttachmentError, so they are skipped. On a rebuild the fresh
- * document has none, so `skipNames` is empty and every attachment is written.
- * A single bad/duplicate attachment is skipped rather than failing the export.
+ * collides at save() time (see below), so they are skipped here. On a rebuild
+ * the fresh document has none, so `skipNames` is empty and every attachment is
+ * written.
+ *
+ * Error handling has two layers. `attach()` queues synchronously (library
+ * `core/document.d.ts`): the local try/catch only catches failures that throw
+ * *at queue time* (e.g. an in-batch duplicate of a name queued earlier in this
+ * same loop) — those are skipped in place and the export still succeeds. A name
+ * that collides with a file ALREADY EMBEDDED in a loaded document does NOT throw
+ * at `attach()`; the collision surfaces later at `doc.save()`, outside this
+ * function's try/catch. On the incremental path that save() throw is caught by
+ * `dispatchBuild`'s fallback, which reruns the export as a full
+ * `buildSourceRebuild` (fresh doc, empty skip-set → every attachment re-embedded
+ * cleanly). So such a duplicate is not skipped in place — the whole export
+ * falls back to the rebuild path — but it still succeeds. `skipNames` exists
+ * precisely to keep that collision from arising on the incremental path.
  */
 function applyAttachments(
 	doc: PdfDocument,

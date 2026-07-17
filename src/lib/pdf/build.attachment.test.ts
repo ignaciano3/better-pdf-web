@@ -17,6 +17,22 @@ async function sourcePdf(): Promise<Uint8Array> {
 	return doc.save();
 }
 
+// A one-page source PDF carrying one AcroForm text field.
+async function sourcePdfWithField(): Promise<Uint8Array> {
+	const doc = await PdfDocument.create();
+	doc.addPage([400, 500]);
+	const form = doc.createForm();
+	form.addTextField('existing', {
+		page: 0,
+		x: 20,
+		y: 400,
+		width: 120,
+		height: 22,
+		value: 'orig'
+	});
+	return doc.save();
+}
+
 describe('attachments export', () => {
 	it('embeds an attachment on the blank rebuild path', async () => {
 		const state: EditState = {
@@ -44,6 +60,42 @@ describe('attachments export', () => {
 			]
 		};
 		// No source-field changes / rotation / objectStreams => incremental path.
+		expect(await namesOf(await buildPdf(state))).toEqual(['added.xml', 'keep.xml']);
+	});
+
+	it('keeps source + new attachments through the incremental flatten branch', async () => {
+		// Source carries an AcroForm field AND an embedded attachment.
+		const src = await PdfDocument.load(await sourcePdfWithField());
+		src.attach(xml(), 'keep.xml');
+		const withAttachment = await src.save();
+
+		// Unchanged source field snapshot => incremental (no structural change);
+		// flatten: true drives the getForm().flatten() branch that runs AFTER
+		// applyAttachments, so both the source and new attachment must survive it.
+		const existing = {
+			type: 'field' as const,
+			id: 'existing',
+			field: 'text' as const,
+			name: 'existing',
+			value: 'orig',
+			x: 20,
+			y: 78,
+			width: 120,
+			height: 22,
+			page: 0
+		};
+		const state: EditState = {
+			pageSize: [400, 500],
+			elements: [existing],
+			sources: [withAttachment],
+			sourceFields: [existing],
+			sourceAttachmentNames: ['keep.xml'],
+			flatten: true,
+			attachments: [
+				{ id: 'a1', name: 'keep.xml', bytes: xml() }, // unchanged source one
+				{ id: 'a2', name: 'added.xml', bytes: xml() } // new
+			]
+		};
 		expect(await namesOf(await buildPdf(state))).toEqual(['added.xml', 'keep.xml']);
 	});
 
