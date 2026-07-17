@@ -17,6 +17,15 @@ async function sourcePdf(): Promise<Uint8Array> {
 	return doc.save();
 }
 
+// A two-page source PDF, used to force the assemble branch of
+// loadForIncremental via a non-identity (reordering) pageOps list.
+async function sourcePdf2Pages(): Promise<Uint8Array> {
+	const doc = await PdfDocument.create();
+	doc.addPage([200, 200]);
+	doc.addPage([200, 200]);
+	return doc.save();
+}
+
 // A one-page source PDF carrying one AcroForm text field.
 async function sourcePdfWithField(): Promise<Uint8Array> {
 	const doc = await PdfDocument.create();
@@ -114,5 +123,60 @@ describe('attachments export', () => {
 		};
 		// attachment-removed => rebuild => fresh doc gets only keep.xml.
 		expect(await namesOf(await buildPdf(state))).toEqual(['keep.xml']);
+	});
+
+	it('keeps the source attachment through the incremental ASSEMBLE branch (reorder)', async () => {
+		// Two-page source carrying keep.xml. A reordering pageOps list ([1, 0]) is a
+		// non-identity single-source structure, so loadForIncremental routes through
+		// PdfDocument.assemble(...) rather than a direct PdfDocument.load(primary) —
+		// the assembled document does NOT carry over /EmbeddedFiles, so the skip-set
+		// must be derived from what the loaded doc actually has, not from
+		// sourceAttachmentNames provenance (which would wrongly skip re-attaching
+		// keep.xml, silently dropping it from the export).
+		const src = await PdfDocument.load(await sourcePdf2Pages());
+		src.attach(xml(), 'keep.xml');
+		const withAttachment = await src.save();
+
+		const state: EditState = {
+			pageSize: [200, 200],
+			elements: [],
+			sources: [withAttachment],
+			sourceAttachmentNames: ['keep.xml'],
+			pageOps: [
+				{ kind: 'source', sourceIndex: 1, rotation: 0, docIndex: 0 },
+				{ kind: 'source', sourceIndex: 0, rotation: 0, docIndex: 0 }
+			],
+			attachments: [
+				{ id: 'a1', name: 'keep.xml', bytes: xml() }, // unchanged source one
+				{ id: 'a2', name: 'added.xml', bytes: xml() } // new
+			]
+		};
+		expect(await namesOf(await buildPdf(state))).toEqual(['added.xml', 'keep.xml']);
+	});
+
+	it('keeps the source attachment through the incremental ASSEMBLE branch (merge)', async () => {
+		// Two sources merged via pageOps referencing both docs; source[0] carries
+		// keep.xml. Also exercises the assemble branch (multiple sources always
+		// route through PdfDocument.assemble).
+		const src0 = await PdfDocument.load(await sourcePdf());
+		src0.attach(xml(), 'keep.xml');
+		const source0 = await src0.save();
+		const source1 = await sourcePdf();
+
+		const state: EditState = {
+			pageSize: [200, 200],
+			elements: [],
+			sources: [source0, source1],
+			sourceAttachmentNames: ['keep.xml'],
+			pageOps: [
+				{ kind: 'source', sourceIndex: 0, rotation: 0, docIndex: 0 },
+				{ kind: 'source', sourceIndex: 0, rotation: 0, docIndex: 1 }
+			],
+			attachments: [
+				{ id: 'a1', name: 'keep.xml', bytes: xml() }, // unchanged source one
+				{ id: 'a2', name: 'added.xml', bytes: xml() } // new
+			]
+		};
+		expect(await namesOf(await buildPdf(state))).toEqual(['added.xml', 'keep.xml']);
 	});
 });

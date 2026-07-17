@@ -181,9 +181,20 @@ async function buildIncremental(
 
 	if (state.watermark) await drawWatermark(doc, pageWidths, pageHeights, state.watermark);
 	applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
-	// Loaded document already carries its source attachments — attach only the new
-	// ones (re-attaching a source name would throw DuplicateAttachmentError).
-	applyAttachments(doc, state.attachments, new Set(state.sourceAttachmentNames ?? []));
+	// Skip-set MUST reflect what the loaded doc actually carries, not
+	// `sourceAttachmentNames` provenance: on the identity-load branch of
+	// loadForIncremental the loaded doc IS the source, so its embedded files match
+	// provenance — but on any non-identity structure (reorder/delete/insert-blank
+	// page, or a merge of a second source) loadForIncremental rebuilds via
+	// `PdfDocument.assemble(...)`, which does NOT carry over document-level
+	// `/EmbeddedFiles`. Trusting provenance there would skip re-attaching a source
+	// file that the assembled doc no longer has, silently dropping it from the
+	// export. Deriving the skip-set from `doc.getAttachments()` is correct on both
+	// branches: identity load's names match the source's embedded files (skipped,
+	// avoiding DuplicateAttachmentError); assemble's skip-set is empty, so every
+	// `state.attachments` entry is re-embedded from its bytes.
+	const presentAttachmentNames = new Set((await doc.getAttachments()).map((a) => a.name));
+	applyAttachments(doc, state.attachments, presentAttachmentNames);
 
 	// getForm() comes strictly after every createForm() addition (1.9.0 contract).
 	const multi = collectMultiSelections(
