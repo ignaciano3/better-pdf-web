@@ -1368,6 +1368,17 @@ export class EditorState {
 				this.sourceFieldNames = [...this.sourceFieldNames];
 				this.sourceFieldNames[docIndex] = [];
 			}
+			// Surface files already embedded in the merged-in document, mirroring the
+			// primary-upload read-back in loadPdf. Failures are swallowed — the merge
+			// still succeeds with no attachments surfaced.
+			try {
+				const atts = await extractAttachmentsFromBytes(exportCopy.slice(), () =>
+					this.nextId('att')
+				);
+				this.mergeSourceAttachments(atts);
+			} catch {
+				// Attachment read-back failed — leave the current list untouched.
+			}
 		} catch (e) {
 			this.errorMessage =
 				e instanceof PdfRenderError
@@ -1376,6 +1387,24 @@ export class EditorState {
 		} finally {
 			this.loadingPdf = false;
 		}
+	}
+
+	/**
+	 * Merge attachments read from a newly appended source document into the
+	 * current list. Attachment names must stay unique in the output PDF, so any
+	 * whose name already exists (in {@link attachments} or the source-provenance
+	 * {@link sourceAttachmentNames}) is skipped — the file already present wins.
+	 * Fresh names are added to {@link sourceAttachmentNames} so they show the "in
+	 * source" badge and round-trip through the export like the primary document's
+	 * attachments (the rebuild / assemble export paths re-embed them from bytes).
+	 */
+	mergeSourceAttachments(atts: AttachmentInput[]): void {
+		if (atts.length === 0) return;
+		const taken = new Set([...this.attachments.map((a) => a.name), ...this.sourceAttachmentNames]);
+		const fresh = atts.filter((a) => !taken.has(a.name));
+		if (fresh.length === 0) return;
+		this.attachments = [...this.attachments, ...fresh];
+		this.sourceAttachmentNames = [...this.sourceAttachmentNames, ...fresh.map((a) => a.name)];
 	}
 
 	/**

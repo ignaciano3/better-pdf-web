@@ -833,3 +833,29 @@ describe('attachments state', () => {
 		expect(ed.attachments).toEqual([]);
 	});
 });
+
+describe('appendPdf attachment merge', () => {
+	it('merges fresh appended attachments and records provenance, skipping duplicate names', () => {
+		const ed = new EditorState();
+		ed.attachments = [{ id: 'a1', name: 'existing.xml', bytes: new Uint8Array([1]) }];
+		ed.sourceAttachmentNames = ['existing.xml'];
+		ed.mergeSourceAttachments([
+			{ id: 'x', name: 'from-merge.xml', bytes: new Uint8Array([2]) },
+			// duplicate name: the file already present wins, this one is skipped
+			{ id: 'y', name: 'existing.xml', bytes: new Uint8Array([9]) }
+		]);
+		expect(ed.attachments.map((a) => a.name)).toEqual(['existing.xml', 'from-merge.xml']);
+		// the surviving 'existing.xml' keeps its original bytes, not the merged-in ones
+		expect(ed.attachments.find((a) => a.name === 'existing.xml')?.bytes).toEqual(
+			new Uint8Array([1])
+		);
+		expect(ed.sourceAttachmentNames).toEqual(['existing.xml', 'from-merge.xml']);
+	});
+
+	it('is a no-op for an empty list', () => {
+		const ed = new EditorState();
+		ed.mergeSourceAttachments([]);
+		expect(ed.attachments).toEqual([]);
+		expect(ed.sourceAttachmentNames).toEqual([]);
+	});
+});
