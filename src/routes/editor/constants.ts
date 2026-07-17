@@ -68,6 +68,9 @@ export const LINK_DEFAULT_SIZE: { width: number; height: number } = { width: 120
 /** Max custom-font upload size (bytes); mirrors the server-side cap. */
 export const MAX_FONT_BYTES = 5 * 1024 * 1024;
 
+/** Max size of a single file the user can embed as an attachment. */
+export const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+
 /** Canvas zoom bounds (1 = 100%). */
 export const ZOOM_MIN = 0.25;
 export const ZOOM_MAX = 4;

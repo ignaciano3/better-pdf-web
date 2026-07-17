@@ -802,3 +802,34 @@ describe('EditorState.warmExportEngine', () => {
 		expect(vi.mocked(initializeWasm)).toHaveBeenCalledTimes(1);
 	});
 });
+
+function fileOf(name: string, body = 'x', type = 'text/xml'): File {
+	return new File([body], name, { type });
+}
+
+describe('attachments state', () => {
+	it('adds an attachment and records an undo step', async () => {
+		const ed = new EditorState();
+		await ed.addAttachment(fileOf('a.xml'));
+		expect(ed.attachments.map((a) => a.name)).toEqual(['a.xml']);
+		ed.flushHistory();
+		expect(ed.canUndo).toBe(true);
+		ed.undo();
+		expect(ed.attachments).toEqual([]);
+	});
+
+	it('rejects a duplicate name', async () => {
+		const ed = new EditorState();
+		await ed.addAttachment(fileOf('a.xml'));
+		await ed.addAttachment(fileOf('a.xml'));
+		expect(ed.attachments).toHaveLength(1);
+		expect(ed.errorMessage).toMatch(/already exists/i);
+	});
+
+	it('removes by id', async () => {
+		const ed = new EditorState();
+		await ed.addAttachment(fileOf('a.xml'));
+		ed.removeAttachment(ed.attachments[0]!.id);
+		expect(ed.attachments).toEqual([]);
+	});
+});

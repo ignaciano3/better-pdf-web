@@ -3,6 +3,7 @@ import type { Color, PdfFont } from '@ignaciano3/better-pdf/generate';
 import { StandardFonts } from '@ignaciano3/better-pdf';
 import type { FormBuilder } from '@ignaciano3/better-pdf/generate';
 import type {
+	AttachmentInput,
 	DocumentMetadataInput,
 	EditElement,
 	EditState,
@@ -180,6 +181,20 @@ async function buildIncremental(
 
 	if (state.watermark) await drawWatermark(doc, pageWidths, pageHeights, state.watermark);
 	applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
+	// Skip-set MUST reflect what the loaded doc actually carries, not
+	// `sourceAttachmentNames` provenance: on the identity-load branch of
+	// loadForIncremental the loaded doc IS the source, so its embedded files match
+	// provenance — but on any non-identity structure (reorder/delete/insert-blank
+	// page, or a merge of a second source) loadForIncremental rebuilds via
+	// `PdfDocument.assemble(...)`, which does NOT carry over document-level
+	// `/EmbeddedFiles`. Trusting provenance there would skip re-attaching a source
+	// file that the assembled doc no longer has, silently dropping it from the
+	// export. Deriving the skip-set from `doc.getAttachments()` is correct on both
+	// branches: identity load's names match the source's embedded files (skipped,
+	// avoiding DuplicateAttachmentError); assemble's skip-set is empty, so every
+	// `state.attachments` entry is re-embedded from its bytes.
+	const presentAttachmentNames = new Set((await doc.getAttachments()).map((a) => a.name));
+	applyAttachments(doc, state.attachments, presentAttachmentNames);
 
 	// getForm() comes strictly after every createForm() addition (1.9.0 contract).
 	const multi = collectMultiSelections(
@@ -335,6 +350,47 @@ function applyDocumentProps(
 	if (outline && outline.length > 0) {
 		const clamped = clampOutline(outline, pageCount);
 		if (clamped.length > 0) doc.setOutline(clamped);
+	}
+}
+
+/**
+ * Attach queued files to the document. `skipNames` lists attachments already
+ * embedded in the loaded source (the incremental path) — re-attaching one
+ * collides at save() time (see below), so they are skipped here. On a rebuild
+ * the fresh document has none, so `skipNames` is empty and every attachment is
+ * written.
+ *
+ * Error handling has two layers. `attach()` queues synchronously (library
+ * `core/document.d.ts`): the local try/catch only catches failures that throw
+ * *at queue time* (e.g. an in-batch duplicate of a name queued earlier in this
+ * same loop) — those are skipped in place and the export still succeeds. A name
+ * that collides with a file ALREADY EMBEDDED in a loaded document does NOT throw
+ * at `attach()`; the collision surfaces later at `doc.save()`, outside this
+ * function's try/catch. On the incremental path that save() throw is caught by
+ * `dispatchBuild`'s fallback, which reruns the export as a full
+ * `buildSourceRebuild` (fresh doc, empty skip-set → every attachment re-embedded
+ * cleanly). So such a duplicate is not skipped in place — the whole export
+ * falls back to the rebuild path — but it still succeeds. `skipNames` exists
+ * precisely to keep that collision from arising on the incremental path.
+ */
+function applyAttachments(
+	doc: PdfDocument,
+	attachments: AttachmentInput[] | undefined,
+	skipNames: ReadonlySet<string>
+): void {
+	if (!attachments) return;
+	for (const a of attachments) {
+		if (skipNames.has(a.name)) continue;
+		if (!(a.bytes instanceof Uint8Array) || a.bytes.byteLength === 0) continue;
+		try {
+			doc.attach(a.bytes, a.name, {
+				...(a.mimeType ? { mimeType: a.mimeType } : {}),
+				...(a.description ? { description: a.description } : {}),
+				...(a.afRelationship ? { afRelationship: a.afRelationship } : {})
+			});
+		} catch {
+			// Duplicate or invalid attachment — skip it; the export still succeeds.
+		}
 	}
 }
 
@@ -544,6 +600,8 @@ async function finishDoc(
 	await stampAndAuthor(doc, state.elements, pageHeights, fonts);
 	if (state.watermark) await drawWatermark(doc, pageWidths, pageHeights, state.watermark);
 	applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
+	// Fresh document: it has no attachments yet, so write every one (skip set empty).
+	applyAttachments(doc, state.attachments, new Set());
 
 	// In-session form finishing. Only touch the form when there is form work to
 	// do — calling getForm() would otherwise seal an interactive doc needlessly.

@@ -252,6 +252,16 @@
 						>
 							Watermark…
 						</button>
+						<button
+							class={menuItem}
+							role="menuitem"
+							onclick={() => {
+								editor.attachmentsModalOpen = true;
+								docMenuOpen = false;
+							}}
+						>
+							Attachments…
+						</button>
 						{#if editor.pageOps.length > 0}
 							<div class="my-1 border-t border-slate-100"></div>
 							<p class="px-3 py-1 text-xs font-medium tracking-wide text-slate-500 uppercase">

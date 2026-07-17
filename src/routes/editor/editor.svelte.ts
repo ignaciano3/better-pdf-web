@@ -1,4 +1,5 @@
 import type {
+	AttachmentInput,
 	DocumentMetadataInput,
 	EditElement,
 	EditState,
@@ -24,12 +25,14 @@ import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { checkExportAllowance, reportExportError } from './gate.remote';
 import { validateExportState } from './export-validate';
 import { extractFieldsFromBytes } from './extract-fields-client';
+import { extractAttachmentsFromBytes } from './extract-attachments-client';
 import {
 	DEFAULT_PAGE,
 	SCALE,
 	MAX_PDF_BYTES,
 	MAX_IMAGE_BYTES,
 	MAX_FONT_BYTES,
+	MAX_ATTACHMENT_BYTES,
 	SIGNATURE_DEFAULT_WIDTH,
 	IMAGE_DEFAULT_WIDTH,
 	SHAPE_DEFAULT_STROKE,
@@ -83,6 +86,7 @@ interface DocSnapshot {
 	pageOps: PageOp[];
 	metadata: DocumentMetadataInput;
 	outline: OutlineItem[];
+	attachments: AttachmentInput[];
 	flatten: boolean;
 	optimizeSize: boolean;
 	watermark: Watermark | null;
@@ -212,6 +216,11 @@ export class EditorState {
 	metadata = $state<DocumentMetadataInput>({});
 	/** Document outline (bookmarks) applied on export when non-empty. */
 	outline = $state<OutlineItem[]>([]);
+	/** Files embedded in the exported PDF (document-level). */
+	attachments = $state<AttachmentInput[]>([]);
+	/** Names of attachments present in source 0 at load (provenance for the
+	 * incremental export path — see EditState.sourceAttachmentNames). */
+	sourceAttachmentNames = $state<string[]>([]);
 	/** When true, fields are flattened (baked) on export. */
 	flatten = $state(false);
 	/**
@@ -225,6 +234,8 @@ export class EditorState {
 	watermarkModalOpen = $state(false);
 	/** True while the document-properties modal is open. */
 	docPropsModalOpen = $state(false);
+	/** True while the attachments modal is open. */
+	attachmentsModalOpen = $state(false);
 	/** True while the outline editor is open. */
 	outlineEditorOpen = $state(false);
 	/** Whether the Pages thumbnail sidebar is shown. Collapsible to free up room
@@ -299,6 +310,7 @@ export class EditorState {
 				this.#track(this.pageOps);
 				this.#track(this.metadata);
 				this.#track(this.outline);
+				this.#track(this.attachments);
 				this.#track(this.watermark);
 				this.#track(this.embeddedFonts);
 				void this.flatten;
@@ -335,6 +347,7 @@ export class EditorState {
 			pageOps: this.pageOps,
 			metadata: this.metadata,
 			outline: this.outline,
+			attachments: this.attachments,
 			flatten: this.flatten,
 			optimizeSize: this.optimizeSize,
 			watermark: this.watermark,
@@ -364,6 +377,7 @@ export class EditorState {
 		this.pageOps = c.pageOps;
 		this.metadata = c.metadata;
 		this.outline = c.outline;
+		this.attachments = c.attachments;
 		this.flatten = c.flatten;
 		this.optimizeSize = c.optimizeSize;
 		this.watermark = c.watermark;
@@ -1258,6 +1272,18 @@ export class EditorState {
 			// place on the live elements, so the provenance baseline must not alias
 			// any nested object. `detected` is plain JSON off the remote call.
 			this.sourceFields = structuredClone(detected);
+			// Read files already embedded in the uploaded PDF (client WASM). Failures
+			// are swallowed — the editor still opens with no attachments surfaced.
+			try {
+				const atts = await extractAttachmentsFromBytes(exportCopy.slice(), () =>
+					this.nextId('att')
+				);
+				this.attachments = atts;
+				this.sourceAttachmentNames = atts.map((a) => a.name);
+			} catch {
+				this.attachments = [];
+				this.sourceAttachmentNames = [];
+			}
 			// A freshly loaded document is a new baseline: undo shouldn't reach back
 			// into whatever was open before (and across stale source references).
 			this.#history.reset();
@@ -1286,6 +1312,8 @@ export class EditorState {
 		this.polygonDraftId = null;
 		this.metadata = {};
 		this.outline = [];
+		this.attachments = [];
+		this.sourceAttachmentNames = [];
 		this.embeddedFonts = {};
 		this.#history.reset();
 	}
@@ -1530,6 +1558,47 @@ export class EditorState {
 		delete el.fontId;
 	}
 
+	// --- attachments -----------------------------------------------------------
+
+	/**
+	 * Embed a file as a document attachment. Rejects a name already used by
+	 * another attachment or already present in the source (the library throws
+	 * DuplicateAttachmentError at export otherwise).
+	 */
+	async addAttachment(file: File): Promise<void> {
+		this.errorMessage = null;
+		if (file.size > MAX_ATTACHMENT_BYTES) {
+			this.errorMessage = `That file is too large (max ${Math.round(
+				MAX_ATTACHMENT_BYTES / 1024 / 1024
+			)} MB).`;
+			return;
+		}
+		const name = file.name;
+		const taken = new Set([...this.attachments.map((a) => a.name), ...this.sourceAttachmentNames]);
+		if (taken.has(name)) {
+			this.errorMessage = `An attachment named "${name}" already exists.`;
+			return;
+		}
+		try {
+			const bytes = new Uint8Array(await file.arrayBuffer());
+			const asset: AttachmentInput = {
+				id: this.nextId('att'),
+				name,
+				bytes,
+				...(file.type ? { mimeType: file.type } : {})
+			};
+			this.attachments = [...this.attachments, asset];
+		} catch {
+			this.errorMessage = 'Could not read that file.';
+		}
+	}
+
+	/** Remove an attachment by id. Removing a source-origin one routes the export
+	 * to the rebuild path (see planExport's attachment-removed guard). */
+	removeAttachment(id: string): void {
+		this.attachments = this.attachments.filter((a) => a.id !== id);
+	}
+
 	// --- export --------------------------------------------------------------
 
 	async export() {
@@ -1564,6 +1633,14 @@ export class EditorState {
 				...(this.optimizeSize && !this.flatten ? { objectStreams: true } : {}),
 				...(this.watermark && this.watermark.text.trim().length > 0
 					? { watermark: $state.snapshot(this.watermark) as Watermark }
+					: {}),
+				...(this.attachments.length > 0
+					? {
+							attachments: $state.snapshot(this.attachments) as AttachmentInput[],
+							...(this.sourceAttachmentNames.length > 0
+								? { sourceAttachmentNames: [...this.sourceAttachmentNames] }
+								: {})
+						}
 					: {})
 			};
 			validateExportState(state);
