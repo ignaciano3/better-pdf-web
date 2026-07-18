@@ -4,11 +4,7 @@ import { getDb } from '$lib/server/db';
 import { subscription } from '$lib/server/db/schema.app';
 import { account } from '$lib/server/db/schema';
 import { resolvePlan } from '$lib/server/plan';
-import { countInWindow } from '$lib/server/usage-count';
-import { usageView } from '$lib/server/profile-usage';
-import { windowStart, WINDOW_MS } from '$lib/server/rate-limit';
-import { usageEvent } from '$lib/server/db/schema.app';
-import { windowWhere } from '$lib/server/usage-count';
+import { usageForActor } from '$lib/server/usage-count';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -38,23 +34,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.limit(1);
 	const hasPassword = pwRows.length > 0;
 
-	// Usage in the current window.
-	const now = new Date();
-	const used = await countInWindow(userId, undefined, now);
-	const view = usageView(plan, used);
-
-	// resetAt: when the oldest in-window event ages out (only meaningful when capped).
-	let resetAt: string | null = null;
-	if (view.limit !== null && used >= view.limit) {
-		const oldest = await db
-			.select({ createdAt: usageEvent.createdAt })
-			.from(usageEvent)
-			.where(windowWhere(userId, undefined, windowStart(now)))
-			.orderBy(usageEvent.createdAt)
-			.limit(1);
-		const t = oldest[0]?.createdAt;
-		resetAt = t ? new Date(t.getTime() + WINDOW_MS).toISOString() : null;
-	}
+	// Usage in the current window — own events only at SSR (no fingerprint
+	// server-side); the client refines to the combined own+anonymous count via
+	// the getProfileUsage remote query.
+	const usage = await usageForActor(userId, undefined, plan, new Date());
 
 	return {
 		email: locals.user.email,
@@ -67,6 +50,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 			currentPeriodEnd: sub?.currentPeriodEnd ? sub.currentPeriodEnd.toISOString() : null,
 			manageUrl: sub?.manageUrl ?? null
 		},
-		usage: { used: view.used, limit: view.limit, resetAt }
+		usage
 	};
 };
