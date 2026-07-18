@@ -143,6 +143,11 @@ export interface EditState {
 	 */
 	watermark?: Watermark;
 	/**
+	 * Optional running header/footer (incl. page numbers) stamped on every output
+	 * page at export. Omitted when unset or when every slot is empty.
+	 */
+	headerFooter?: HeaderFooter;
+	/**
 	 * Files embedded in the exported PDF via `doc.attach()`. Document-level, so
 	 * they are applied once at export regardless of page layout.
 	 */
@@ -509,6 +514,46 @@ export interface Watermark {
 	opacity?: number;
 	/** Clockwise display rotation in degrees. Defaults to 45. */
 	rotation?: number;
+}
+
+/** Horizontal alignment of a header/footer slot within its row. */
+export type HFPos = 'left' | 'center' | 'right';
+
+/**
+ * One row (header or footer) of the running stamp. Each of the three
+ * {@link HFPos} positions holds an optional template string; empty/absent slots
+ * are skipped. Font, size, colour and margin are per-section, so a header can be
+ * styled independently of the footer.
+ */
+export interface HFSection {
+	/** Per-position template strings. Empty/whitespace-only ⇒ that slot skipped. */
+	slots: Partial<Record<HFPos, string>>;
+	/** Standard font. Defaults to Helvetica. */
+	font?: StandardFontName;
+	/** Font size in points. Defaults to 10. */
+	size?: number;
+	/** RGB components in 0..1. Defaults to black. */
+	color?: { r: number; g: number; b: number };
+	/** Distance from the page edge in points. Defaults to 36 (0.5in). */
+	margin?: number;
+}
+
+/**
+ * A running header/footer stamped on every output page at export. The header and
+ * footer are independent {@link HFSection}s (each with its own font/size/colour/
+ * margin). Templates support the tokens `{n}` (current page number), `{total}`
+ * (numbered-page count) and `{title}` (document title from metadata).
+ * Modeled after {@link Watermark}: a document-level config, not an element.
+ */
+export interface HeaderFooter {
+	/** Top-of-page row. Absent ⇒ no header. */
+	header?: HFSection;
+	/** Bottom-of-page row. Absent ⇒ no footer. */
+	footer?: HFSection;
+	/** Page-number value on the first numbered page. Defaults to 1. */
+	startAt?: number;
+	/** When true, page 0 is left unstamped and excluded from numbering. */
+	skipFirst?: boolean;
 }
 
 /**

@@ -180,6 +180,8 @@ async function buildIncremental(
 	}
 
 	if (state.watermark) await drawWatermark(doc, pageWidths, pageHeights, state.watermark);
+	if (state.headerFooter)
+		drawHeaderFooter(doc, pageWidths, pageHeights, state.headerFooter, state.metadata?.title ?? '');
 	applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
 	// Skip-set MUST reflect what the loaded doc actually carries, not
 	// `sourceAttachmentNames` provenance: on the identity-load branch of
@@ -508,6 +510,89 @@ async function drawImageWatermark(
 }
 
 /**
+ * Stamp a running header/footer (and page numbers) on every output page.
+ *
+ * Six independent slots (header/footer × left/center/right). Each slot's
+ * template is substituted per page: `{n}` → the current page number
+ * (`startAt` + position among numbered pages), `{total}` → the numbered-page
+ * count, `{title}` → the document title. Horizontal placement uses the measured
+ * text width (center/right); vertical placement sits `size` below the top margin
+ * for headers and at the bottom margin for footers (drawText Y is the baseline,
+ * bottom-left origin). When `skipFirst` is set, page 0 is neither stamped nor
+ * counted, so numbering starts on page 1 and `{total}` excludes the first page.
+ */
+/** A header/footer section resolved to concrete draw settings. */
+interface ResolvedHFSection {
+	isHeader: boolean;
+	slots: [import('./types').HFPos, string][];
+	size: number;
+	font: ReturnType<PdfDocument['getFont']>;
+	color: ReturnType<typeof rgb>;
+	margin: number;
+}
+
+/** Resolve one section's defaults, or null when it has no non-empty slot. */
+function resolveHFSection(
+	doc: PdfDocument,
+	section: import('./types').HFSection | undefined,
+	isHeader: boolean
+): ResolvedHFSection | null {
+	if (!section) return null;
+	const slots = Object.entries(section.slots).filter(([, t]) => t && t.trim().length > 0) as [
+		import('./types').HFPos,
+		string
+	][];
+	if (slots.length === 0) return null;
+	return {
+		isHeader,
+		slots,
+		size: section.size ?? 10,
+		font: doc.getFont((section.font ?? 'Helvetica') as StandardFonts),
+		color: section.color ? toColor(section.color) : rgb(0, 0, 0),
+		margin: section.margin ?? 36
+	};
+}
+
+function drawHeaderFooter(
+	doc: PdfDocument,
+	pageWidths: number[],
+	pageHeights: number[],
+	hf: import('./types').HeaderFooter,
+	title: string
+): void {
+	const sections = [
+		resolveHFSection(doc, hf.header, true),
+		resolveHFSection(doc, hf.footer, false)
+	].filter((s): s is ResolvedHFSection => s !== null);
+	if (sections.length === 0) return;
+	const startAt = hf.startAt ?? 1;
+	const skipFirst = hf.skipFirst ?? false;
+	const total = pageHeights.length - (skipFirst ? 1 : 0);
+	let numbered = 0;
+	for (let i = 0; i < pageHeights.length; i++) {
+		if (skipFirst && i === 0) continue;
+		const pageNo = startAt + numbered;
+		numbered++;
+		const page = doc.getPage(i);
+		const W = pageWidths[i] as number;
+		const H = pageHeights[i] as number;
+		for (const sec of sections) {
+			const y = sec.isHeader ? H - sec.margin - sec.size : sec.margin;
+			for (const [pos, tmpl] of sec.slots) {
+				const text = tmpl
+					.replaceAll('{n}', String(pageNo))
+					.replaceAll('{total}', String(total))
+					.replaceAll('{title}', title);
+				if (text.length === 0) continue;
+				const tw = sec.font.widthOfTextAtSize(text, sec.size);
+				const x = pos === 'left' ? sec.margin : pos === 'right' ? W - sec.margin - tw : (W - tw) / 2;
+				page.drawText(text, { x, y, size: sec.size, font: sec.font, color: sec.color });
+			}
+		}
+	}
+}
+
+/**
  * Embed each font asset once, returning a `Record<id, PdfFont>` for renderers.
  * A single asset that fails to embed (corrupt / unsupported font program) is
  * skipped — text referencing it falls back to its standard font — rather than
@@ -599,6 +684,8 @@ async function finishDoc(
 	const fonts = await embedFonts(doc, state.fonts);
 	await stampAndAuthor(doc, state.elements, pageHeights, fonts);
 	if (state.watermark) await drawWatermark(doc, pageWidths, pageHeights, state.watermark);
+	if (state.headerFooter)
+		drawHeaderFooter(doc, pageWidths, pageHeights, state.headerFooter, state.metadata?.title ?? '');
 	applyDocumentProps(doc, state.metadata, state.outline, pageHeights.length);
 	// Fresh document: it has no attachments yet, so write every one (skip set empty).
 	applyAttachments(doc, state.attachments, new Set());

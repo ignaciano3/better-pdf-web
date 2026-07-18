@@ -12,6 +12,7 @@
 	import PasswordPromptModal from './PasswordPromptModal.svelte';
 	import OutlineEditor from './OutlineEditor.svelte';
 	import WatermarkModal from './WatermarkModal.svelte';
+	import HeaderFooterModal from './HeaderFooterModal.svelte';
 	import AttachmentsModal from './AttachmentsModal.svelte';
 	import UpsellModal from './UpsellModal.svelte';
 	import { SHORTCUT_TO_DRAW, SELECT_SHORTCUT } from './constants';
@@ -332,6 +333,7 @@
 	<PasswordPromptModal {editor} />
 	<OutlineEditor {editor} />
 	<WatermarkModal {editor} />
+	<HeaderFooterModal {editor} />
 	<AttachmentsModal {editor} />
 	<!-- Hidden picker for the `merge` deep-link intent: appends a second PDF
 	     right after the first one loads. -->

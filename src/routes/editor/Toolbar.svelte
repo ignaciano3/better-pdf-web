@@ -256,6 +256,16 @@
 							class={menuItem}
 							role="menuitem"
 							onclick={() => {
+								editor.headerFooterModalOpen = true;
+								docMenuOpen = false;
+							}}
+						>
+							Header &amp; footer…
+						</button>
+						<button
+							class={menuItem}
+							role="menuitem"
+							onclick={() => {
 								editor.attachmentsModalOpen = true;
 								docMenuOpen = false;
 							}}

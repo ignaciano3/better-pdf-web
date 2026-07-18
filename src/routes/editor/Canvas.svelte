@@ -3,6 +3,7 @@
 	import { SCALE } from './constants';
 	import { overlayFor } from './overlays';
 	import WatermarkOverlay from './overlays/WatermarkOverlay.svelte';
+	import HeaderFooterOverlay from './overlays/HeaderFooterOverlay.svelte';
 	import FloatingToolbar from './FloatingToolbar.svelte';
 	import PdfPageCanvas from './PdfPageCanvas.svelte';
 
@@ -148,6 +149,14 @@
 						watermark={editor.watermark}
 						pageWidth={page.width * SCALE}
 						pageHeight={page.height * SCALE}
+					/>
+				{/if}
+				{#if editor.headerFooter}
+					<HeaderFooterOverlay
+						hf={editor.headerFooter}
+						{pageIndex}
+						pageCount={editor.pages.length}
+						title={editor.metadata.title ?? ''}
 					/>
 				{/if}
 				<!-- The selected element's options panel lives inside its page so it

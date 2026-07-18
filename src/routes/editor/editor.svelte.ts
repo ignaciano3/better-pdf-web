@@ -15,7 +15,8 @@ import type {
 	ShapeElement,
 	SignatureElement,
 	TextElement,
-	Watermark
+	Watermark,
+	HeaderFooter
 } from '$lib/pdf/types';
 import { flushSync } from 'svelte';
 import { renderSourcePdf, type RenderedPage, PdfRenderError } from '$lib/pdf/render';
@@ -91,8 +92,16 @@ interface DocSnapshot {
 	flatten: boolean;
 	optimizeSize: boolean;
 	watermark: Watermark | null;
+	headerFooter: HeaderFooter | null;
 	embeddedFonts: Record<string, EmbeddedFontAsset>;
 	selectedId: string | null;
+}
+
+/** True when the header or footer has at least one non-empty slot template. */
+function hasHeaderFooterContent(hf: HeaderFooter): boolean {
+	const nonEmpty = (s: HeaderFooter['header']) =>
+		s ? Object.values(s.slots).some((t) => t && t.trim().length > 0) : false;
+	return nonEmpty(hf.header) || nonEmpty(hf.footer);
 }
 
 /**
@@ -233,6 +242,10 @@ export class EditorState {
 	watermark = $state<Watermark | null>(null);
 	/** True while the watermark editor modal is open. */
 	watermarkModalOpen = $state(false);
+	/** Optional running header/footer (incl. page numbers) stamped at export. */
+	headerFooter = $state<HeaderFooter | null>(null);
+	/** True while the header/footer editor modal is open. */
+	headerFooterModalOpen = $state(false);
 	/** True while the document-properties modal is open. */
 	docPropsModalOpen = $state(false);
 	/** True while the attachments modal is open. */
@@ -341,6 +354,7 @@ export class EditorState {
 				this.#track(this.outline);
 				this.#track(this.attachments);
 				this.#track(this.watermark);
+				this.#track(this.headerFooter);
 				this.#track(this.embeddedFonts);
 				void this.flatten;
 				void this.optimizeSize;
@@ -380,6 +394,7 @@ export class EditorState {
 			flatten: this.flatten,
 			optimizeSize: this.optimizeSize,
 			watermark: this.watermark,
+			headerFooter: this.headerFooter,
 			embeddedFonts: this.embeddedFonts,
 			selectedId: this.selectedId
 		}) as DocSnapshot;
@@ -410,6 +425,7 @@ export class EditorState {
 		this.flatten = c.flatten;
 		this.optimizeSize = c.optimizeSize;
 		this.watermark = c.watermark;
+		this.headerFooter = c.headerFooter;
 		this.embeddedFonts = c.embeddedFonts;
 		this.selectedId = c.selectedId;
 		// Run the tracking effect now, while #applying suppresses it, so the
@@ -1705,6 +1721,9 @@ export class EditorState {
 				...(this.optimizeSize && !this.flatten ? { objectStreams: true } : {}),
 				...(this.watermark && this.watermark.text.trim().length > 0
 					? { watermark: $state.snapshot(this.watermark) as Watermark }
+					: {}),
+				...(this.headerFooter && hasHeaderFooterContent(this.headerFooter)
+					? { headerFooter: $state.snapshot(this.headerFooter) as HeaderFooter }
 					: {}),
 				...(this.attachments.length > 0
 					? {
