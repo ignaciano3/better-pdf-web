@@ -78,7 +78,10 @@
 						>Admin</a
 					>
 				{/if}
-				<span class="flex items-center gap-2 text-slate-500">
+				<a
+					href={resolve('/profile')}
+					class="flex items-center gap-2 text-slate-500 transition hover:text-slate-900"
+				>
 					{user.email}
 					{#if plan === 'pro'}
 						<span
@@ -86,7 +89,7 @@
 							>Pro</span
 						>
 					{/if}
-				</span>
+				</a>
 				<button
 					type="button"
 					onclick={handleSignOut}
@@ -186,6 +189,12 @@
 						>Admin</a
 					>
 				{/if}
+				<a
+					href={resolve('/profile')}
+					onclick={() => (menuOpen = false)}
+					class="block rounded-lg px-2 py-3 text-base font-medium text-slate-700 transition hover:bg-slate-50"
+					>Profile</a
+				>
 				<div class="mt-1 border-t border-slate-100 pt-2">
 					<p class="flex items-center gap-2 px-2 py-1 text-sm text-slate-500">
 						<span class="truncate">{user.email}</span>
