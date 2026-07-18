@@ -8,16 +8,25 @@ export const EXPORT_ACTION = 'export';
 
 /**
  * SQL predicate matching an actor's in-window export events: their own
- * authenticated events, plus anonymous events by ipHash. Mirrors
- * `countsTowardWindow` in `usage-window.ts`.
+ * authenticated events, plus anonymous events by ipHash (when an ipHash is
+ * given). Mirrors `countsTowardWindow` in `usage-window.ts`.
+ *
+ * - userId + ipHash: own events OR anonymous events by ipHash.
+ * - ipHash only (no userId): anonymous events by ipHash.
+ * - userId only (no ipHash): own events only — no anonymous branch, so no
+ *   `undefined` bind value is ever sent to the driver.
  */
 export function windowWhere(
 	userId: string | undefined,
 	ipHash: string | undefined,
 	since: Date
 ): SQL | undefined {
-	const anonMatch = and(isNull(usageEvent.userId), eq(usageEvent.ipHash, ipHash!));
-	const who = userId ? or(eq(usageEvent.userId, userId), anonMatch) : anonMatch;
+	const anonMatch = ipHash ? and(isNull(usageEvent.userId), eq(usageEvent.ipHash, ipHash)) : undefined;
+	const who = userId
+		? anonMatch
+			? or(eq(usageEvent.userId, userId), anonMatch)
+			: eq(usageEvent.userId, userId)
+		: anonMatch;
 	return and(eq(usageEvent.action, EXPORT_ACTION), who, gte(usageEvent.createdAt, since));
 }
 
