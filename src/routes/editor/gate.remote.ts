@@ -1,41 +1,14 @@
 import { command, getRequestEvent } from '$app/server';
 import { error } from '@sveltejs/kit';
-import { and, count, eq, gte, isNull, or, type SQL } from 'drizzle-orm';
 import { getDb } from '$lib/server/db';
 import { usageEvent } from '$lib/server/db/schema.app';
 import { resolveIdentity } from '$lib/server/identity';
 import { resolvePlan } from '$lib/server/plan';
 import { decide, windowStart, WINDOW_MS, type Tier } from '$lib/server/rate-limit';
+import { windowWhere, countInWindow, EXPORT_ACTION } from '$lib/server/usage-count';
 import { recordExportError } from './export-error-log';
 
-const EXPORT_ACTION = 'export';
 const UPGRADE_URL = '/pricing';
-
-/** SQL predicate matching this actor's in-window export events (SQL mirror of
- *  `countsTowardWindow`: own userId events plus anonymous events by ipHash). */
-function windowWhere(
-	userId: string | undefined,
-	ipHash: string | undefined,
-	since: Date
-): SQL | undefined {
-	const anonMatch = and(isNull(usageEvent.userId), eq(usageEvent.ipHash, ipHash!));
-	const who = userId ? or(eq(usageEvent.userId, userId), anonMatch) : anonMatch;
-	return and(eq(usageEvent.action, EXPORT_ACTION), who, gte(usageEvent.createdAt, since));
-}
-
-/** Count this actor's prior export events in the current window. */
-async function countInWindow(
-	userId: string | undefined,
-	ipHash: string | undefined,
-	now: Date
-): Promise<number> {
-	const db = getDb();
-	const rows = await db
-		.select({ value: count() })
-		.from(usageEvent)
-		.where(windowWhere(userId, ipHash, windowStart(now)));
-	return rows[0]?.value ?? 0;
-}
 
 /**
  * Epoch ms at which the actor can export again, given they're currently capped.
