@@ -9,6 +9,7 @@
 		hasPassword
 	}: { name: string; email: string; emailVerified: boolean; hasPassword: boolean } = $props();
 
+	// svelte-ignore state_referenced_locally
 	let nameValue = $state(name);
 	let nameError = $state<string | null>(null);
 	let nameSaving = $state(false);
