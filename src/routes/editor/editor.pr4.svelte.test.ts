@@ -5,6 +5,11 @@ vi.mock('./gate.remote', () => ({
 	checkExportAllowance: vi.fn(async () => ({ ok: true })),
 	reportExportError: vi.fn(async () => {})
 }));
+// The fake %PDF bytes aren't a real PDF; skip WASM decryption entirely.
+vi.mock('./decrypt-pdf', () => ({
+	decryptIfNeeded: vi.fn(async (bytes: Uint8Array) => ({ bytes, decrypted: false })),
+	DecryptCancelled: class DecryptCancelled extends Error {}
+}));
 // Render the source PDF to a couple of fake pages without touching pdf.js.
 vi.mock('$lib/pdf/render', async (orig) => {
 	const actual = (await orig()) as object;

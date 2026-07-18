@@ -97,6 +97,11 @@
 						</span>
 					</span>
 				</label>
+				{#if editor.wasDecrypted}
+					<p class="mt-1 rounded bg-amber-50 px-2 py-1.5 text-xs text-amber-700">
+						This PDF was password-protected. The exported file will not be password-protected.
+					</p>
+				{/if}
 			</div>
 
 			<div class="mt-5 flex justify-end gap-2">

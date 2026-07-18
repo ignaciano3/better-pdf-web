@@ -9,6 +9,7 @@
 	import ZoomControls from './ZoomControls.svelte';
 	import FieldPropertiesModal from './FieldPropertiesModal.svelte';
 	import DocumentPropertiesModal from './DocumentPropertiesModal.svelte';
+	import PasswordPromptModal from './PasswordPromptModal.svelte';
 	import OutlineEditor from './OutlineEditor.svelte';
 	import WatermarkModal from './WatermarkModal.svelte';
 	import AttachmentsModal from './AttachmentsModal.svelte';
@@ -328,6 +329,7 @@
 
 	<FieldPropertiesModal {editor} />
 	<DocumentPropertiesModal {editor} />
+	<PasswordPromptModal {editor} />
 	<OutlineEditor {editor} />
 	<WatermarkModal {editor} />
 	<AttachmentsModal {editor} />

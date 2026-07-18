@@ -26,6 +26,7 @@ import { checkExportAllowance, reportExportError } from './gate.remote';
 import { validateExportState } from './export-validate';
 import { extractFieldsFromBytes } from './extract-fields-client';
 import { extractAttachmentsFromBytes } from './extract-attachments-client';
+import { decryptIfNeeded, DecryptCancelled, type PasswordResolver } from './decrypt-pdf';
 import {
 	DEFAULT_PAGE,
 	SCALE,
@@ -247,6 +248,34 @@ export class EditorState {
 	errorMessage = $state<string | null>(null);
 	/** Non-null when the last export was rate-limited; the upsell modal reads it. */
 	upsell = $state<UpsellInfo | null>(null);
+
+	/** Active password prompt for an encrypted upload, or null. The modal calls
+	 *  resolve/reject; both clear this back to null. */
+	passwordPrompt: {
+		wrongPassword: boolean;
+		resolve: (pw: string) => void;
+		reject: () => void;
+	} | null = $state(null);
+
+	/** True once any uploaded source was decrypted — the export will be unencrypted. */
+	wasDecrypted = $state(false);
+
+	/** Open the password modal and resolve with the entered password, or reject
+	 *  with DecryptCancelled on cancel. Passed to decryptIfNeeded. */
+	#requestPassword: PasswordResolver = (wrongPassword) =>
+		new Promise<string>((resolve, reject) => {
+			this.passwordPrompt = {
+				wrongPassword,
+				resolve: (pw) => {
+					this.passwordPrompt = null;
+					resolve(pw);
+				},
+				reject: () => {
+					this.passwordPrompt = null;
+					reject(new DecryptCancelled());
+				}
+			};
+		});
 
 	#nextId = 0;
 	/** Object URLs for raster previews, cached per element id. Not reactive. */
@@ -1241,7 +1270,9 @@ export class EditorState {
 			// A re-upload replaces source 0; drop any previously cached document so
 			// the old proxy is freed and the new bytes are reopened on next render.
 			void this.#docStore.destroyAll();
-			const bytes = new Uint8Array(await file.arrayBuffer());
+			const raw = new Uint8Array(await file.arrayBuffer());
+			const { bytes, decrypted } = await decryptIfNeeded(raw, this.#requestPassword);
+			if (decrypted) this.wasDecrypted = true;
 			// pdf.js detaches the buffer it renders, so keep a copy for export.
 			const exportCopy = bytes.slice();
 			const result = await renderSourcePdf(bytes, SCALE);
@@ -1288,10 +1319,14 @@ export class EditorState {
 			// into whatever was open before (and across stale source references).
 			this.#history.reset();
 		} catch (e) {
-			this.errorMessage =
-				e instanceof PdfRenderError
-					? e.message
-					: 'Could not open that PDF. It may be corrupt or unsupported.';
+			if (e instanceof DecryptCancelled) {
+				// User dismissed the password prompt — not an error.
+			} else {
+				this.errorMessage =
+					e instanceof PdfRenderError
+						? e.message
+						: 'Could not open that PDF. It may be corrupt or unsupported.';
+			}
 		} finally {
 			this.loadingPdf = false;
 		}
@@ -1307,6 +1342,8 @@ export class EditorState {
 		this.sourceFieldNames = [];
 		this.selectedId = null;
 		this.errorMessage = null;
+		this.wasDecrypted = false;
+		this.passwordPrompt = null;
 		this.pendingSignature = null;
 		this.pendingImage = null;
 		this.polygonDraftId = null;
@@ -1336,7 +1373,9 @@ export class EditorState {
 		}
 		this.loadingPdf = true;
 		try {
-			const bytes = new Uint8Array(await file.arrayBuffer());
+			const raw = new Uint8Array(await file.arrayBuffer());
+			const { bytes, decrypted } = await decryptIfNeeded(raw, this.#requestPassword);
+			if (decrypted) this.wasDecrypted = true;
 			const exportCopy = bytes.slice();
 			const result = await renderSourcePdf(bytes, SCALE);
 			const docIndex = this.renderedByDoc.length;
@@ -1380,10 +1419,14 @@ export class EditorState {
 				// Attachment read-back failed — leave the current list untouched.
 			}
 		} catch (e) {
-			this.errorMessage =
-				e instanceof PdfRenderError
-					? e.message
-					: 'Could not open that PDF. It may be corrupt or unsupported.';
+			if (e instanceof DecryptCancelled) {
+				// User dismissed the password prompt — not an error.
+			} else {
+				this.errorMessage =
+					e instanceof PdfRenderError
+						? e.message
+						: 'Could not open that PDF. It may be corrupt or unsupported.';
+			}
 		} finally {
 			this.loadingPdf = false;
 		}
