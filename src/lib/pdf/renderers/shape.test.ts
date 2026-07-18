@@ -51,3 +51,48 @@ describe('renderShape — line direction (#1)', () => {
 		expect(end).toEqual({ x: 50, y: 630 });
 	});
 });
+
+describe('renderShape — strokeless fill (whiteout)', () => {
+	function captureRect(element: ShapeElement, pageHeight = 800) {
+		let rect: Record<string, unknown> | null = null;
+		const page = {
+			drawLine: () => {},
+			drawRectangle: (a: Record<string, unknown>) => (rect = a),
+			drawEllipse: () => {}
+		};
+		renderShape({ page, pageHeight } as unknown as RenderContext, element);
+		return rect as Record<string, unknown> | null;
+	}
+
+	it('a filled rectangle with no strokeColor draws fill and NO stroke', () => {
+		const rect = captureRect({
+			type: 'shape',
+			id: 'w',
+			shape: 'rectangle',
+			x: 10,
+			y: 20,
+			width: 100,
+			height: 30,
+			fillColor: { r: 1, g: 1, b: 1 }
+			// strokeColor intentionally omitted (whiteout cover)
+		});
+		expect(rect).not.toBeNull();
+		expect(rect!['fill']).toBeDefined();
+		expect(rect!['stroke']).toBeUndefined();
+		expect(rect!['strokeWidth']).toBeUndefined();
+	});
+
+	it('a rectangle WITH strokeColor still draws its stroke', () => {
+		const rect = captureRect({
+			type: 'shape',
+			id: 's',
+			shape: 'rectangle',
+			x: 0,
+			y: 0,
+			width: 10,
+			height: 10,
+			strokeColor: { r: 0, g: 0, b: 0 }
+		});
+		expect(rect!['stroke']).toBeDefined();
+	});
+});

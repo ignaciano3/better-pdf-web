@@ -46,6 +46,7 @@ import {
 	MARKUP_LINE_COLOR,
 	MARKUP_DEFAULT_OPACITY,
 	MARKUP_DEFAULT_THICKNESS,
+	WHITEOUT_DEFAULT_COLOR,
 	VECTOR_DEFAULT_STROKE_WIDTH,
 	LINK_DEFAULT_SIZE,
 	FIELD_DEFAULT_SIZE,
@@ -203,6 +204,8 @@ export class EditorState {
 	 * underline/strikethrough (they carry different defaults). */
 	highlightColor = $state<{ r: number; g: number; b: number }>({ ...MARKUP_HIGHLIGHT_COLOR });
 	markupLineColor = $state<{ r: number; g: number; b: number }>({ ...MARKUP_LINE_COLOR });
+	/** Last-used whiteout fill (defaults to opaque white). */
+	whiteoutColor = $state<{ r: number; g: number; b: number }>({ ...WHITEOUT_DEFAULT_COLOR });
 
 	/**
 	 * Id of the polygon currently being drawn vertex-by-vertex, or null. While
@@ -1103,6 +1106,51 @@ export class EditorState {
 			(live) => {
 				// A stray click with no real drag still yields a visible default swath.
 				if (live.width < SHAPE_MIN_SIZE) live.width = SHAPE_MIN_SIZE * 12;
+				if (live.height < SHAPE_MIN_SIZE) live.height = SHAPE_MIN_SIZE * 3;
+			}
+		);
+	}
+
+	/**
+	 * Begin drawing a whiteout: a strokeless filled rectangle that COVERS content.
+	 * Modeled on {@link beginShapeDraw} but preset to a rectangle with a fill
+	 * (default white) and no stroke — it reuses the {@link ShapeElement} pipeline,
+	 * so no new element type/overlay/renderer is needed. Returns false (no-op) when
+	 * the whiteout tool isn't active.
+	 *
+	 * NOTE: a whiteout only hides content visually; the underlying text/image
+	 * stays in the PDF and is recoverable. It is not redaction.
+	 */
+	beginWhiteoutDraw(event: PointerEvent, pageEl: HTMLElement, pageIndex: number): boolean {
+		if (!(this.tool.type === 'draw' && this.tool.kind === 'whiteout')) return false;
+		const fill = $state.snapshot(this.whiteoutColor);
+		return this.#beginDraw<ShapeElement>(
+			event,
+			pageEl,
+			pageIndex,
+			(start) => ({
+				type: 'shape',
+				id: this.nextId('wo'),
+				shape: 'rectangle',
+				x: start.x,
+				y: start.y,
+				width: 0,
+				height: 0,
+				page: pageIndex,
+				// Strokeless: no strokeColor, zero width so the canvas overlay draws
+				// no border either.
+				strokeWidth: 0,
+				fillColor: fill
+			}),
+			(live, cur, start) => {
+				live.x = Math.min(start.x, cur.x);
+				live.y = Math.min(start.y, cur.y);
+				live.width = Math.abs(cur.x - start.x);
+				live.height = Math.abs(cur.y - start.y);
+			},
+			(live) => {
+				// A stray click with no real drag still yields a visible default cover.
+				if (live.width < SHAPE_MIN_SIZE) live.width = SHAPE_MIN_SIZE * 8;
 				if (live.height < SHAPE_MIN_SIZE) live.height = SHAPE_MIN_SIZE * 3;
 			}
 		);

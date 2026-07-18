@@ -58,9 +58,14 @@ export type DrawKind =
 	| 'highlight'
 	| 'underline'
 	| 'strikethrough'
+	| 'whiteout'
 	| 'path'
 	| 'polygon'
 	| 'link';
+
+/** Default whiteout fill (opaque white). A whiteout is a strokeless filled
+ * rectangle that COVERS content — it does not remove the text underneath. */
+export const WHITEOUT_DEFAULT_COLOR = { r: 1, g: 1, b: 1 };
 
 /** Default markup colours (RGB 0..1): yellow highlight, black lines. */
 export const MARKUP_HIGHLIGHT_COLOR = { r: 1, g: 0.92, b: 0.23 };
@@ -126,7 +131,8 @@ export const DRAW_SHORTCUTS: Partial<Record<DrawKind, string>> = {
 	signature: 's',
 	highlight: 'h',
 	underline: 'u',
-	strikethrough: 'g'
+	strikethrough: 'g',
+	whiteout: 'w'
 };
 
 /** Reverse lookup (key → draw kind) for the keyboard handler. */

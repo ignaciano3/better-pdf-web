@@ -10,7 +10,6 @@ import type { ElementRenderer } from './types';
  */
 export const renderShape: ElementRenderer<ShapeElement> = ({ page, pageHeight }, element) => {
 	const { x, y, width, height, strokeColor, fillColor, strokeWidth, dash, dashPhase } = element;
-	const stroke = strokeColor ? rgb(strokeColor.r, strokeColor.g, strokeColor.b) : rgb(0, 0, 0);
 	const lineWidth = strokeWidth ?? 1;
 	// Shared dash options — a non-empty `dash` makes the stroke dashed; omitted
 	// for a solid stroke so the lib keeps its default.
@@ -18,6 +17,13 @@ export const renderShape: ElementRenderer<ShapeElement> = ({ page, pageHeight },
 		...(dash && dash.length > 0 ? { dash } : {}),
 		...(dashPhase !== undefined ? { dashPhase } : {})
 	};
+	// Stroke options — omitted entirely for a strokeless fill (e.g. a whiteout
+	// cover) so the lib draws no border, not a zero/hairline one. Lines always
+	// stroke (a line without a stroke is invisible), defaulting to black.
+	const strokeOpts = strokeColor
+		? { stroke: rgb(strokeColor.r, strokeColor.g, strokeColor.b), strokeWidth: lineWidth }
+		: {};
+	const lineStroke = strokeColor ? rgb(strokeColor.r, strokeColor.g, strokeColor.b) : rgb(0, 0, 0);
 	// Bottom edge of the box after the top-left → bottom-left Y flip.
 	const bottom = pageHeight - y - height;
 	const top = pageHeight - y;
@@ -29,7 +35,7 @@ export const renderShape: ElementRenderer<ShapeElement> = ({ page, pageHeight },
 			page.drawLine({
 				start: element.antidiagonal ? { x: x + width, y: top } : { x, y: top },
 				end: element.antidiagonal ? { x, y: bottom } : { x: x + width, y: bottom },
-				stroke,
+				stroke: lineStroke,
 				strokeWidth: lineWidth,
 				...dashOpts
 			});
@@ -40,8 +46,7 @@ export const renderShape: ElementRenderer<ShapeElement> = ({ page, pageHeight },
 				y: bottom,
 				width,
 				height,
-				stroke,
-				strokeWidth: lineWidth,
+				...strokeOpts,
 				...dashOpts,
 				...(fillColor ? { fill: rgb(fillColor.r, fillColor.g, fillColor.b) } : {})
 			});
@@ -52,8 +57,7 @@ export const renderShape: ElementRenderer<ShapeElement> = ({ page, pageHeight },
 				y: bottom + height / 2,
 				radiusX: width / 2,
 				radiusY: height / 2,
-				stroke,
-				strokeWidth: lineWidth,
+				...strokeOpts,
 				...dashOpts,
 				...(fillColor ? { fill: rgb(fillColor.r, fillColor.g, fillColor.b) } : {})
 			});

@@ -55,6 +55,7 @@
 		// the active tool handles it (each no-ops when its tool isn't active).
 		if (editor.beginShapeDraw(event, el, pageIndex)) return;
 		if (editor.beginMarkupDraw(event, el, pageIndex)) return;
+		if (editor.beginWhiteoutDraw(event, el, pageIndex)) return;
 		if (editor.beginFreehandDraw(event, el, pageIndex)) return;
 		editor.beginLinkDraw(event, el, pageIndex);
 	}

@@ -131,7 +131,21 @@
 			{/if}
 		{/if}
 
-		{#if editor.selectedShape}
+		{#if editor.selectedShape && !editor.selectedShape.strokeColor && editor.selectedShape.shape === 'rectangle'}
+			<!-- Whiteout: a strokeless filled rectangle. Only the cover colour is
+			     editable; the note keeps the "cover, not redaction" promise honest. -->
+			{@const wo = editor.selectedShape}
+			<input
+				type="color"
+				value={rgbToHex(wo.fillColor)}
+				oninput={(e) => (wo.fillColor = hexToRgb((e.currentTarget as HTMLInputElement).value))}
+				class="swatch h-6 w-6 cursor-pointer rounded border"
+				aria-label="Whiteout color"
+			/>
+			<span class="max-w-48 text-xs text-slate-500" title="Whiteout covers content but does not remove the hidden text/image underneath — it is not redaction.">
+				Covers only — not redaction
+			</span>
+		{:else if editor.selectedShape}
 			{@const sh = editor.selectedShape}
 			<input
 				type="color"
