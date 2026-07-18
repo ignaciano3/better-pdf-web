@@ -10,7 +10,7 @@ vi.mock('$lib/auth-client', () => {
 import SecuritySection from './SecuritySection.svelte';
 import { authClient } from '$lib/auth-client';
 
-const revokeOtherSessions = (authClient.revokeOtherSessions as any);
+const revokeOtherSessions = vi.mocked(authClient.revokeOtherSessions);
 
 describe('SecuritySection', () => {
 	it('calls revokeOtherSessions when the button is clicked', async () => {

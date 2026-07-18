@@ -1,12 +1,11 @@
 <script lang="ts">
-	let {
-		used,
-		limit,
-		resetAt
-	}: { used: number; limit: number | null; resetAt: string | null } = $props();
+	let { used, limit, resetAt }: { used: number; limit: number | null; resetAt: string | null } =
+		$props();
 
 	const resetLabel = $derived(
-		resetAt ? new Date(resetAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : null
+		resetAt
+			? new Date(resetAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+			: null
 	);
 </script>
 
