@@ -178,6 +178,43 @@
 			{/if}
 		{/if}
 
+		{#if editor.selectedMarkup}
+			{@const mk = editor.selectedMarkup}
+			<input
+				type="color"
+				value={rgbToHex(mk.color)}
+				oninput={(e) => (mk.color = hexToRgb((e.currentTarget as HTMLInputElement).value))}
+				class="swatch h-6 w-6 cursor-pointer rounded border"
+				aria-label="Markup color"
+			/>
+			{#if mk.markup === 'highlight'}
+				<label class="flex items-center gap-1 text-sm" title="Highlight opacity">
+					Opacity
+					<input
+						type="range"
+						min="0.1"
+						max="1"
+						step="0.05"
+						value={mk.opacity ?? 0.4}
+						oninput={(e) => (mk.opacity = Number((e.currentTarget as HTMLInputElement).value))}
+						class="w-20"
+						aria-label="Highlight opacity"
+					/>
+				</label>
+			{:else}
+				<input
+					type="number"
+					min="0.5"
+					max="20"
+					step="0.5"
+					value={mk.thickness ?? 1.5}
+					oninput={(e) => (mk.thickness = Number((e.currentTarget as HTMLInputElement).value))}
+					class="w-14 rounded border px-1 py-0.5 text-sm"
+					aria-label="Line thickness"
+				/>
+			{/if}
+		{/if}
+
 		{#if editor.selectedVector}
 			{@const v = editor.selectedVector}
 			<input

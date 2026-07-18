@@ -55,9 +55,20 @@ export type DrawKind =
 	| 'line'
 	| 'rectangle'
 	| 'ellipse'
+	| 'highlight'
+	| 'underline'
+	| 'strikethrough'
 	| 'path'
 	| 'polygon'
 	| 'link';
+
+/** Default markup colours (RGB 0..1): yellow highlight, black lines. */
+export const MARKUP_HIGHLIGHT_COLOR = { r: 1, g: 0.92, b: 0.23 };
+export const MARKUP_LINE_COLOR = { r: 0, g: 0, b: 0 };
+/** Default highlight fill opacity so covered text stays legible. */
+export const MARKUP_DEFAULT_OPACITY = 0.4;
+/** Default underline/strikethrough line width in PDF points. */
+export const MARKUP_DEFAULT_THICKNESS = 1.5;
 
 /** Default stroke width (PDF points) for a newly drawn path/polygon. */
 export const VECTOR_DEFAULT_STROKE_WIDTH = 2;
@@ -112,7 +123,10 @@ export const DRAW_SHORTCUTS: Partial<Record<DrawKind, string>> = {
 	polygon: 'p',
 	path: 'd',
 	link: 'k',
-	signature: 's'
+	signature: 's',
+	highlight: 'h',
+	underline: 'u',
+	strikethrough: 'g'
 };
 
 /** Reverse lookup (key → draw kind) for the keyboard handler. */

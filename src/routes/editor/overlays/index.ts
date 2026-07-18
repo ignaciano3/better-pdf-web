@@ -4,6 +4,7 @@ import type { OverlayProps } from './types';
 import TextOverlay from './TextOverlay.svelte';
 import RasterOverlay from './RasterOverlay.svelte';
 import ShapeOverlay from './ShapeOverlay.svelte';
+import MarkupOverlay from './MarkupOverlay.svelte';
 import FieldOverlay from './FieldOverlay.svelte';
 import PathOverlay from './PathOverlay.svelte';
 import PolygonOverlay from './PolygonOverlay.svelte';
@@ -21,6 +22,7 @@ const registry: Record<EditElement['type'], Component<OverlayProps>> = {
 	signature: RasterOverlay,
 	image: RasterOverlay,
 	shape: ShapeOverlay,
+	markup: MarkupOverlay,
 	path: PathOverlay,
 	polygon: PolygonOverlay,
 	link: LinkOverlay,

@@ -373,6 +373,44 @@ export interface ShapeElement {
 	antidiagonal?: boolean;
 }
 
+/** The kinds of text-oriented markup the editor can stamp over a region. */
+export type MarkupKind = 'highlight' | 'underline' | 'strikethrough';
+
+/**
+ * A text-markup element: a highlight, underline, or strikethrough drawn over a
+ * dragged rectangular region. Like the other elements, `x`/`y` is the top-left
+ * corner of the bounding box in PDF points (top-left origin) and the builder
+ * flips Y at export. There is no text layer, so markup covers a region the user
+ * drags — it is not anchored to specific glyphs.
+ *
+ * Geometry at render:
+ * - `highlight` fills the whole box (semi-transparent).
+ * - `underline` draws a line along the box's bottom edge.
+ * - `strikethrough` draws a line across the box's vertical centre.
+ */
+export interface MarkupElement {
+	type: 'markup';
+	id: string;
+	/** Which markup to draw. */
+	markup: MarkupKind;
+	/** Distance from the left edge, in PDF points. */
+	x: number;
+	/** Distance from the top edge, in PDF points (top-left origin). */
+	y: number;
+	/** Bounding-box width in PDF points. */
+	width: number;
+	/** Bounding-box height in PDF points. */
+	height: number;
+	/** Zero-based page index. Defaults to 0. */
+	page?: number;
+	/** RGB components in 0..1. */
+	color: { r: number; g: number; b: number };
+	/** Highlight fill opacity 0..1. Highlight only. Defaults to 0.4. */
+	opacity?: number;
+	/** Line width in points for underline/strikethrough. Defaults to 1.5. */
+	thickness?: number;
+}
+
 /**
  * A free vector path: an ordered list of points stamped as an SVG path. Used by
  * the freehand drawing tool (`closed: false` polyline) and closed vector shapes.
@@ -717,6 +755,7 @@ export type EditElement =
 	| SignatureElement
 	| ImageElement
 	| ShapeElement
+	| MarkupElement
 	| PathElement
 	| PolygonElement
 	| LinkElement

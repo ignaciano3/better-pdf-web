@@ -10,6 +10,8 @@ import type {
 	LinkElement,
 	OutlineItem,
 	PageOp,
+	MarkupElement,
+	MarkupKind,
 	PathElement,
 	PolygonElement,
 	ShapeElement,
@@ -40,6 +42,10 @@ import {
 	SHAPE_DEFAULT_STROKE,
 	SHAPE_DEFAULT_STROKE_WIDTH,
 	SHAPE_MIN_SIZE,
+	MARKUP_HIGHLIGHT_COLOR,
+	MARKUP_LINE_COLOR,
+	MARKUP_DEFAULT_OPACITY,
+	MARKUP_DEFAULT_THICKNESS,
 	VECTOR_DEFAULT_STROKE_WIDTH,
 	LINK_DEFAULT_SIZE,
 	FIELD_DEFAULT_SIZE,
@@ -193,6 +199,10 @@ export class EditorState {
 	activeFieldKind = $derived<FieldKind | null>(this.tool.type === 'field' ? this.tool.kind : null);
 	/** Stroke color applied to newly drawn shapes (RGB 0..1). */
 	shapeStroke = $state<{ r: number; g: number; b: number }>({ ...SHAPE_DEFAULT_STROKE });
+	/** Last-used colours for new markup: a highlight fill and a line colour for
+	 * underline/strikethrough (they carry different defaults). */
+	highlightColor = $state<{ r: number; g: number; b: number }>({ ...MARKUP_HIGHLIGHT_COLOR });
+	markupLineColor = $state<{ r: number; g: number; b: number }>({ ...MARKUP_LINE_COLOR });
 
 	/**
 	 * Id of the polygon currently being drawn vertex-by-vertex, or null. While
@@ -457,6 +467,7 @@ export class EditorState {
 		this.selected?.type === 'image' || this.selected?.type === 'signature' ? this.selected : null
 	);
 	selectedShape = $derived(this.selected?.type === 'shape' ? this.selected : null);
+	selectedMarkup = $derived(this.selected?.type === 'markup' ? this.selected : null);
 	selectedField = $derived(this.selected?.type === 'field' ? this.selected : null);
 	selectedPath = $derived(this.selected?.type === 'path' ? this.selected : null);
 	selectedPolygon = $derived(this.selected?.type === 'polygon' ? this.selected : null);
@@ -1048,6 +1059,55 @@ export class EditorState {
 		);
 	}
 
+	/**
+	 * Begin drawing text markup (highlight / underline / strikethrough): press one
+	 * corner, drag to size the region, release commits it. No text layer exists, so
+	 * markup covers the dragged box rather than snapping to glyphs. Returns false
+	 * (no-op) when no markup tool is active.
+	 */
+	beginMarkupDraw(event: PointerEvent, pageEl: HTMLElement, pageIndex: number): boolean {
+		const kind: MarkupKind | null =
+			this.tool.type === 'draw' &&
+			(this.tool.kind === 'highlight' ||
+				this.tool.kind === 'underline' ||
+				this.tool.kind === 'strikethrough')
+				? this.tool.kind
+				: null;
+		if (!kind) return false;
+		const highlight = kind === 'highlight';
+		const color = $state.snapshot(highlight ? this.highlightColor : this.markupLineColor);
+		return this.#beginDraw<MarkupElement>(
+			event,
+			pageEl,
+			pageIndex,
+			(start) => ({
+				type: 'markup',
+				id: this.nextId('mk'),
+				markup: kind,
+				x: start.x,
+				y: start.y,
+				width: 0,
+				height: 0,
+				page: pageIndex,
+				color,
+				...(highlight
+					? { opacity: MARKUP_DEFAULT_OPACITY }
+					: { thickness: MARKUP_DEFAULT_THICKNESS })
+			}),
+			(live, cur, start) => {
+				live.x = Math.min(start.x, cur.x);
+				live.y = Math.min(start.y, cur.y);
+				live.width = Math.abs(cur.x - start.x);
+				live.height = Math.abs(cur.y - start.y);
+			},
+			(live) => {
+				// A stray click with no real drag still yields a visible default swath.
+				if (live.width < SHAPE_MIN_SIZE) live.width = SHAPE_MIN_SIZE * 12;
+				if (live.height < SHAPE_MIN_SIZE) live.height = SHAPE_MIN_SIZE * 3;
+			}
+		);
+	}
+
 	// --- vector paths / polygons / links -------------------------------------
 
 	/**
@@ -1231,7 +1291,7 @@ export class EditorState {
 
 	startResize(
 		event: PointerEvent,
-		el: SignatureElement | ImageElement | ShapeElement | FieldElement | LinkElement
+		el: SignatureElement | ImageElement | ShapeElement | MarkupElement | FieldElement | LinkElement
 	) {
 		event.stopPropagation();
 		event.preventDefault();
@@ -1240,8 +1300,9 @@ export class EditorState {
 		const startY = event.clientY;
 		const startWidth = el.width;
 		const startHeight = el.height;
-		// Rasters resize about their aspect ratio; shapes/fields/links resize freely.
-		const free = el.type === 'shape' || el.type === 'field' || el.type === 'link';
+		// Rasters resize about their aspect ratio; shapes/markup/fields/links resize freely.
+		const free =
+			el.type === 'shape' || el.type === 'markup' || el.type === 'field' || el.type === 'link';
 		const aspect = el.width / el.height;
 
 		const minSide = free ? SHAPE_MIN_SIZE : 20;

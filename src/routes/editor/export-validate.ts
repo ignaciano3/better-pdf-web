@@ -68,8 +68,9 @@ function validatePoints(points: unknown, min: number): void {
 
 /**
  * Validate one editor element by type before it reaches the PDF renderers.
- * Every element type the editor can produce (text, signature, image, shape)
- * must be accepted here — otherwise valid exports 422.
+ * Every element type the editor can produce (text, signature, image, shape,
+ * markup, path, polygon, link, field) must be accepted here — otherwise valid
+ * exports 422.
  */
 function validateElement(el: EditElement): void {
 	if (!el || typeof el !== 'object') error(422, 'Invalid element');
@@ -105,6 +106,20 @@ function validateElement(el: EditElement): void {
 				error(422, 'Invalid shape geometry');
 			}
 			if (!['line', 'rectangle', 'ellipse'].includes(el.shape)) error(422, 'Invalid shape kind');
+			break;
+		case 'markup':
+			if (!isFiniteNumber(el.width) || !isFiniteNumber(el.height)) {
+				error(422, 'Invalid markup geometry');
+			}
+			if (!['highlight', 'underline', 'strikethrough'].includes(el.markup)) {
+				error(422, 'Invalid markup kind');
+			}
+			if (el.opacity !== undefined && !isFiniteNumber(el.opacity)) {
+				error(422, 'Invalid markup opacity');
+			}
+			if (el.thickness !== undefined && !isFiniteNumber(el.thickness)) {
+				error(422, 'Invalid markup thickness');
+			}
 			break;
 		case 'path':
 			validatePoints(el.points, 1);

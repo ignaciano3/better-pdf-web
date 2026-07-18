@@ -4,6 +4,7 @@
 	import ContentSection from './toolbar/ContentSection.svelte';
 	import FieldsSection from './toolbar/FieldsSection.svelte';
 	import ShapesSection from './toolbar/ShapesSection.svelte';
+	import AnnotateSection from './toolbar/AnnotateSection.svelte';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 
 	let {
@@ -179,6 +180,7 @@
 			<FieldsSection {editor} />
 			<!-- Shapes kept last (#2). -->
 			<ShapesSection {editor} />
+			<AnnotateSection {editor} />
 		</div>
 
 		<!-- Right: document menu. On mobile it shares the top row with File (ml-auto
