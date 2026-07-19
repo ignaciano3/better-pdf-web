@@ -1,12 +1,13 @@
 import { error } from '@sveltejs/kit';
 
-/** Max accepted fingerprint length (mirrors the export gate's own limit). */
+/** Max accepted fingerprint length. */
 const MAX_FINGERPRINT_LEN = 256;
 
 /**
  * Extract and validate the client fingerprint from a remote-function payload.
- * Throws HTTP 422 for a missing, empty, non-string, or over-long value. Keeps
- * the profile usage query's validation in lockstep with the export gate.
+ * Throws HTTP 422 for a missing, empty, non-string, or over-long value. Shared
+ * by the export gate (`checkExportAllowance`) and the profile usage query
+ * (`getProfileUsage`) so their fingerprint validation can't drift.
  */
 export function parseFingerprint(input: unknown): string {
 	const fingerprint = (input as { fingerprint?: unknown } | null)?.fingerprint;
