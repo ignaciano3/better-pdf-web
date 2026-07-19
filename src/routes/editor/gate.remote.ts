@@ -6,6 +6,7 @@ import { resolveIdentity } from '$lib/server/identity';
 import { resolvePlan } from '$lib/server/plan';
 import { decide, windowStart, WINDOW_MS, type Tier } from '$lib/server/rate-limit';
 import { windowWhere, countInWindow, EXPORT_ACTION } from '$lib/server/usage-count';
+import { parseFingerprint } from '$lib/server/fingerprint';
 import { recordExportError } from './export-error-log';
 
 const UPGRADE_URL = '/pricing';
@@ -46,10 +47,7 @@ async function nextExportAllowedAt(
 export const checkExportAllowance = command(
 	'unchecked',
 	async (input: unknown): Promise<{ ok: true }> => {
-		const fingerprint = (input as { fingerprint?: unknown } | null)?.fingerprint;
-		if (typeof fingerprint !== 'string' || fingerprint.length === 0 || fingerprint.length > 256) {
-			error(422, 'Invalid fingerprint');
-		}
+		const fingerprint = parseFingerprint(input);
 		const event = getRequestEvent();
 		const identity = resolveIdentity(event, fingerprint);
 		const tier: Tier = identity.kind === 'anon' ? 'anonymous' : await resolvePlan(identity.userId);

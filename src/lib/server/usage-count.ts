@@ -67,6 +67,11 @@ export async function usageForActor(
 
 	let resetAt: string | null = null;
 	if (view.limit !== null && view.used >= view.limit) {
+		// Approximation: a slot frees up when the OLDEST in-window event ages out.
+		// The gate's `nextExportAllowedAt` computes the exact reset (the
+		// `priorCount - limit + 1`-th oldest) for enforcement; here it only drives
+		// a "Resets around …" hint, so the oldest-event estimate is good enough and
+		// can read slightly early when the actor is over the cap by more than one.
 		const db = getDb();
 		const oldest = await db
 			.select({ createdAt: usageEvent.createdAt })
